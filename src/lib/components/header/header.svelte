@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { enhance } from '$app/forms';
     import CircleUser from "lucide-svelte/icons/circle-user";
+    import KeySquare from "lucide-svelte/icons/key-square";
     import Menu from "lucide-svelte/icons/menu";
 
 	import type { PageServerData } from "../../../routes/$types";
@@ -13,7 +15,13 @@
 
     let {data}: {data: PageServerData} = $props();
 
-    if (data) console.log('data:', data)
+	let isLoggedIn: boolean = $state(false);
+	let password = $state("");
+
+	if (data.user && data.user.id) {
+		isLoggedIn = true;
+	}
+
 </script>
 
 <header class="bg-background/90 sticky top-0 flex h-[4.5rem] items-center gap-4 mt-2 px-8 md:px-8 border-b border-border/30">
@@ -53,7 +61,7 @@
 		</Sheet.Content>
 		</Sheet.Root>
 		<div class="flex w-full items-center gap-4 md:ml-auto md:gap-4 lg:gap-6">
-			<div class="ml-auto flex gap-6">
+			<div class="ml-auto flex">
 				<div class="hidden md:flex gap-6 items-center">
 					<MenuLinks
 						isLoggedIn={data.user ?? false}
@@ -61,36 +69,52 @@
 				</div>
 				<Separator
 					orientation="vertical"
-					class="my-2"
+					class="my-2 ml-6 mr-2"
 					decorative={true}
 				/>
 				<Lightswitch />
 				<Separator
 					orientation="vertical"
-					class="my-2"
+					class="my-2 mx-2"
 					decorative={true}
 				/>
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger asChild let:builder>
-						<Button
-							builders={[builder]}
-							variant="ghost"
-							size="icon"
-							class="rounded"
-						>
-						<CircleUser class="h-5 w-5" />
-						<span class="sr-only">Toggle user menu</span>
-						</Button>
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end">
-						<DropdownMenu.Label>Your Account</DropdownMenu.Label>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item>Settings</DropdownMenu.Item>
-						<DropdownMenu.Item>Support</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item>Logout</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
+				{#if isLoggedIn}
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger asChild let:builder>
+							<Button
+								builders={[builder]}
+								variant="ghost"
+								size="icon"
+								class="rounded"
+							>
+							<CircleUser class="h-5 w-5" />
+							<span class="sr-only">Toggle user menu</span>
+							</Button>
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							<DropdownMenu.Label>Your Account</DropdownMenu.Label>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item>Settings</DropdownMenu.Item>
+							<DropdownMenu.Item>Support</DropdownMenu.Item>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item>
+								<form method="post" action="/?/logout" use:enhance>
+									<button>Sign out</button>
+								</form>
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				{:else}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="rounded"
+						href="/login"
+					>
+						<KeySquare class="h-5 w-5" />
+						<span class="sr-only">Login</span>
+					</Button>
+				{/if}
 			</div>
 		</div>
 	</div>
