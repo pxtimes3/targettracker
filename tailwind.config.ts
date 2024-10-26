@@ -1,5 +1,5 @@
-import { fontFamily } from "tailwindcss/defaultTheme";
 import type { Config } from "tailwindcss";
+import { fontFamily } from "tailwindcss/defaultTheme";
 
 const config: Config = {
 	darkMode: ["class"],
@@ -56,6 +56,9 @@ const config: Config = {
 			},
 			fontFamily: {
 				sans: [...fontFamily.sans]
+			},
+			gridTemplateRows: {
+				'mainlayout': '4.5rem minmax(calc(97vh - 10rem), auto) minmax(5.5rem, auto)',
 			}
 		}
 	},
