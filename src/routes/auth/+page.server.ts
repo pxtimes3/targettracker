@@ -1,23 +1,30 @@
-import { hash, verify } from '@node-rs/argon2';
-import { generateRandomString } from '@oslojs/crypto/random';
-import { fail, redirect } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
 import { dev } from '$app/environment';
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
+import { hash, verify } from '@node-rs/argon2';
+import { generateRandomString } from '@oslojs/crypto/random';
+import { fail, redirect } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
+import { superValidate } from "sveltekit-superforms";
+import { zod } from "sveltekit-superforms/adapters";
 import type { Actions, PageServerLoad } from './$types';
+import { loginForm } from "./schema";
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/dashboard');
 	}
-	return {};
+	return {
+    	form: await superValidate(zod(loginForm)),
+  	};
 };
 
 export const actions: Actions = {
 	login: async (event) => {
 		const formData = await event.request.formData();
+		console.log(formData.get('username'))
+		console.log(formData.get('password'))
 		const username = formData.get('username');
 		const password = formData.get('password');
 
@@ -41,6 +48,7 @@ export const actions: Actions = {
 			outputLen: 32,
 			parallelism: 1
 		});
+
 		if (!validPassword) {
 			return fail(400, { message: 'Incorrect username or password' });
 		}
@@ -54,7 +62,7 @@ export const actions: Actions = {
 			secure: !dev
 		});
 
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/dashboard');
 	},
 	register: async (event) => {
 		const formData = await event.request.formData();
