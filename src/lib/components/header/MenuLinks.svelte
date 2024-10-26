@@ -2,7 +2,7 @@
     import ChevronDown from "lucide-svelte/icons/chevron-down";
     import * as DropdownMenu from "../ui/dropdown-menu/index.ts";
 
-    let { isLoggedIn = false } : { isLoggedIn?: boolean|string } = $props();
+    let { isLoggedIn = false } : { isLoggedIn?: boolean } = $props();
 </script>
 
 
