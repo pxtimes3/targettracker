@@ -1,25 +1,27 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import type { ActionData } from './$types';
+	import * as Card from '@/components/ui/card/index.ts';
+	import type { PageData } from '../$types';
+	import LoginForm from './login-form.svelte';
 
-	let { form }: { form: ActionData } = $props();
+	let { data } : { data: PageData } = $props();
 </script>
 
-<div class="w-full min-h-full">
-<div>
-<h1>Login/Register</h1>
-<form method="post" action="?/login" use:enhance>
-	<label>
-		Username
-		<input name="username" />
-	</label>
-	<label>
-		Password
-		<input type="password" name="password" />
-	</label>
-	<button>Login</button>
-	<button formaction="?/register">Register</button>
-</form>
-<p style="color: red">{form?.message ?? ''}</p>
-</div>
+<div class="relative card grid justify-center align-middle">
+
+		<Card.Root class="mx-auto max-w-sm ">
+			<Card.Header>
+				<Card.Title class="text-2xl">Login</Card.Title>
+				<Card.Description>Enter your email below to login to your account</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<LoginForm
+					data={data.form}
+				/>
+				<div class="mt-4 text-center text-sm">
+				Don&apos;t have an account?
+				<a href="##" class="underline">Sign up</a>
+				</div>
+			</Card.Content>
+		</Card.Root>
+
 </div>
