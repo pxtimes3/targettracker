@@ -13,7 +13,7 @@
 
 
 <main class="px-8 pt-4">
-	<div class="container grid maxw-screen-2x1 h-full items-center">
+	<div class="container grid maxw-screen-2x1 h-full">
 	<ModeWatcher />
 	{@render children?.()}
 	</div>
