@@ -3,20 +3,48 @@
 <script lang="ts">
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
+	import { zxcvbn } from '@zxcvbn-ts/core';
+// import { matcherPwnedFactory } from '@zxcvbn-ts/matcher-pwned';
 	import { Eye, EyeOff } from "lucide-svelte";
 
 	let {
-		value = $bindable(""),
+		id = "password",
+		value = $bindable(),
+		badPass = $bindable(false),
+		name = "password",
 		placeholder = "Enter password",
+		required = $bindable(true),
+		checkPass = $bindable(false),
+		css = $bindable(''),
 		disabled = false
 	}: {
-		value: string,
-		placeholder: string,
+		id?: string,
+		value?: string,
+		name?: string,
+		badPass?: boolean,
+		checkPass?: boolean,
+		placeholder?: string,
+		required?: boolean,
+		css?: string,
 		disabled?: boolean
 	} = $props();
 
+	const badPassThreshold = 1;
+
+	let pwInput: Input;
+	let pwStrength: HTMLDivElement|undefined = $state();
 	let showPassword = $state(false);
 	let error = $state("");
+
+	async function checkPwnd(e?: Event)
+	{
+		if (!value) return;
+		let entropy = zxcvbn(value);
+		if (checkPass === true && entropy.score <= badPassThreshold) {
+			badPass = true;
+			error = `Your password is not secure enough. Here is a few recommendations for a secure password:<br/>`;
+		}
+	}
 
 	function togglePasswordVisibility(e: Event) {
 		e.preventDefault();
@@ -31,9 +59,14 @@
 	<Input
 		type={showPassword ? "text" : "password"}
 		bind:value
+		bind:this={pwInput}
+		onchange={checkPwnd}
 		{placeholder}
 		{disabled}
-		class={error ? "border-red-500" : ""}
+		{required}
+		id="password"
+		name={name}
+		class={error ? css + " border-red-500" : css}
 	/>
 	<Button
 		variant="ghost"
@@ -48,7 +81,7 @@
 			<Eye class="h-4 w-4" />
 		{/if}
 	</Button>
+	{#if error}
+		<div bind:this={pwStrength}><p class="text-sm text-red-500 mt-1">{@html error}</p></div>
+	{/if}
 </div>
-{#if error}
-	<p class="text-sm text-red-500 mt-1">{error}</p>
-{/if}

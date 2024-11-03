@@ -22,7 +22,7 @@
     async function processForm(e: Event)
     {
         e.preventDefault();
-        e.stopPropagation();
+        // e.stopPropagation();
 
         let logindata = new FormData();
         logindata.append('username', $formData.username);
@@ -35,12 +35,12 @@
             });
             const result = await fetch(req);
         } catch (error) {
-
+            console.error(error)
         }
     }
 </script>
 
-<form id="loginForm">
+<form id="loginForm" method="POST" action="?/login">
     <Form.Field {form} name="username">
     <Form.Control let:attrs>
     <Form.Label>Username</Form.Label>
@@ -52,6 +52,5 @@
     <Form.FieldErrors />
     </Form.Field>
     <Form.Button
-        on:click={processForm}
     >Login</Form.Button>
 </form>

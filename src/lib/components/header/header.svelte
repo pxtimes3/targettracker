@@ -18,9 +18,14 @@
 	let isLoggedIn: boolean = $state(false);
 	let password = $state("");
 
-	if (data.user && data.user.id) {
-		isLoggedIn = true;
-	}
+	$effect(() => {
+		if (data.user && data.user.id) {
+			isLoggedIn = true;
+		} else {
+			isLoggedIn = false;
+		}
+	})
+
 
 </script>
 
@@ -109,7 +114,7 @@
 						variant="ghost"
 						size="icon"
 						class="rounded"
-						href="/login"
+						href="/auth"
 					>
 						<KeySquare class="h-5 w-5" />
 						<span class="sr-only">Login</span>
