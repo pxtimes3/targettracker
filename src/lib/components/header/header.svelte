@@ -99,8 +99,10 @@
 						<DropdownMenu.Content align="end">
 							<DropdownMenu.Label>Your Account</DropdownMenu.Label>
 							<DropdownMenu.Separator />
-							<DropdownMenu.Item>Settings</DropdownMenu.Item>
-							<DropdownMenu.Item>Support</DropdownMenu.Item>
+							<DropdownMenu.Item href="/dashboard">Dashboard</DropdownMenu.Item>
+							<DropdownMenu.Item href="/dashboard/settings">Settings</DropdownMenu.Item>
+							<DropdownMenu.Item href="/dashboard/invite">Invite friends</DropdownMenu.Item>
+							<DropdownMenu.Item href="/faq">FAQ / Support</DropdownMenu.Item>
 							<DropdownMenu.Separator />
 							<DropdownMenu.Item>
 								<form method="post" action="/?/logout" use:enhance>
