@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, pgEnum, pgPolicy, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgEnum, pgPolicy, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const rolesEnum = pgEnum("roles", ["user", "vip", "admin"]);
 
@@ -38,6 +38,7 @@ export const faq = pgTable("faq", {
 	id: uuid("id").defaultRandom(),
 	question: text("question").notNull(),
 	answer: text("answer").notNull(),
+	order: integer("order").default(0),
 	created: timestamp("created").default(sql`now()`),
 	updated: timestamp("updated").default(sql`now()`).$onUpdate(() => new Date()),
 }, (t) => [
