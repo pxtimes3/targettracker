@@ -1,6 +1,4 @@
 <script lang="ts">
-   import { mode as currentMode } from "mode-watcher";
-
    let {
       width = '36',
       height = '36',
@@ -8,12 +6,11 @@
       dark = '#ffffff'
    } = $props();
 
-   let mode = $state(currentMode);
    let color: string = $state(light);
 
    $effect(() => {
       // byt färg vid $modechange
-		$mode === 'light' ? color = light : color = dark;
+		// $mode === 'light' ? color = light : color = dark;
 	});
 </script>
 

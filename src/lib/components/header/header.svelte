@@ -1,15 +1,9 @@
 <script lang="ts">
-    import { enhance } from '$app/forms';
-    import CircleUser from "lucide-svelte/icons/circle-user";
     import KeySquare from "lucide-svelte/icons/key-square";
     import Menu from "lucide-svelte/icons/menu";
 
 	import type { PageServerData } from "../../../routes/$types";
 	import Logo from "../logo/logo.svelte";
-	import Button from "../ui/button/button.svelte";
-	import * as DropdownMenu from "../ui/dropdown-menu/index.ts";
-	import Separator from "../ui/separator/separator.svelte";
-	import * as Sheet from "../ui/sheet/index.ts";
 	import Lightswitch from "./Lightswitch.svelte";
 	import MenuLinks from "./MenuLinks.svelte";
 
@@ -39,19 +33,15 @@
 			<span class="hidden md:block w-[20ch]">Target Tracker</span>
 		</a>
 		</nav>
-		<Sheet.Root>
-		<Sheet.Trigger asChild let:builder>
-			<Button
-			variant="outline"
-			size="icon"
-			class="shrink-0 md:hidden"
-			builders={[builder]}
+		<div>
+			<button
+				class="shrink-0 md:hidden"
 			>
 			<Menu class="h-5 w-5" />
 			<span class="sr-only">Toggle navigation menu</span>
-			</Button>
-		</Sheet.Trigger>
-		<Sheet.Content side="left">
+			</button>
+		</div>
+		<div>
 			<nav class="grid gap-6 text-lg font-medium">
 				<a href="##" class="flex items-center gap-2 text-lg font-semibold">
 					<Logo />
@@ -63,8 +53,7 @@
 				/>
 
 			</nav>
-		</Sheet.Content>
-		</Sheet.Root>
+		</div>
 		<div class="flex w-full items-center gap-4 md:ml-auto md:gap-4 lg:gap-6">
 			<div class="ml-auto flex">
 				<div class="hidden md:flex gap-6 items-center">
@@ -72,18 +61,9 @@
 						isLoggedIn={data.user ?? false}
 					/>
 				</div>
-				<Separator
-					orientation="vertical"
-					class="my-2 ml-6 mr-2"
-					decorative={true}
-				/>
 				<Lightswitch />
-				<Separator
-					orientation="vertical"
-					class="my-2 mx-2"
-					decorative={true}
-				/>
 				{#if isLoggedIn}
+				<!--
 					<DropdownMenu.Root>
 						<DropdownMenu.Trigger asChild let:builder>
 							<Button
@@ -111,16 +91,15 @@
 							</DropdownMenu.Item>
 						</DropdownMenu.Content>
 					</DropdownMenu.Root>
+				-->
+					USER
 				{:else}
-					<Button
-						variant="ghost"
-						size="icon"
+					<button
 						class="rounded"
-						href="/auth"
 					>
 						<KeySquare class="h-5 w-5" />
 						<span class="sr-only">Login</span>
-					</Button>
+					</button>
 				{/if}
 			</div>
 		</div>
