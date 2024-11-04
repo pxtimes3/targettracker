@@ -18,6 +18,8 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
+		"@skeletonlabs/skeleton": "3.0.0-next.5",
+		"@skeletonlabs/skeleton-svelte": "1.0.0-next.11",
 		"@sveltejs/adapter-auto": "^3.3.1",
 		"@sveltejs/kit": "^2.7.3",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
@@ -27,6 +29,7 @@
 		"@tailwindcss/typography": "^0.5.15",
 		"@types/eslint": "^9.6.1",
 		"@types/luxon": "^3.4.2",
+		"@types/node": "^22.8.7",
 		"autoprefixer": "^10.4.20",
 		"bits-ui": "^0.21.16",
 		"clsx": "^2.1.1",
@@ -71,6 +74,7 @@
 		"mode-watcher": "^0.4.1",
 		"postgres": "^3.4.5",
 		"svelte-captcha-enhance": "^1.2.1",
+		"svelte-sonner": "^0.3.28",
 		"ts-luxon": "5.0.7-beta.0"
 	}
 }

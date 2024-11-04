@@ -49,15 +49,3 @@
 	--ring: 178.6 84.3% 10%;
 	--radius: 0.3rem;
   }
-
-
-
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
