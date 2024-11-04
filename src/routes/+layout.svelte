@@ -8,8 +8,8 @@
 <Header
 	data={data}
 />
-<main class="px-8 pt-4">
-	<div class="container grid h-full">
+<main class="container px-8 pt-4 grid grid-flow-col grid-cols-1 justify-center justify-self-center">
+	<div class="container grid h-full w-full">
 
 	{@render children?.()}
 	</div>

@@ -1,9 +1,7 @@
-import type { Config } from "tailwindcss";
-import { fontFamily } from "tailwindcss/defaultTheme";
-import { join } from 'path';
 import { skeleton } from '@skeletonlabs/skeleton/plugin';
-import * as themes from '@skeletonlabs/skeleton/themes';
-import ducks from "./ducks.theme";
+import forms from '@tailwindcss/forms';
+import { join } from 'path';
+import ducks from './ducks.theme';
 
 
 /** @type {import('tailwindcss').Config} \*/
@@ -13,12 +11,17 @@ export default {
         join(require.resolve('@skeletonlabs/skeleton-svelte'), '../**/*.{html,js,svelte,ts}')
     ],
     theme: {
-        extend: {},
+        extend: {
+            gridTemplateRows: {
+                'layout' : 'auto min-content auto',
+            }
+        },
     },
     plugins: [
+        forms,
         skeleton({
             // NOTE: each theme included will be added to your CSS bundle
-            themes: [ themes.catppuccin, themes.cerberus, themes.rose, ducks ]
+            themes: [ ducks ]
         })
     ]
 }

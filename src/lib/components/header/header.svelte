@@ -23,10 +23,10 @@
 
 </script>
 
-<header class="bg-background/90 sticky top-0 flex h-[4.5rem] items-center gap-4 mt-2 px-8 md:px-8 border-b border-border/30">
+<header class="bg-surface-900/85 sticky top-0 flex h-[4.5rem] backdrop-blur-xl items-center gap-4 pt-2 px-8 md:px-8 border-b-[1px] border-b-surface-50/20 justify-center">
 	<div class="container flex max-w-screen-2x1 items-center">
 		<nav
-		class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
+			class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
 		>
 		<a href="/" class="flex items-center gap-2 text-lg font-semibold md:text-base">
 			<Logo />
@@ -41,7 +41,7 @@
 			<span class="sr-only">Toggle navigation menu</span>
 			</button>
 		</div>
-		<div>
+		<div class="md:hidden">
 			<nav class="grid gap-6 text-lg font-medium">
 				<a href="##" class="flex items-center gap-2 text-lg font-semibold">
 					<Logo />
