@@ -1,14 +1,9 @@
-import { extname } from 'path';
-import { superValidate } from "sveltekit-superforms";
-import { zod } from "sveltekit-superforms/adapters";
+import type { PageServerLoad } from './$types';
 import { v4 as uuidv4 } from 'uuid';
-import type { PageServerLoad } from '../../../.svelte-kit/types/src/routes/target/$types';
-import { targetUploadFormSchema } from "./targetuploadformschema";
+import { extname } from 'path';
 
 export const load: PageServerLoad = async () => {
-  return {
-    form: await superValidate(zod(targetUploadFormSchema)),
-  };
+
 };
 
 export const actions = {

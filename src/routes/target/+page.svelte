@@ -1,37 +1,26 @@
 <script lang="ts">
-	import { page } from "$app/stores";
-	import * as Form from "$lib/components/ui/form/index.js";
-	import Input from "@/components/ui/input/input.svelte";
+	import { enhance } from "$app/forms";
 	import { ImageUp } from "lucide-svelte";
-	import { Toaster, toast } from 'svelte-sonner';
-	import {
-		superForm,
-		type Infer,
-		type SuperValidated,
-	} from "sveltekit-superforms";
-	import { zodClient } from "sveltekit-superforms/adapters";
-	import { formSchema, type TargetInformationFormSchema } from "./targetuploadformschema";
-
-    let {
-        form: data = $page.data.select
-    }: { form: SuperValidated<Infer<TargetInformationFormSchema>> } = $props();
-
-    const form = superForm(data, {
-        validators: zodClient(formSchema),
-        onUpdated: ({ form: f }) => {
-            if (f.valid) {
-                toast.success(`You submitted ${JSON.stringify(f.data, null, 2)}`);
-            } else {
-                toast.error("Please fix the errors in the form.");
-            }
-        }
-    });
+	import { Toaster } from 'svelte-sonner';
 
     let targetUploadForm: HTMLFormElement|undefined = $state();
     let targetType: string|undefined = $state()
     let targetTypeSelect: any|undefined = $state();
     let files: FileList|undefined = $state();
     let showModal = $state(false);
+    let rangeUnitSelector: HTMLSelectElement|undefined = $state();
+
+    function targetTypeChangeHandler(e: Event)
+    {
+        const target = e.target as HTMLSelectElement;
+        if (!target) return;
+        if (!rangeUnitSelector) return;
+
+        // rangeunitselector switch
+        const targetRangeUnit = target.value.match(/(\w)$/i)?.[0];
+        targetRangeUnit === 'm' ? rangeUnitSelector.selectedIndex = 0 : rangeUnitSelector.selectedIndex = 1;
+
+    }
 
     $effect(() => {
         console.log(targetType)
@@ -57,8 +46,6 @@
             });
         }
     });
-
-    const { form: formData, enhance } = form;
 </script>
 <Toaster />
 <div class="flex flex-col my-auto gap-4 items-end place-content-center h-fit max-h-fit w-fit">
@@ -67,49 +54,43 @@
         method="POST"
         action="?/targetupload"
         enctype="multipart/form-data"
-        class="flex flex-row my-auto gap-4 items-start place-content-start h-fit max-h-fit"
         use:enhance
     >
+    <!--class="flex flex-row my-auto gap-4 items-start place-content-start h-fit max-h-fit"-->
         <div>
             <h4>Target information</h4>
             <div>
-                <Form.Field
-                    {form}
-                    name="targetname"
-                >
-                    <Form.Control>
-                        {#snippet children({ props })}
-                            <Input {...props} bind:value={$formData.targetname} placeholder="Target name:" />
-                        {/snippet}
-                    </Form.Control>
-                </Form.Field>
+                <label class="label">
+                    <input
+                        type="text"
+                        id="targetname"
+                        name="targetname"
+                        placeholder="Target name"
+                        required
+                        pattern="^(?:^[.,@0-9_\- a-z A-ZÅ-ö]*)$"
+                        class="input"
+                    />
+                </label>
             </div>
-            <!--
-            <div class="grid">
-                <Form.Field
-                    {form}
-                    name="targettype"
-                >
-                    <Form.Control>
-                        {#snippet children({ props })}
-                            <Select.Root bind:this={targetTypeSelect}>
-                                <Select.Trigger {...props} class="w-full">Target type:</Select.Trigger>
-                                <Select.Content>
-                                    <Select.Item value="issf_airpistol_10m">ISSF Air Pistol 10m</Select.Item>
-                                    <Select.Item value="issf_rapid_fire_airpistol_10m">ISSF Rapid Fire Air Pistol 10m</Select.Item>
-                                    <Select.Item value="ssf_airrifle_5dot_10m">SSF Luftgevär 5 dot 10m</Select.Item>
-                                    <Select.Item value="issf_pistol_2025m_rifle_100m">ISSF Pistol 20/25m Rifle 100m</Select.Item>
-                                    <Select.Item value="issf_rifle_50m">ISSF Rifle 50m</Select.Item>
-                                    <Select.Item value="issf_rifle_300m">ISSF Rifle 300m</Select.Item>
-                                    <Select.Item value="issf_rifle_300m_reduced">ISSF Rifle 300m, reduced</Select.Item>
-                                    <Select.Item value="other">Other</Select.Item>
-                                </Select.Content>
-                            </Select.Root>
-                        {/snippet}
-                    </Form.Control>
-                </Form.Field>
+            <div>
+                <select id="targettype" name="targettype" required onchange={targetTypeChangeHandler}>
+                    <option value="issf_airpistol_10m">ISSF Air Pistol 10m</option>
+                    <option value="issf_rapid_fire_airpistol_10m">ISSF Rapid Fire Air Pistol 10m</option>
+                    <option value="ssf_airrifle_5dot_10m">SSF Luftgevär 5 dot 10m</option>
+                    <option value="issf_pistol_2025m_rifle_100m">ISSF Pistol 20/25m Rifle 100m</option>
+                    <option value="issf_rifle_50m">ISSF Rifle 50m</option>
+                    <option value="issf_rifle_300m">ISSF Rifle 300m</option>
+                    <option value="issf_rifle_300m_reduced_100m">ISSF Rifle 300m, reduced</option>
+                    <option value="other">Other</option>
+                </select>
             </div>
-            -->
+            <div>
+                <input type="text" id="range" name="range" placeholder="100" required pattern="^(?:^[0-9,.]+)$" max="5" />
+                <select id="rangeunit" name="rangeunit" bind:this={rangeUnitSelector} required>
+                    <option value="metric">Meters</option>
+                    <option value="imperial">Yards</option>
+                </select>
+            </div>
         </div>
         <label
             for="imageupload"

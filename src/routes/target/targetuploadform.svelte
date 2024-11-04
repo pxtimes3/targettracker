@@ -9,7 +9,7 @@
   import { zodClient } from "sveltekit-superforms/adapters";
   import { targetUploadFormSchema, type TargetUploadFormSchema } from "./targetuploadformschema";
 
-  export let data: SuperValidated<Infer<TargetUploadFormSchema>>;
+  let data: SuperValidated<Infer<TargetUploadFormSchema>> = $props();
 
   const form = superForm(data, {
     validators: zodClient(targetUploadFormSchema),
@@ -18,11 +18,11 @@
   const { form: formData, enhance } = form;
 </script>
 
-<form method="POST" use:enhance>
+<form method="POST" use:enhance action="?/upload">
   <Form.Field {form} name="targetname">
     <Form.Control>
       {#snippet children({ props })}
-        <Form.Label>Username</Form.Label>
+        <Form.Label>TargetName</Form.Label>
         <Input {...props} bind:value={$formData.targetname} />
       {/snippet}
     </Form.Control>
