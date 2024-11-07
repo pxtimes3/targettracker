@@ -1,8 +1,6 @@
 <!-- svelte-ignore event_directive_deprecated -->
 <!-- password-input.svelte -->
 <script lang="ts">
-	import { Button } from "$lib/components/ui/button";
-	import { Input } from "$lib/components/ui/input";
 	import { zxcvbn } from '@zxcvbn-ts/core';
 // import { matcherPwnedFactory } from '@zxcvbn-ts/matcher-pwned';
 	import { Eye, EyeOff } from "lucide-svelte";
@@ -31,7 +29,7 @@
 
 	const badPassThreshold = 1;
 
-	let pwInput: Input;
+	let pwInput: HTMLInputElement;
 	let pwStrength: HTMLDivElement|undefined = $state();
 	let showPassword = $state(false);
 	let error = $state("");
@@ -55,8 +53,8 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="relative" on:click|stopPropagation>
-	<Input
+<div class="relative" onclick={(e) => e.stopPropagation()}>
+	<input
 		type={showPassword ? "text" : "password"}
 		bind:value
 		bind:this={pwInput}
@@ -68,11 +66,9 @@
 		name={name}
 		class={error ? css + " border-red-500" : css}
 	/>
-	<Button
-		variant="ghost"
-		size="icon"
+	<button
 		class="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-		on:click={togglePasswordVisibility}
+		onclick={togglePasswordVisibility}
 		type="button"
 	>
 		{#if showPassword}
@@ -80,7 +76,7 @@
 		{:else}
 			<Eye class="h-4 w-4" />
 		{/if}
-	</Button>
+	</button>
 	{#if error}
 		<div bind:this={pwStrength}><p class="text-sm text-red-500 mt-1">{@html error}</p></div>
 	{/if}

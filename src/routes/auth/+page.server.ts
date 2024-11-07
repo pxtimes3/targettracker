@@ -6,18 +6,12 @@ import { verify } from '@node-rs/argon2';
 import { generateRandomString } from '@oslojs/crypto/random';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
-import { superValidate } from "sveltekit-superforms";
-import { zod } from "sveltekit-superforms/adapters";
 import type { Actions, PageServerLoad } from './$types';
-import { loginForm } from "./schema";
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
 		return redirect(302, '/dashboard');
 	}
-	return {
-    	form: await superValidate(zod(loginForm)),
-  	};
 };
 
 export const actions: Actions = {
