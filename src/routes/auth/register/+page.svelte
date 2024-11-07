@@ -2,9 +2,7 @@
     import { enhance } from "$app/forms";
     import { page } from "$app/stores";
     import PasswordInput from "@/components/password-input/password-input.svelte";
-    import Button from "@/components/ui/button/button.svelte";
-    import Input from "@/components/ui/input/input.svelte";
-    import Label from "@/components/ui/label/label.svelte";
+
     import type { SubmitFunction } from "@sveltejs/kit";
     import { Turnstile } from 'svelte-turnstile';
     import type { PageData } from "../$types";
@@ -142,8 +140,8 @@
         {/if}
     </div>
     <div>
-        <Label for="username">Username:</Label>
-        <Input
+        <label for="username">Username:</label>
+        <input
             type="text"
             id="username"
             name="username"
@@ -153,8 +151,8 @@
         />
     </div>
     <div>
-        <Label for="email">E-mail:</Label>
-        <Input
+        <label for="email">E-mail:</label>
+        <input
             type="email"
             id="email"
             name="email"
@@ -164,7 +162,7 @@
         />
     </div>
     <div>
-        <Label for="passwordInput">Password:</Label>
+        <label for="passwordInput">Password:</label>
         <PasswordInput
             id="passwordInput"
             required
@@ -173,8 +171,8 @@
         />
     </div>
     <div>
-        <Label for="invitecode">Invite code:</Label>
-        <Input
+        <label for="invitecode">Invite code:</label>
+        <input
             type="text"
             id="invitecode"
             bind:value={inviteCodeValue}
@@ -194,13 +192,13 @@
             appearance="interaction-only"
             class="align-middle"
         />
-        <Button
+        <button
             type="submit"
             disabled={registerDisabled}
             class="w-fit place-self-center"
         >
             Submit
-        </Button>
+        </button>
     </div>
 </div>
 </form>

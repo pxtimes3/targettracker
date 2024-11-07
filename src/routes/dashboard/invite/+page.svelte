@@ -1,8 +1,6 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
     import { invalidate } from "$app/navigation";
-    import Button from "@/components/ui/button/button.svelte";
-    import Input from "@/components/ui/input/input.svelte";
     import { DateTime } from "luxon";
     import { type PageData } from "../$types";
     import type { Invites } from '../../$types';
@@ -47,15 +45,16 @@
                 <option value={invite.code}>{invite.code}</option>
             {/each}
         </select>
-        <Input
+        <input
+            type="text"
             name="invitee-email"
             placeholder="friendly.duck@targettracker.se"
             value="friendly.duck@targettracker.se"
         />
-        <Button
+        <button
             type="submit"
             class="w-fit"
-        >Send it!</Button>
+        >Send it!</button>
     {:else}
         <div class="col-span-3 mb-4">
             <h3 class="text-xl font-semibold">Available Invites</h3>
