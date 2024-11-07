@@ -35,6 +35,9 @@ importers:
       drizzle-orm:
         specifier: ^0.36.0
         version: 0.36.0(@libsql/client-wasm@0.14.0)(postgres@3.4.5)
+      exifreader:
+        specifier: ^4.25.0
+        version: 4.25.0
       lucide-svelte:
         specifier: ^0.454.0
         version: 0.454.0(svelte@5.1.6)
@@ -1054,6 +1057,10 @@ packages:
   '@vitest/utils@2.1.4':
     resolution: {integrity: sha512-MXDnZn0Awl2S86PSNIim5PWXgIAx8CIkzu35mBdSApUip6RFOGXBCf3YFyeEu8n1IHk4bWD46DeYFu9mQlFIRg==}
 
+  '@xmldom/xmldom@0.9.5':
+    resolution: {integrity: sha512-6g1EwSs8cr8JhP1iBxzyVAWM6BIDvx9Y3FZRIQiMDzgG43Pxi8YkWOZ0nQj2NHgNzgXDZbJewFx/n+YAvMZrfg==}
+    engines: {node: '>=14.6'}
+
   '@zag-js/accordion@0.73.1':
     resolution: {integrity: sha512-jxZImKoVt4j1YkTdFITNYlwSDBU9CdY5RvcQiiV+E0BPzMGU5DJBn0d+R8Hov4bgaZNyQcCzLnl1yidAhKG38A==}
 
@@ -1590,6 +1597,9 @@ packages:
   esutils@2.0.3:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
+
+  exifreader@4.25.0:
+    resolution: {integrity: sha512-lPyPXWTUuYgoKdKf3rw2EDoE9Zl7xHoy/ehPNeQ4gFVNLzfLyNMP4oEI+sP0/Czp5r/2i7cFhqg5MHsl4FYtyw==}
 
   expect-type@1.1.0:
     resolution: {integrity: sha512-bFi65yM+xZgk+u/KRIpekdSYkTB5W1pEf0Lt8Q8Msh7b+eQ7LXVtIB1Bkm4fvclDEL1b2CZkMhv2mOeF8tMdkA==}
@@ -3210,6 +3220,9 @@ snapshots:
       loupe: 3.1.2
       tinyrainbow: 1.2.0
 
+  '@xmldom/xmldom@0.9.5':
+    optional: true
+
   '@zag-js/accordion@0.73.1':
     dependencies:
       '@zag-js/anatomy': 0.73.1
@@ -3863,6 +3876,10 @@ snapshots:
       '@types/estree': 1.0.6
 
   esutils@2.0.3: {}
+
+  exifreader@4.25.0:
+    optionalDependencies:
+      '@xmldom/xmldom': 0.9.5
 
   expect-type@1.1.0: {}
 
