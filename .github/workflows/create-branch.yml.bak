@@ -1,0 +1,21 @@
+name: Create branch on issue
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  create_branch:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issue_number="${{ github.event.issue.number }}"
+          branch_name="issue-${issue_number}"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git checkout -b "$branch_name"
+          git push origin "$branch_name"
