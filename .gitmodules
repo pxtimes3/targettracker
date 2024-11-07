@@ -1,0 +1,3 @@
+[submodule "targettracker.analysis"]
+	path = targettracker.analysis
+	url = git@github.com:pxtimes3/targettracker.analysis.git
