@@ -1,9 +1,9 @@
 <script lang="ts">
     // TODO: Turnstile
+	import PhotoCapture from '@/components/target/photocapture/PhotoCapture.svelte';
 	import { FileUpload, ProgressRing } from '@skeletonlabs/skeleton-svelte';
 	import { CircleCheck, CircleOff } from 'lucide-svelte';
 	import IconDropzone from 'lucide-svelte/icons/image-plus';
-	import { DateTime } from 'luxon';
 
     let card: HTMLDivElement;
     let cardBlur: boolean = $state(false)
@@ -23,11 +23,34 @@
     let uploadModal: HTMLDivElement|undefined = $state();
     let uploadModalText: HTMLParagraphElement|undefined = $state();
 
-    const dateTimeString = '2024:07:31 18:39:14';
-    const date = `${dateTimeString.substring(0,10).replaceAll(/:/gi, '-')}T${dateTimeString.substring(11, dateTimeString.length)}+02:00`;
-    const time = DateTime.fromISO(date);
-    console.log(time.hour, time.toFormat('yyyy-MM-dd'))
+    let photoUploadStatus: string|null = $state(null);
 
+    async function handlePhoto(event) {
+		const { photoData } = event.detail;
+
+		try {
+			photoUploadStatus = 'uploading';
+
+			const response = await fetch('/api/upload', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ photoData })
+			});
+
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error);
+			}
+
+			photoUploadStatus = 'success';
+		} catch (error) {
+			console.error('Upload failed:', error);
+			photoUploadStatus = 'error';
+		}
+	}
 
     function targetTypeChangeHandler(e: Event)
     {
@@ -132,6 +155,7 @@
             formSubmitDisabled = true;
         }
     }
+
 
     $effect(() => {
         validateForm()
@@ -276,4 +300,17 @@
             >Upload!</button>
         </div>
     </form>
+    <PhotoCapture on:photo={handlePhoto} />
+
+	{#if uploadStatus}
+		<div class="status" class:error={photoUploadStatus === 'error'}>
+			{#if photoUploadStatus === 'uploading'}
+				Uploading...
+			{:else if photoUploadStatus === 'success'}
+				Upload successful!
+			{:else if photoUploadStatus === 'error'}
+				Upload failed. Please try again.
+			{/if}
+		</div>
+	{/if}
 </div>
