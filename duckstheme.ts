@@ -1,7 +1,7 @@
 import type { Theme } from '@skeletonlabs/skeleton/themes';
 
-const ducks = {
-  "name": "ducks",
+const duckstheme = {
+  "name": "duckstheme",
   "properties": {
     "--type-scale-factor": "1.067",
     "--type-scale-1": "calc(0.75rem * var(--type-scale-factor))",
@@ -19,7 +19,7 @@ const ducks = {
     "--type-scale-13": "calc(8rem * var(--type-scale-factor))",
     "--base-font-color": "var(--color-surface-950)",
     "--base-font-color-dark": "var(--color-surface-50)",
-    "--base-font-family": "system-ui, sans-serif",
+    "--base-font-family": "system-ui",
     "--base-font-size": "inherit",
     "--base-line-height": "inherit",
     "--base-font-weight": "normal",
@@ -45,7 +45,7 @@ const ducks = {
     "--anchor-text-decoration-focus": "none",
     "--space-scale-factor": "1",
     "--radii-default": "6px",
-    "--radii-container": "12px",
+    "--radii-container": "6px",
     "--border-width-default": "1px",
     "--divide-width-default": "1px",
     "--outline-width-default": "1px",
@@ -226,4 +226,4 @@ const ducks = {
   }
 } satisfies Theme;
 
-export default ducks;
+export default duckstheme;
