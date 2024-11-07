@@ -61,6 +61,7 @@ async function getWeatherData(): Promise<void>
     if (!store.weather.timestamp) return;
 
     // EXIF sparar datum som 2001:03:16 14:15:16 -.-
+    // exif.OffsetTimeOriginal tillagd när vi hämtar tags i targetupload så strängen är 2001:03:16 14:15:16+02:00 när vi får den här.
     const dateTime = DateTime.fromISO(`${store.weather.timestamp.substring(0,10).replaceAll(/:/gi, '-')}T${store.weather.timestamp.substring(11, store.weather.timestamp.length)}`);
     const timezoneText = dateTime.zoneName;
     const hour = dateTime.hour;
