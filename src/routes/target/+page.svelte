@@ -1,15 +1,33 @@
 <script lang="ts">
-	import { enhance } from "$app/forms";
-	import { ImageUp } from "lucide-svelte";
-	import { Toaster } from 'svelte-sonner';
+    // TODO: Turnstile
+	import { FileUpload, ProgressRing } from '@skeletonlabs/skeleton-svelte';
+	import { CircleCheck, CircleOff } from 'lucide-svelte';
+	import IconDropzone from 'lucide-svelte/icons/image-plus';
+	import { DateTime } from 'luxon';
 
+    let card: HTMLDivElement;
+    let cardBlur: boolean = $state(false)
     let targetUploadForm: HTMLFormElement|undefined = $state();
+    let uploadStatus: "pending"|"success"|"failed"|undefined = $state();
+    let targetImageFile: File|undefined = $state();
     let targetType: string|undefined = $state()
     let targetTypeSelect: any|undefined = $state();
-    let files: FileList|undefined = $state();
     let showModal = $state(false);
     let rangeUnitSelector: HTMLSelectElement|undefined = $state();
+    let rangeInputGroup: HTMLDivElement;
     let rangeInput: HTMLInputElement;
+    let rangeInputValue: string|undefined = $state();
+    let targetNameInput: HTMLInputElement;
+    let targetNameInputValue: string|undefined = $state();
+    let formSubmitDisabled: boolean = $state(true);
+    let uploadModal: HTMLDivElement|undefined = $state();
+    let uploadModalText: HTMLParagraphElement|undefined = $state();
+
+    const dateTimeString = '2024:07:31 18:39:14';
+    const date = `${dateTimeString.substring(0,10).replaceAll(/:/gi, '-')}T${dateTimeString.substring(11, dateTimeString.length)}+02:00`;
+    const time = DateTime.fromISO(date);
+    console.log(time.hour, time.toFormat('yyyy-MM-dd'))
+
 
     function targetTypeChangeHandler(e: Event)
     {
@@ -24,60 +42,175 @@
         let range = target.value.match(/(\d+)(?:\w)$/i)?.[1];
         if (range) {
             rangeInput.value = range;
+            rangeInputValue = range;
+        }
+    }
+
+    async function handleSubmit(e: Event)
+    {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // console.log('handleSubmit called');
+
+        if (!targetImageFile) return;
+        if (!targetNameInputValue) return;
+        if (!rangeInputValue) return;
+
+        showModal = true;
+        uploadStatus = "pending"
+
+        let result;
+
+        const formData = new FormData();
+        formData.append('targetImage', targetImageFile);
+        formData.append('targetName', targetNameInputValue?.toString());
+        formData.append('targetType', targetTypeSelect.value.toString());
+        formData.append('targetRange', rangeInputValue?.toString())
+        formData.append('targetRangeUnit', rangeUnitSelector?.value.toString() || 'm');
+
+        const request = await fetch('?/targetupload', {
+            method: 'POST',
+            body: formData
+        })
+
+        if (request) {
+            result = await request.json();
+
+            if (result.status === 200) {
+                uploadStatus = "success";
+                targetUploadForm?.reset();
+            } else if (result.status === 400) {
+                uploadStatus = "failed";
+                // TODO: Logging
+                // console.error('Error:', JSON.parse(result.data)[0]);
+                if (!uploadModalText) return;
+                uploadModalText.innerText = `Upload failed! With the error: ${JSON.parse(result.data)[0]}.`;
+            }
+        }
+    }
+
+    async function closeModal()
+    {
+        if (uploadStatus === "failed") {
+            showModal = false;
+            targetUploadForm?.classList.remove('blur-md');
+        }
+    }
+
+    async function validateFile(files: any): Promise<void>
+    {
+        if (files.acceptedFiles && files.acceptedFiles[0].size  > 0) {
+            targetImageFile = files.acceptedFiles[0];
+        }
+    }
+
+    async function validateForm()
+    {
+        if (!targetNameInput.validity.valid) {
+            targetNameInput.classList.add('border-error-500')
+        } else {
+             targetNameInput.classList.remove('border-error-500');
+        }
+
+        if (!rangeInput.validity.valid && rangeInputValue && rangeInputValue?.length > 0) {
+            rangeInputGroup.classList.add('border-error-500');
+        } else {
+            rangeInputGroup.classList.remove('border-error-500');
+        }
+
+        if (
+            targetNameInput.validity.valid &&
+            rangeInput.validity.valid &&
+            targetTypeSelect.value.length > 0 &&
+            targetImageFile
+        ) {
+            // console.log(targetNameInputValue, rangeInputValue, targetTypeSelect.value, targetImageFile);
+            formSubmitDisabled = false;
+        } else {
+            // console.log(targetNameInputValue, rangeInputValue, targetTypeSelect.value, targetImageFile);
+            formSubmitDisabled = true;
         }
     }
 
     $effect(() => {
-        if (files && files.length > 0) {
-            // Create FormData manually
-            const formData = new FormData();
-            formData.append('file', files[0]);
-
-            // Submit via fetch
-            fetch('?/targetupload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(result => {
-                console.log('Success:', result);
-                showModal = true; // Show modal on success
-                files = undefined; // Reset file input
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Handle error
-            });
+        validateForm()
+        if (showModal) {
+            showModal ? targetUploadForm?.classList.add('blur-md') : targetUploadForm?.classList.remove('blur-md');
         }
     });
 </script>
-<Toaster />
-<form
-    bind:this={targetUploadForm}
-    method="POST"
-    action="?/targetupload"
-    enctype="multipart/form-data"
-    use:enhance
+
+<div
+    bind:this={card}
+    class="card grid justify-items-center place-items-center preset-filled-surface-100-900 border-[1px] border-surface-200-800 w-fit py-6 px-8"
 >
-<div class="grid grid-flow-row-dense grid-cols-2 grid-rows-[repeat(2,_fit)] gap-4 place-content-center">
-    <!--class="flex flex-row my-auto gap-4 items-start place-content-start h-fit max-h-fit"-->
+    {#if showModal}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <div
+            bind:this={uploadModal}
+            class="absolute grid justify-items-center place-items-center my-auto mx-auto z-10 stroke-tertiary-600-400"
+            onclick={closeModal}
+        >
+            {#if uploadStatus === "pending"}
+                <ProgressRing
+                    value={null}
+                    size="size-14"
+                    meterStroke="stroke-tertiary-600-400"
+                    trackStroke="stroke-tertiary-50-950"
+                />
+                <p bind:this={uploadModalText} class="mt-2">Uploading target ... </p>
+            {/if}
+            {#if uploadStatus === "success"}
+                <CircleCheck size="64" />
+                <p bind:this={uploadModalText} class="mt-2">Upload successful. Redirecting ... </p>
+            {/if}
+            {#if uploadStatus === "failed"}
+                <CircleOff size="64" />
+                <p bind:this={uploadModalText} class="mt-2">Upload failed! Contact <a href="/contact?subject=FileuploadError">support</a> if this problem persists.</p>
+            {/if}
+        </div>
+    {/if}
+    <form
+        bind:this={targetUploadForm}
+        method="POST"
+        action="?/targetupload"
+        enctype="multipart/form-data"
+        onsubmit={handleSubmit}
+        class="grid justify-center grid-flow-row-dense grid-cols-[1fr,_auto] grid-rows-[repeat(2,_fit)] gap-4 place-content-center"
+    >
         <h2 class="col-span-2 text-xl font-semibold">Target information</h2>
         <div class="grid-flow-row space-y-4">
             <div>
-                <label class="label">
+                <label class="label bg-surface-700 rounded">
                     <input
                         type="text"
+                        bind:this={targetNameInput}
+                        bind:value={targetNameInputValue}
+                        onkeydown={validateForm}
                         id="targetname"
                         name="targetname"
                         placeholder="Target name"
                         required
-                        pattern="^(?:^[.,@0-9_\- a-z A-ZÅ-ö]*)$"
+                        minlength="3"
+                        maxlength="96"
+                        pattern="^(?:^[.,@0-9_\- a-z A-ZÅ-ö]+)$"
                         class="input"
                     />
                 </label>
             </div>
-            <div>
-                <select id="targettype" name="targettype" required onchange={targetTypeChangeHandler} class="select p-2 px-12">
+            <div class="bg-surface-700">
+                <select
+                    id="targettype"
+                    name="targettype"
+                    required
+                    onchange={targetTypeChangeHandler}
+                    bind:value={targetType}
+                    bind:this={targetTypeSelect}
+                    class="select py-1.5 px-3 bg-surface-700 text-md"
+                >
+                    <option value={undefined} selected disabled>Target type:</option>
                     <option value="issf_airpistol_10m">ISSF Air Pistol 10m</option>
                     <option value="issf_rapid_fire_airpistol_10m">ISSF Rapid Fire Air Pistol 10m</option>
                     <option value="ssf_airrifle_5dot_10m">SSF Luftgevär 5 dot 10m</option>
@@ -85,44 +218,62 @@
                     <option value="issf_rifle_50m">ISSF Rifle 50m</option>
                     <option value="issf_rifle_300m">ISSF Rifle 300m</option>
                     <option value="issf_rifle_300m_reduced_100m">ISSF Rifle 300m, reduced</option>
-                    <option value="other" selected>Other</option>
+                    <option value="other">Other</option>
                 </select>
             </div>
-            <div class="input-group divide-surface-200-800 grid-cols-[1fr_minmax(auto,_12ch)] px-2 divide-x">
-                <input type="text" id="range" name="range" bind:this={rangeInput} placeholder="100" required pattern="^(?:^[0-9,.]+)$" max="5" />
-                <select id="rangeunit" name="rangeunit" bind:this={rangeUnitSelector} required class="select">
+            <div class="input-group border-[1px] divide-surface-200-800 grid-cols-[1fr_minmax(auto,_12ch)] pl-2 divide-x divide-solid bg-surface-700" bind:this={rangeInputGroup}>
+                <input
+                    type="text"
+                    id="range"
+                    name="range"
+                    bind:this={rangeInput}
+                    bind:value={rangeInputValue}
+                    placeholder="100"
+                    required
+                    pattern={'^(?:^[0-9,.]{0,4})$'}
+                    minlength="1"
+                    maxlength="5"
+                    class="input"
+                />
+                <select
+                    id="rangeunit"
+                    name="rangeunit"
+                    bind:this={rangeUnitSelector}
+                    required
+                    class="select pl-4 mr-[-2rem]"
+                >
                     <option value="metric">Meters</option>
                     <option value="imperial">Yards</option>
                 </select>
             </div>
         </div>
         <div>
-        <label
-            for="imageupload"
-            class="border rounded bg-surface-500 cursor-pointer border-slate-300 shadow-xl content-center grid grid-flow-row place-items-center w-64 h-[164px] min-h-[164px] max-h-[164px]"
-        >
-            <div class="mx-4 mb-4"><center><ImageUp size=36/></center></div>
-            <div class="mx-4 align-center"><center>Click, or drop files, here to upload your target.</center></div>
-        </label>
-
-        <input
-            bind:files
-            name="file"
-            accept="image/png, image/jpeg, image/heic"
-            type="file"
-            id="imageupload"
-            hidden
-        />
-        <p class="text-sm mt-2">JPG, PNG & HEIC allowed.</p>
+            <!--
+                TODO:   onFileChange={handleSubmit}
+                TODO:   onFileReject={console.error}
+                        subtext="JPG, PNG & HEIC allowed."
+            -->
+            <FileUpload
+            	name="targetImage"
+                accept="image/*"
+                allowDrop
+                maxFiles={1}
+                onFileChange={validateFile}
+                interfaceClasses="bg-surface-700 rounded w-full"
+            >
+                {#snippet iconInterface()}<IconDropzone class="size-8" />{/snippet}
+                <!--
+                    {#snippet iconFile()}<IconFile class="size-4" />{/snippet}
+                    {#snippet iconFileRemove()}<IconRemove class="size-4" />{/snippet}
+                -->
+            </FileUpload>
         </div>
+        <div id="turnstile"></div>
+        <div class="grid place-content-end">
+            <button
+                class="btn preset-filled-primary-500 mt-2"
+                disabled={formSubmitDisabled}
+            >Upload!</button>
+        </div>
+    </form>
 </div>
-</form>
-
-{#if showModal}
-    <div class="modal">
-        <div class="modal-content">
-            <h2>Upload Complete!</h2>
-            <button onclick={() => showModal = false}>Close</button>
-        </div>
-    </div>
-{/if}
