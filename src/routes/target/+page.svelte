@@ -300,6 +300,7 @@
             >Upload!</button>
         </div>
     </form>
+
     <PhotoCapture on:photo={handlePhoto} />
 
 	{#if uploadStatus}
