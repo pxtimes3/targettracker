@@ -8,8 +8,8 @@
 	let error = $state<string | null>(null);
 
 	// We still need refs for DOM elements
-	let videoElement: HTMLVideoElement;
-	let canvasElement: HTMLCanvasElement;
+	let videoElement = $state<HTMLVideoElement|undefined>();
+	let canvasElement = $state<HTMLCanvasElement|undefined>();
 
 	// Event dispatcher for component events
 	const dispatch = createEventDispatcher<{
@@ -18,6 +18,7 @@
 
 	async function startCamera() {
 		try {
+            if (!videoElement) throw new Error('HTML Video Element.');
 			stream = await navigator.mediaDevices.getUserMedia({
 				video: {
 					facingMode: 'environment', // Use back camera
@@ -29,7 +30,7 @@
 			error = null;
 		} catch (err) {
 			error = 'Error accessing camera: ' + (err instanceof Error ? err.message : String(err));
-			console.error('Error accessing camera:', err);
+			console.warn('Error accessing camera:', err);
 		}
 	}
 
@@ -47,7 +48,6 @@
 			canvasElement.width = videoElement.videoWidth;
 			canvasElement.height = videoElement.videoHeight;
 
-            context?.stroke(lol)
             context?.drawImage(videoElement, 0, 0);
 			photoData = canvasElement.toDataURL('image/jpeg');
 			dispatch('photo', { photoData: photoData });
@@ -63,6 +63,7 @@
 	});
 </script>
 
+{#if !error}
 <div class="camera-container">
 	{#if error}
 		<div class="error">
@@ -84,14 +85,14 @@
 
 	<div class="controls">
 		<button
-			on:click={capturePhoto}
+			onclick={capturePhoto}
 			disabled={!stream}
 		>
 			Take Photo
 		</button>
 
 		{#if photoData}
-			<button on:click={() => {
+			<button onclick={() => {
 				photoData = null;
 				startCamera();
 			}}>
@@ -104,11 +105,12 @@
     <div style="position: absolute; top: 50px; left:50px;z-index:50;">HELVETET<LucideSkull /></div>
 	{#if photoData}
         <div class="preview border-b-2 border-cyan-50 border-solid">
-			<img src={photoData} alt="Captured photo" style="position:relative; z-index: 0; display:none;"/>
+			<img src={photoData} alt="Capture" style="position:relative; z-index: 0; display:none;"/>
 		</div>
 	{/if}
 
 </div>
+{/if}
 
 <style>
 	.camera-container {
