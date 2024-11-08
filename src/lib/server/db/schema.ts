@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, pgEnum, pgPolicy, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgEnum, pgPolicy, pgRole, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
+export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true });
 
 export const rolesEnum = pgEnum("roles", ["user", "vip", "admin"]);
 
