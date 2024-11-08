@@ -1,12 +1,13 @@
 <script lang="ts">
     // TODO: Turnstile
 	import PhotoCapture from '@/components/target/photocapture/PhotoCapture.svelte';
+	import { cameraImageDataStore } from '@/stores/TargetImageStore';
 	import { FileUpload, ProgressRing } from '@skeletonlabs/skeleton-svelte';
 	import { CircleCheck, CircleOff } from 'lucide-svelte';
 	import IconDropzone from 'lucide-svelte/icons/image-plus';
+	import { onMount } from 'svelte';
 
-    let card: HTMLDivElement;
-    let cardBlur: boolean = $state(false)
+    let card: HTMLDivElement|undefined = $state();
     let targetUploadForm: HTMLFormElement|undefined = $state();
     let uploadStatus: "pending"|"success"|"failed"|undefined = $state();
     let targetImageFile: File|undefined = $state();
@@ -14,16 +15,17 @@
     let targetTypeSelect: any|undefined = $state();
     let showModal = $state(false);
     let rangeUnitSelector: HTMLSelectElement|undefined = $state();
-    let rangeInputGroup: HTMLDivElement;
-    let rangeInput: HTMLInputElement;
+    let rangeInputGroup: HTMLDivElement|undefined = $state();
+    let rangeInput: HTMLInputElement|undefined = $state();
     let rangeInputValue: string|undefined = $state();
-    let targetNameInput: HTMLInputElement;
+    let targetNameInput: HTMLInputElement|undefined = $state();
     let targetNameInputValue: string|undefined = $state();
     let formSubmitDisabled: boolean = $state(true);
     let uploadModal: HTMLDivElement|undefined = $state();
     let uploadModalText: HTMLParagraphElement|undefined = $state();
 
     let photoUploadStatus: string|null = $state(null);
+    let cameraAvailable: boolean = $state(false);
 
     async function handlePhoto(event) {
 		const { photoData } = event.detail;
@@ -130,19 +132,21 @@
 
     async function validateForm()
     {
-        if (!targetNameInput.validity.valid) {
+        if (targetNameInput && targetNameInputValue?.length && !targetNameInput.validity.valid) {
             targetNameInput.classList.add('border-error-500')
-        } else {
+        } else if(targetNameInput){
              targetNameInput.classList.remove('border-error-500');
         }
 
-        if (!rangeInput.validity.valid && rangeInputValue && rangeInputValue?.length > 0) {
+        if (rangeInput && rangeInputGroup && !rangeInput.validity.valid && rangeInputValue && rangeInputValue?.length > 0) {
             rangeInputGroup.classList.add('border-error-500');
-        } else {
+        } else if(rangeInputGroup){
             rangeInputGroup.classList.remove('border-error-500');
         }
 
         if (
+            targetNameInput &&
+            rangeInput &&
             targetNameInput.validity.valid &&
             rangeInput.validity.valid &&
             targetTypeSelect.value.length > 0 &&
@@ -156,6 +160,15 @@
         }
     }
 
+    async function hasCamera(): Promise<boolean> {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.some(device => device.kind === 'videoinput');
+        } catch (err) {
+            console.warn('Error checking for camera:', err);
+            return false;
+        }
+    }
 
     $effect(() => {
         validateForm()
@@ -163,11 +176,21 @@
             showModal ? targetUploadForm?.classList.add('blur-md') : targetUploadForm?.classList.remove('blur-md');
         }
     });
+
+    onMount(async () => {
+        cameraAvailable = await hasCamera();
+        if (cameraAvailable) {
+            // Show camera option
+        } else {
+            // Hide camera option or automatically show upload interface
+        }
+    });
 </script>
 
+{#if !$cameraImageDataStore}
 <div
     bind:this={card}
-    class="card grid justify-items-center place-items-center preset-filled-surface-100-900 border-[1px] border-surface-200-800 w-fit py-6 px-8"
+    class="card grid justify-items-center place-items-center border-surface-200-800 w-fit py-6 px-8"
 >
     {#if showModal}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -196,15 +219,26 @@
             {/if}
         </div>
     {/if}
+
     <form
         bind:this={targetUploadForm}
         method="POST"
         action="?/targetupload"
         enctype="multipart/form-data"
         onsubmit={handleSubmit}
-        class="grid justify-center grid-flow-row-dense grid-cols-[1fr,_auto] grid-rows-[repeat(2,_fit)] gap-4 place-content-center"
+        class="grid justify-center grid-flow-row-dense lg:grid-cols-[1fr,_auto] gap-4 place-content-center"
     >
-        <h2 class="col-span-2 text-xl font-semibold">Target information</h2>
+        <!-- {#if cameraAvailable} -->
+            <button
+                class="btn btn-lg h-20 preset-filled-primary-500 mt-2 w-full mb-8"
+            >Use camera</button>
+            <div class="grid grid-cols-[1fr_auto_1fr] w-full items-center mb-8 opacity-70">
+                <span class="border-t-[1px] h-1 align-middle"></span>
+                <div class="justify-self-center align-self-middle px-4 text-sm">OR</div>
+                <span class="border-t-[1px] h-1 align-middle"></span>
+            </div>
+        <!-- {/if} -->
+        <h2 class="lg:col-span-2 text-xl font-semibold">Target information</h2>
         <div class="grid-flow-row space-y-4">
             <div>
                 <label class="label bg-surface-700 rounded">
@@ -216,11 +250,12 @@
                         id="targetname"
                         name="targetname"
                         placeholder="Target name"
+                        onload={() => focus()}
                         required
                         minlength="3"
                         maxlength="96"
                         pattern="^(?:^[.,@0-9_\- a-z A-ZÅ-ö]+)$"
-                        class="input"
+                        class="form-input rounded w-full border-surface-100-900 bg-surface-200-800"
                     />
                 </label>
             </div>
@@ -232,7 +267,7 @@
                     onchange={targetTypeChangeHandler}
                     bind:value={targetType}
                     bind:this={targetTypeSelect}
-                    class="select py-1.5 px-3 bg-surface-700 text-md"
+                    class="py-1.5 px-3 form-select rounded w-full border-surface-100-900 bg-surface-200-800 text-md"
                 >
                     <option value={undefined} selected disabled>Target type:</option>
                     <option value="issf_airpistol_10m">ISSF Air Pistol 10m</option>
@@ -245,7 +280,7 @@
                     <option value="other">Other</option>
                 </select>
             </div>
-            <div class="input-group border-[1px] divide-surface-200-800 grid-cols-[1fr_minmax(auto,_12ch)] pl-2 divide-x divide-solid bg-surface-700" bind:this={rangeInputGroup}>
+            <div class="input-group border-[1px] divide-surface-200-800 grid-cols-[1fr_minmax(auto,_12ch)] divide-x divide-solid rounded w-full border-surface-100-900 bg-surface-200-800" bind:this={rangeInputGroup}>
                 <input
                     type="text"
                     id="range"
@@ -257,14 +292,14 @@
                     pattern={'^(?:^[0-9,.]{0,4})$'}
                     minlength="1"
                     maxlength="5"
-                    class="input"
+                    class="form-input rounded w-full border-surface-100-900 bg-surface-200-800 to-"
                 />
                 <select
                     id="rangeunit"
                     name="rangeunit"
                     bind:this={rangeUnitSelector}
                     required
-                    class="select pl-4 mr-[-2rem]"
+                    class="form-select mr-[-2rem]"
                 >
                     <option value="metric">Meters</option>
                     <option value="imperial">Yards</option>
@@ -277,31 +312,36 @@
                 TODO:   onFileReject={console.error}
                         subtext="JPG, PNG & HEIC allowed."
             -->
-            <FileUpload
-            	name="targetImage"
-                accept="image/*"
-                allowDrop
-                maxFiles={1}
-                onFileChange={validateFile}
-                interfaceClasses="bg-surface-700 rounded w-full"
-            >
-                {#snippet iconInterface()}<IconDropzone class="size-8" />{/snippet}
-                <!--
-                    {#snippet iconFile()}<IconFile class="size-4" />{/snippet}
-                    {#snippet iconFileRemove()}<IconRemove class="size-4" />{/snippet}
-                -->
-            </FileUpload>
+            {#if !$cameraImageDataStore}
+                <FileUpload
+                    name="targetImage"
+                    accept="image/*"
+                    allowDrop
+                    maxFiles={1}
+                    onFileChange={validateFile}
+                    classes=""
+                    interfaceClasses="bg-gradient-to-br dark:from-surface-700 dark:to-surface-800 border-surface-100-900 border-4 border-solid rounded w-full"
+                >
+                    {#snippet iconInterface()}<IconDropzone class="size-8" />{/snippet}
+                    <!--
+                        {#snippet iconFile()}<IconFile class="size-4" />{/snippet}
+                        {#snippet iconFileRemove()}<IconRemove class="size-4" />{/snippet}
+                    -->
+                </FileUpload>
+            {:else}
+                <img src={$cameraImageDataStore} alt="cam" class="max-w-20"/>
+            {/if}
         </div>
         <div id="turnstile"></div>
-        <div class="grid place-content-end">
+
             <button
-                class="btn preset-filled-primary-500 mt-2"
+                class="btn btn-lg h-20 preset-filled-primary-500 mt-2"
                 disabled={formSubmitDisabled}
             >Upload!</button>
-        </div>
+
     </form>
 
-    <PhotoCapture on:photo={handlePhoto} />
+
 
 	{#if uploadStatus}
 		<div class="status" class:error={photoUploadStatus === 'error'}>
@@ -315,3 +355,6 @@
 		</div>
 	{/if}
 </div>
+{:else}
+    <PhotoCapture on:photo={handlePhoto} />
+{/if}

@@ -1,7 +1,8 @@
 <!-- PhotoCapture.svelte -->
 <script lang="ts">
+	import { cameraImageDataStore } from '@/stores/TargetImageStore';
 	import { LucideSkull } from 'lucide-svelte';
-	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	let stream = $state<MediaStream | null>(null);
 	let photoData = $state<string | null>(null);
@@ -10,11 +11,6 @@
 	// We still need refs for DOM elements
 	let videoElement = $state<HTMLVideoElement|undefined>();
 	let canvasElement = $state<HTMLCanvasElement|undefined>();
-
-	// Event dispatcher for component events
-	const dispatch = createEventDispatcher<{
-		photo: { photoData: string };
-	}>();
 
 	async function startCamera() {
 		try {
@@ -50,7 +46,6 @@
 
             context?.drawImage(videoElement, 0, 0);
 			photoData = canvasElement.toDataURL('image/jpeg');
-			dispatch('photo', { photoData: photoData });
 		}
 	}
 
@@ -63,89 +58,73 @@
 	});
 </script>
 
-{#if !error}
-<div class="camera-container">
-	{#if error}
-		<div class="error">
-			{error}
-		</div>
-	{/if}
-
-	<video
-		bind:this={videoElement}
-		autoplay
-		playsinline
-		muted
-	></video>
-
-	<canvas
-		bind:this={canvasElement}
-		style="display: none;"
-	></canvas>
-
-	<div class="controls">
-		<button
-			onclick={capturePhoto}
-			disabled={!stream}
-		>
-			Take Photo
-		</button>
-
-		{#if photoData}
-			<button onclick={() => {
-				photoData = null;
-				startCamera();
-			}}>
-				Retake
-			</button>
+{#if !error && !$cameraImageDataStore}
+	<div
+		class="camera-container relative z-0 w-fit border-2"
+	>
+		{#if error}
+			<div class="error">
+				{error}
+			</div>
 		{/if}
-	</div>
 
+		{#if !photoData}
+		<video
+			bind:this={videoElement}
+			autoplay
+			playsinline
+			muted
+		></video>
+		{/if}
 
-    <div style="position: absolute; top: 50px; left:50px;z-index:50;">HELVETET<LucideSkull /></div>
-	{#if photoData}
-        <div class="preview border-b-2 border-cyan-50 border-solid">
-			<img src={photoData} alt="Capture" style="position:relative; z-index: 0; display:none;"/>
+		<canvas
+			bind:this={canvasElement}
+			style="display: none;"
+		></canvas>
+
+		<div
+			class="controls z-50 absolute bottom-[10vh] left-0 w-full px-4 grid {photoData ? 'grid-cols-2' : ''}  border-2"
+		>
+			{#if !photoData}
+				<button
+					class="btn btn-lg preset-filled justify-self-center"
+					onclick={capturePhoto}
+					disabled={!stream}
+				>
+					Take Photo
+				</button>
+			{/if}
+
+			{#if photoData}
+				<button
+					class="btn btn-lg preset-filled justify-self-start"
+					onclick={() => {
+						photoData = null;
+						startCamera();
+					}}
+				>
+					Retake
+				</button>
+				<button
+					class="btn btn-lg preset-filled justify-self-end"
+					onclick={() => {
+						if (photoData) {
+							$cameraImageDataStore = photoData;
+						}
+					}}
+				> Use Photo </button>
+			{/if}
 		</div>
-	{/if}
 
-</div>
+
+		<div style="position: absolute; top: 50px; left:50px;z-index:40;">HELVETET<LucideSkull />{error}</div>
+		{#if photoData}
+			<div class="preview border-b-2 border-cyan-50 border-solid">
+				<img src={photoData} alt="Capture" style="position:relative; z-index: 0;"/>
+			</div>
+		{/if}
+
+	</div>
+{:else}
+	{error}
 {/if}
-
-<style>
-	.camera-container {
-		position: relative;
-		max-width: 100%;
-		width: 100%;
-	}
-
-	video {
-		width: 100%;
-		max-width: 100%;
-		height: auto;
-	}
-
-	.controls {
-		position: relative;
-		padding: 1rem;
-		text-align: center;
-		display: flex;
-		gap: 1rem;
-		justify-content: center;
-	}
-
-	.preview {
-		margin-top: 1rem;
-	}
-
-	.preview img {
-		max-width: 100%;
-		height: auto;
-	}
-
-	.error {
-		color: red;
-		padding: 1rem;
-		text-align: center;
-	}
-</style>
