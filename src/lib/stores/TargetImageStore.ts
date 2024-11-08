@@ -1,5 +1,10 @@
 import { writable, type Writable } from "svelte/store";
 
+/**
+ * Håller bild-datan som base64-string.
+ */
+export const cameraImageDataStore: Writable<undefined|string> = writable();
+
 export interface ShotInterface {
     [key: string|number]: string|object|number|undefined;
     group: number|undefined;
