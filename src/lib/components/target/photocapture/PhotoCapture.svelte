@@ -1,7 +1,6 @@
 <!-- PhotoCapture.svelte -->
 <script lang="ts">
 	import { cameraImageDataStore } from '@/stores/TargetImageStore';
-	import { LucideSkull } from 'lucide-svelte';
 	import { onDestroy, onMount } from 'svelte';
 
 	let stream = $state<MediaStream | null>(null);
@@ -60,7 +59,7 @@
 
 {#if !error && !$cameraImageDataStore}
 	<div
-		class="camera-container relative z-0 w-fit border-2"
+		class="camera-container absolute top-0 z-10 w-full h-full"
 	>
 		{#if error}
 			<div class="error">
@@ -69,12 +68,13 @@
 		{/if}
 
 		{#if !photoData}
-		<video
-			bind:this={videoElement}
-			autoplay
-			playsinline
-			muted
-		></video>
+			<video
+				bind:this={videoElement}
+				autoplay
+				playsinline
+				muted
+				class="relative z-0"
+			></video>
 		{/if}
 
 		<canvas
@@ -83,7 +83,7 @@
 		></canvas>
 
 		<div
-			class="controls z-50 absolute bottom-[10vh] left-0 w-full px-4 grid {photoData ? 'grid-cols-2' : ''}  border-2"
+			class="controls z-50 absolute bottom-[5vh] left-0 w-full px-4 grid {photoData ? 'grid-cols-2' : ''}"
 		>
 			{#if !photoData}
 				<button
@@ -115,11 +115,13 @@
 				> Use Photo </button>
 			{/if}
 		</div>
-
-
-		<div style="position: absolute; top: 50px; left:50px;z-index:40;">HELVETET<LucideSkull />{error}</div>
+		<div style="position: absolute; top: 0px; left:0px; width:100%; height: 100%; z-index:40;" class="grid justify-items-center place-content-center">
+			<img src='10_mtarget.svg' alt="lol" style="transform:translate(50% 0)" class="opacity-30">
+			<span class="text-white opacity-40">Place the target within the circle.</span>
+		</div>
 		{#if photoData}
 			<div class="preview border-b-2 border-cyan-50 border-solid">
+
 				<img src={photoData} alt="Capture" style="position:relative; z-index: 0;"/>
 			</div>
 		{/if}
