@@ -6,6 +6,7 @@
 	import { CircleCheck, CircleOff } from 'lucide-svelte';
 	import IconDropzone from 'lucide-svelte/icons/image-plus';
 	import { onMount } from 'svelte';
+	import type { PageServerData } from './$types';
 
     let card: HTMLDivElement|undefined = $state();
     let targetUploadForm: HTMLFormElement|undefined = $state();
@@ -26,6 +27,10 @@
 
     let photoUploadStatus: string|null = $state(null);
     let cameraAvailable: boolean = $state(false);
+    let showCameraOption: boolean = $state(true);
+    let cameraActive: boolean = $state(false);
+
+    let { data } : { data: PageServerData } = $props();
 
     async function handlePhoto(event) {
 		const { photoData } = event.detail;
@@ -160,6 +165,17 @@
         }
     }
 
+    function isMobileWithTouch(): boolean {
+        return ('ontouchstart' in window) &&
+            (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    }
+
+    async function shouldShowCameraOption(): Promise<boolean> {
+        const hasCam = await hasCamera();
+        const isMobileTouch = isMobileWithTouch();
+        return hasCam && isMobileTouch;
+    }
+
     async function hasCamera(): Promise<boolean> {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -178,19 +194,14 @@
     });
 
     onMount(async () => {
-        cameraAvailable = await hasCamera();
-        if (cameraAvailable) {
-            // Show camera option
-        } else {
-            // Hide camera option or automatically show upload interface
-        }
+        showCameraOption = await shouldShowCameraOption();
     });
 </script>
 
-{#if !$cameraImageDataStore}
+{#if !cameraActive}
 <div
     bind:this={card}
-    class="card grid justify-items-center place-items-center border-surface-200-800 w-fit py-6 px-8"
+    class="card grid justify-items-center place-items-center {showCameraOption ? '' : 'bg-surface-500 border-surface-800 border-[1px] place-self-center mt-10'} border-surface-200-800 w-fit py-6 px-8"
 >
     {#if showModal}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -228,16 +239,17 @@
         onsubmit={handleSubmit}
         class="grid justify-center grid-flow-row-dense lg:grid-cols-[1fr,_auto] gap-4 place-content-center"
     >
-        <!-- {#if cameraAvailable} -->
+        {#if showCameraOption}
             <button
                 class="btn btn-lg h-20 preset-filled-primary-500 mt-2 w-full mb-8"
+                onclick={() => cameraActive = true}
             >Use camera</button>
             <div class="grid grid-cols-[1fr_auto_1fr] w-full items-center mb-8 opacity-70">
                 <span class="border-t-[1px] h-1 align-middle"></span>
                 <div class="justify-self-center align-self-middle px-4 text-sm">OR</div>
                 <span class="border-t-[1px] h-1 align-middle"></span>
             </div>
-        <!-- {/if} -->
+        {/if}
         <h2 class="lg:col-span-2 text-xl font-semibold">Target information</h2>
         <div class="grid-flow-row space-y-4">
             <div>
@@ -277,6 +289,9 @@
                     <option value="issf_rifle_50m">ISSF Rifle 50m</option>
                     <option value="issf_rifle_300m">ISSF Rifle 300m</option>
                     <option value="issf_rifle_300m_reduced_100m">ISSF Rifle 300m, reduced</option>
+                    <option value="ipsc_target">IPSC Target</option>
+                    <option value="ipsc_mini_target">IPSC Mini Target</option>
+                    <option value="ipsc_rifle_target">IPSC Rifle Target</option>
                     <option value="other">Other</option>
                 </select>
             </div>
@@ -306,7 +321,7 @@
                 </select>
             </div>
         </div>
-        <div>
+        <div class="h-full">
             <!--
                 TODO:   onFileChange={handleSubmit}
                 TODO:   onFileReject={console.error}
@@ -319,8 +334,8 @@
                     allowDrop
                     maxFiles={1}
                     onFileChange={validateFile}
-                    classes=""
-                    interfaceClasses="bg-gradient-to-br dark:from-surface-700 dark:to-surface-800 border-surface-100-900 border-4 border-solid rounded w-full"
+                    classes="h-full"
+                    interfaceClasses="bg-gradient-to-br dark:from-surface-700 dark:to-surface-800 border-surface-100-900 border-4 border-solid rounded w-full "
                 >
                     {#snippet iconInterface()}<IconDropzone class="size-8" />{/snippet}
                     <!--
@@ -334,14 +349,21 @@
         </div>
         <div id="turnstile"></div>
 
-            <button
-                class="btn btn-lg h-20 preset-filled-primary-500 mt-2"
-                disabled={formSubmitDisabled}
-            >Upload!</button>
+        <button
+            class="btn {showCameraOption ? 'btn-lg h-20' : ''}  preset-filled-primary-500 mt-2"
+            disabled={formSubmitDisabled}
+        >Upload!</button>
+
+        <hr class="lg:col-span-2 opacity-40 maw-w-sm mt-3 mb-2"/>
+
+        <div class="text-sm opacity-50 max-w-[40rem] lg:col-span-2">
+            <ul class="list-disc ml-4 space-y-2">
+                <li class="list-item">Do not upload images containing anything else but targets. No persons, pets or identifying information. Failure to abide by this can cause your account to be terminated.</li>
+                <li class="list-item">For best results use an image taken straight on with as little angle as possible. This is especially important if you want accurate scoring.</li>
+            </ul>
+        </div>
 
     </form>
-
-
 
 	{#if uploadStatus}
 		<div class="status" class:error={photoUploadStatus === 'error'}>
