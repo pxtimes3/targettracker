@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, pgEnum, pgPolicy, pgRole, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true });
+export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true }).existing();
+export const service = pgRole('service', { createRole: true, createDb: true, inherit: true }).existing();
 
-export const rolesEnum = pgEnum("roles", ["user", "vip", "admin"]);
+export const rolesEnum = pgEnum("roles", ["user", "vip", "admin", "service"]);
 
 export const user = pgTable('user', {
 	id: uuid('id').primaryKey(),
@@ -16,7 +17,21 @@ export const user = pgTable('user', {
 	verificationCode: uuid('verificationCode').notNull(),
 	verified: boolean('verified').default(false),
 	createdAt: timestamp('createdAt').default(sql`now()`),
-});
+}, (t) => [
+	pgPolicy('admin access all', {
+		as: 'permissive',
+		to: 'admin',
+		for: 'all',
+		using: sql`true`,  // Allows access to all rows
+		withCheck: sql`true`,  // Allows all changes
+	}),
+	pgPolicy('public can view', {
+		as: 'permissive',
+		to: undefined,
+		for: 'select',
+		using: sql`auth.uid() = user_id`,
+	}),
+]);
 
 export const session = pgTable('session', {
 	id: text('id').primaryKey(),
@@ -34,7 +49,21 @@ export const invitecodes = pgTable("invitecodes", {
 	invite_sent: timestamp('inivite_sent'),
 	accepted: boolean('accepted').default(false),
 	active: boolean("active").default(true)
-});
+}, (t) => [
+	pgPolicy('admin access all', {
+		as: 'permissive',
+		to: 'admin',
+		for: 'all',
+		using: sql`true`,
+		withCheck: sql`true`,
+	}),
+	pgPolicy('public can view', {
+		as: 'permissive',
+		to: undefined,
+		for: 'select',
+		using: sql`auth.uid() = user_id`,
+	}),
+]);
 
 export const faq = pgTable("faq", {
 	id: uuid("id").defaultRandom(),
@@ -44,12 +73,12 @@ export const faq = pgTable("faq", {
 	created: timestamp("created").default(sql`now()`),
 	updated: timestamp("updated").default(sql`now()`).$onUpdate(() => new Date()),
 }, (t) => [
-	pgPolicy('admin', {
+	pgPolicy('admin access all', {
 		as: 'permissive',
 		to: 'admin',
 		for: 'all',
-		using: sql``,
-		withCheck: sql``,
+		using: sql`true`,
+		withCheck: sql`true`,
 	}),
 	pgPolicy('public can view', {
 		as: 'permissive',
@@ -59,7 +88,42 @@ export const faq = pgTable("faq", {
 	}),
 ]);
 
+export const analysis = pgTable("analysis", {
+	id: uuid("id").defaultRandom(),
+	submitted: timestamp("submitted").default(sql`now()`),
+	updated: timestamp("updated").default(sql`now()`).$onUpdate(() => new Date()),
+	user_id: uuid("user_id").notNull().references(() => user.id, { onDelete: 'cascade' }).notNull(),
+	image_name: text("image_name").notNull(),
+	result: text("result"),
+	error: text("error"),
+}, (t) => [
+	pgPolicy('admin access all', {
+		as: 'permissive',
+		to: 'admin',
+		for: 'all',
+		using: sql`true`,
+		withCheck: sql`true`,
+	}),
+	sql`ALTER TABLE public.analysis FORCE ROW LEVEL SECURITY`,
+    sql`ALTER TABLE public.analysis ENABLE ROW LEVEL SECURITY`,
+    sql`ALTER TABLE public.analysis OWNER TO service`,
+	pgPolicy('service', {
+		as: 'permissive',
+		to: 'service',
+		for: 'all',
+		using: sql`true`,
+		withCheck: sql`true`,
+	}),
+	pgPolicy('public can view', {
+		as: 'permissive',
+		to: undefined,
+		for: 'select',
+		using: sql`auth.uid() = user_id`,
+	}),
+]);
+
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type InviteCodes = typeof invitecodes.$inferSelect;
 export type Faq = typeof faq.$inferSelect;
+export type Analysis = typeof analysis.$inferSelect;
