@@ -15,6 +15,11 @@ export default {
         extend: {
             gridTemplateRows: {
                 'layout' : 'auto min-content auto',
+            },
+            cursor: {
+                'poa'  : 'url(cursors/poa.svg), pointer',
+                'shot' : 'url(cursors/shot.svg), pointer',
+                'move' : 'url(cursors/move.svg), pointer',
             }
         },
     },
