@@ -148,6 +148,7 @@
             placeholder="xXx_1337user_xXx"
             required
             bind:value={usernameValue}
+            class="input-text w-full rounded"
         />
     </div>
     <div>
@@ -159,6 +160,7 @@
             required
             placeholder="user@example.com"
             bind:value={emailValue}
+            class="input-text w-full rounded"
         />
     </div>
     <div>
@@ -166,7 +168,9 @@
         <PasswordInput
             id="passwordInput"
             required
-            checkPass={true}
+            checkPass={false}
+            textcolor="text-surface-900"
+            css="input-password w-full rounded"
             bind:value={passwordValue}
         />
     </div>
@@ -179,7 +183,7 @@
             name="invitecode"
             required={data.inviteonly}
             placeholder="AAA098765321ZZZ"
-            class={data.inviteonly ? 'required' : ''}
+            class={`${data.inviteonly ? 'required' : ''} input-text w-full rounded`}
         />
     </div>
 

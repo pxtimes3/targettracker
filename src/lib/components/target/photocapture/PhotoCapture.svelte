@@ -7,6 +7,8 @@
 	let photoData = $state<string | null>(null);
 	let error = $state<string | null>(null);
 
+	let { cameraActive = $bindable(), classes } = $props();
+
 	// We still need refs for DOM elements
 	let videoElement = $state<HTMLVideoElement|undefined>();
 	let canvasElement = $state<HTMLCanvasElement|undefined>();
@@ -22,6 +24,7 @@
 				}
 			});
 			videoElement.srcObject = stream;
+			cameraActive = true;
 			error = null;
 		} catch (err) {
 			error = 'Error accessing camera: ' + (err instanceof Error ? err.message : String(err));
@@ -33,6 +36,7 @@
 		if (stream) {
 			stream.getTracks().forEach(track => track.stop());
 			stream = null;
+			cameraActive = false;
 		}
 	}
 
@@ -57,9 +61,9 @@
 	});
 </script>
 
-{#if !error && !$cameraImageDataStore}
+{#if !error}
 	<div
-		class="camera-container absolute top-0 z-10 w-full h-full"
+		class="camera-container absolute top-0 z-10 w-full h-full {classes}"
 	>
 		{#if error}
 			<div class="error">
@@ -67,15 +71,13 @@
 			</div>
 		{/if}
 
-		{#if !photoData}
-			<video
-				bind:this={videoElement}
-				autoplay
-				playsinline
-				muted
-				class="relative z-0"
-			></video>
-		{/if}
+		<video
+			bind:this={videoElement}
+			autoplay
+			playsinline
+			muted
+			class="relative z-0"
+		></video>
 
 		<canvas
 			bind:this={canvasElement}
@@ -110,6 +112,7 @@
 					onclick={() => {
 						if (photoData) {
 							$cameraImageDataStore = photoData;
+							stopCamera();
 						}
 					}}
 				> Use Photo </button>
@@ -121,7 +124,6 @@
 		</div>
 		{#if photoData}
 			<div class="preview border-b-2 border-cyan-50 border-solid">
-
 				<img src={photoData} alt="Capture" style="position:relative; z-index: 0;"/>
 			</div>
 		{/if}

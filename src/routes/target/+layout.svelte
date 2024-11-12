@@ -28,7 +28,7 @@ import '../../app.css';
     }
 
 	onMount(async () => {
-		shouldShowCameraOption();
+		showCameraOption = await shouldShowCameraOption();
 	})
 </script>
 

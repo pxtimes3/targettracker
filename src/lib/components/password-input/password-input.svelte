@@ -14,6 +14,8 @@
 		required = $bindable(true),
 		checkPass = $bindable(false),
 		css = $bindable(''),
+		textcolor = $bindable('#666'),
+		strokewidth = $bindable(3),
 		disabled = false
 	}: {
 		id?: string,
@@ -24,6 +26,8 @@
 		placeholder?: string,
 		required?: boolean,
 		css?: string,
+		textcolor?: string,
+		strokewidth?: number,
 		disabled?: boolean
 	} = $props();
 
@@ -64,7 +68,7 @@
 		{required}
 		id="password"
 		name={name}
-		class={error ? css + " border-red-500" : css}
+		class={error ? `${css}border-red-500` : `${css} ${textcolor}`}
 	/>
 	<button
 		class="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
@@ -72,9 +76,17 @@
 		type="button"
 	>
 		{#if showPassword}
-			<EyeOff class="h-4 w-4" />
+			<EyeOff
+				strokeWidth={strokewidth}
+				color={textcolor}
+				class="h-4 w-4"
+			/>
 		{:else}
-			<Eye class="h-4 w-4" />
+			<Eye
+				strokeWidth={3}
+				color={textcolor}
+				class="h-4 w-4"
+			/>
 		{/if}
 	</button>
 	{#if error}
