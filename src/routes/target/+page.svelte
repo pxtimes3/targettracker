@@ -1,7 +1,8 @@
 <script lang="ts">
     // TODO: Turnstile
+	import { goto } from '$app/navigation';
 	import PhotoCapture from '@/components/target/photocapture/PhotoCapture.svelte';
-	import { cameraImageDataStore } from '@/stores/TargetImageStore';
+	import { cameraImageDataStore, TargetStore } from '@/stores/TargetImageStore';
 	import { FileUpload, ProgressRing } from '@skeletonlabs/skeleton-svelte';
 	import { CircleCheck, CircleOff } from 'lucide-svelte';
 	import IconDropzone from 'lucide-svelte/icons/image-plus';
@@ -27,37 +28,12 @@
 
     let photoUploadStatus: string|null = $state(null);
     let cameraAvailable: boolean = $state(false);
-    let showCameraOption: boolean = $state(true);
+    let showCameraOption: boolean|undefined = $state();
     let cameraActive: boolean = $state(false);
 
+    let debug: any = $state();
+
     let { data } : { data: PageServerData } = $props();
-
-    async function handlePhoto(event) {
-		const { photoData } = event.detail;
-
-		try {
-			photoUploadStatus = 'uploading';
-
-			const response = await fetch('/api/upload', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ photoData })
-			});
-
-			const result = await response.json();
-
-			if (!result.success) {
-				throw new Error(result.error);
-			}
-
-			photoUploadStatus = 'success';
-		} catch (error) {
-			console.error('Upload failed:', error);
-			photoUploadStatus = 'error';
-		}
-	}
 
     function targetTypeChangeHandler(e: Event)
     {
@@ -76,16 +52,94 @@
         }
     }
 
+    function convertToBlob(data: string): Blob
+    {
+        try {
+            // Check if it's a DataURL
+            if (data.startsWith('data:')) {
+                const [prefix, base64Data] = data.split(',');
+                if (!base64Data) {
+                    throw new Error('Invalid DataURL format');
+                }
+
+                const contentType = prefix.split(':')[1]?.split(';')[0] || '';
+                const actualData = base64Data.replace(/^base64,/, '');
+
+                try {
+                    const byteString = atob(actualData);
+                    const arrayBuffer = new ArrayBuffer(byteString.length);
+                    const uint8Array = new Uint8Array(arrayBuffer);
+
+                    for (let i = 0; i < byteString.length; i++) {
+                        uint8Array[i] = byteString.charCodeAt(i);
+                    }
+
+                    return new Blob([arrayBuffer], { type: contentType });
+                } catch (e) {
+                    throw new Error('Failed to decode base64 data');
+                }
+            }
+
+            // If it's just a base64 string
+            try {
+                const byteString = atob(data);
+                const arrayBuffer = new ArrayBuffer(byteString.length);
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                for (let i = 0; i < byteString.length; i++) {
+                    uint8Array[i] = byteString.charCodeAt(i);
+                }
+
+                return new Blob([arrayBuffer]);
+            } catch (e) {
+                throw new Error('Invalid base64 string');
+            }
+        } catch (e: any) {
+            throw new Error(`Failed to convert to Blob: ${e.message}`);
+        }
+    }
+
+    function extractExtensionFromDataURL(DataURL: string): string|undefined
+    {
+        if (!DataURL.match(/^(data:)/)) return;
+        let extension: string;
+
+        const contentType = DataURL.match(/^(?:data:image\/)(\w*)(?:;)/i);
+
+        if (contentType === null) {
+            return;
+        } else {
+            extension = contentType[1].toLowerCase();
+        }
+
+        switch (extension) {
+            case 'jpeg':
+                return 'jpg';
+            case 'png':
+                return 'png';
+            case 'heic':
+                return 'heic';
+            default:
+                // TODO: Logging
+                console.error(`Unknown extension: ${extension}`);
+                return;
+        }
+    }
+
     async function handleSubmit(e: Event)
     {
         e.preventDefault();
         e.stopPropagation();
 
-        // console.log('handleSubmit called');
+        debug = 'handleSubmit called';
 
-        if (!targetImageFile) return;
+        if (!targetImageFile && !$cameraImageDataStore) return;
         if (!targetNameInputValue) return;
         if (!rangeInputValue) return;
+
+        console.log($TargetStore);
+        TargetStore.clearStorage();
+        console.log($TargetStore);
 
         showModal = true;
         uploadStatus = "pending"
@@ -93,8 +147,17 @@
         let result;
 
         const formData = new FormData();
-        formData.append('targetImage', targetImageFile);
-        formData.append('targetName', targetNameInputValue?.toString());
+
+        if (!$cameraImageDataStore && targetImageFile) {
+            formData.append('targetImage', targetImageFile);
+            formData.append('targetName', targetNameInputValue?.toString());
+        } else if ($cameraImageDataStore) {
+            const ext = extractExtensionFromDataURL($cameraImageDataStore);
+            if (ext) formData.append('extension', ext);
+            formData.append('targetImage', convertToBlob($cameraImageDataStore))
+            formData.append('targetName', `${targetNameInputValue?.toString()}.${ext}`);
+        }
+
         formData.append('targetType', targetTypeSelect.value.toString());
         formData.append('targetRange', rangeInputValue?.toString())
         formData.append('targetRangeUnit', rangeUnitSelector?.value.toString() || 'm');
@@ -110,6 +173,20 @@
             if (result.status === 200) {
                 uploadStatus = "success";
                 targetUploadForm?.reset();
+
+                // console.log('result:', result);
+                // console.log(JSON.parse(result.data));
+
+                const parsedData = JSON.parse(result.data);
+                const storeData = JSON.parse(parsedData[2]);
+
+                if (storeData) {
+                    TargetStore.set(storeData);
+                }
+
+                setTimeout(() => {
+                    goto('/shots/');
+                }, 3000);
             } else if (result.status === 400) {
                 uploadStatus = "failed";
                 // TODO: Logging
@@ -155,7 +232,7 @@
             targetNameInput.validity.valid &&
             rangeInput.validity.valid &&
             targetTypeSelect.value.length > 0 &&
-            targetImageFile
+            (targetImageFile || $cameraImageDataStore)
         ) {
             // console.log(targetNameInputValue, rangeInputValue, targetTypeSelect.value, targetImageFile);
             formSubmitDisabled = false;
@@ -191,34 +268,39 @@
         if (showModal) {
             showModal ? targetUploadForm?.classList.add('blur-md') : targetUploadForm?.classList.remove('blur-md');
         }
+        // console.log(cameraActive)
     });
 
     onMount(async () => {
         showCameraOption = await shouldShowCameraOption();
+        extractExtensionFromDataURL('data:image/jpeg;base64,/9j/4AAQSkZJRgABA');
+        showModal = false;
     });
 </script>
 
 {#if !cameraActive}
 <div
     bind:this={card}
-    class="card grid justify-items-center place-items-center {showCameraOption ? '' : 'bg-surface-500 border-surface-800 border-[1px] place-self-center mt-10'} border-surface-200-800 w-fit py-6 px-8"
+    class="card grid justify-items-center md:mt-8 place-items-center {showCameraOption ? '' : 'bg-surface-500 border-surface-800 border-[1px] place-self-center mt-10'}border-surface-200-800 w-fit py-6 px-8"
 >
     {#if showModal}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div
             bind:this={uploadModal}
-            class="absolute grid justify-items-center place-items-center my-auto mx-auto z-10 stroke-tertiary-600-400"
+            class="absolute top-0 left-0 grid w-full h-full justify-items-center place-items-center z-10 stroke-tertiary-600-400"
             onclick={closeModal}
         >
             {#if uploadStatus === "pending"}
                 <ProgressRing
                     value={null}
-                    size="size-14"
-                    meterStroke="stroke-tertiary-600-400"
-                    trackStroke="stroke-tertiary-50-950"
+                    size="size-36"
+                    strokeWidth="20px"
+                    meterStroke="stroke-white"
+                    trackStroke="stroke-white/10"
+                    classes="place-self-end justify-self-center"
                 />
-                <p bind:this={uploadModalText} class="mt-2">Uploading target ... </p>
+                <p bind:this={uploadModalText} class="mt-4 text-lg place-self-start justify-self-center">Uploading target ... </p>
             {/if}
             {#if uploadStatus === "success"}
                 <CircleCheck size="64" />
@@ -234,9 +316,9 @@
     <form
         bind:this={targetUploadForm}
         method="POST"
+        onsubmit={handleSubmit}
         action="?/targetupload"
         enctype="multipart/form-data"
-        onsubmit={handleSubmit}
         class="grid justify-center grid-flow-row-dense lg:grid-cols-[1fr,_auto] gap-4 place-content-center"
     >
         {#if showCameraOption}
@@ -250,7 +332,7 @@
                 <span class="border-t-[1px] h-1 align-middle"></span>
             </div>
         {/if}
-        <h2 class="lg:col-span-2 text-xl font-semibold">Target information</h2>
+        <h2 class="lg:col-span-2 text-xl font-semibold">Upload target:</h2>
         <div class="grid-flow-row space-y-4">
             <div>
                 <label class="label bg-surface-700 rounded">
@@ -344,13 +426,19 @@
                     -->
                 </FileUpload>
             {:else}
-                <img src={$cameraImageDataStore} alt="cam" class="max-w-20"/>
+                <div class="relative max-h-20 w-full overflow-hidden">
+                    <div class="absolute top-0 left-0 z-10 w-full h-full grid justify-center place-content-center">
+                        <button class="p-2 bg-white/50 text-primary-900" onclick={(e) => {cameraActive = true; e.preventDefault();} }>Retake photo</button>
+                    </div>
+                    <img src={$cameraImageDataStore} alt="cam" class="translate-y-[-50%]"/>
+                </div>
             {/if}
         </div>
         <div id="turnstile"></div>
-
         <button
-            class="btn {showCameraOption ? 'btn-lg h-20' : ''}  preset-filled-primary-500 mt-2"
+            class="btn {showCameraOption ? 'btn-lg h-20' : ''}  preset-filled-primary-500"
+            type="submit"
+            onclick={() => debug = 'clicked upload button'}
             disabled={formSubmitDisabled}
         >Upload!</button>
 
@@ -362,21 +450,11 @@
                 <li class="list-item">For best results use an image taken straight on with as little angle as possible. This is especially important if you want accurate scoring.</li>
             </ul>
         </div>
-
     </form>
-
-	{#if uploadStatus}
-		<div class="status" class:error={photoUploadStatus === 'error'}>
-			{#if photoUploadStatus === 'uploading'}
-				Uploading...
-			{:else if photoUploadStatus === 'success'}
-				Upload successful!
-			{:else if photoUploadStatus === 'error'}
-				Upload failed. Please try again.
-			{/if}
-		</div>
-	{/if}
 </div>
 {:else}
-    <PhotoCapture on:photo={handlePhoto} />
+    <PhotoCapture
+        bind:cameraActive={cameraActive}
+        classes={cameraActive ? '' : 'hidden'}
+    />
 {/if}

@@ -1,3 +1,5 @@
+import * as table from '$lib/server/db/schema';
+import { db } from '@/server/db';
 import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore.js';
 import { fail } from '@sveltejs/kit';
 import ExifReader from 'exifreader';
@@ -13,27 +15,58 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-    targetupload: async ({ request }) => {
+    targetupload: async ({ locals, request }) => {
+        if (!locals.user) {
+		    return new Response('Unauthorized', { status: 401 })
+	    }
+
         const formData = await request.formData();
         if (!formData) return;
 
         const uploadedFile = formData?.get('targetImage') as File;
         if(!uploadedFile) {
+            console.error("nofile");
             return fail(400, {message: "no file"});
         }
 
         // return fail(400, {message: "Errormessage"});
 
-        const filename = `${uuidv4()}${extname(uploadedFile?.name)}`;
+        let ext;
+        extname(uploadedFile?.name) ? ext = extname(uploadedFile?.name) : ext = `.${formData.get('extension')?.toString()}`;
+
+        const filename = `${uuidv4()}${ext}`;
+
+        //console.log(filename);
 
         await writeFile('temp/' + filename, Buffer.from(await uploadedFile?.arrayBuffer()));
+        await writeFile('targettracker.analysis/analyze/' + filename, Buffer.from(await uploadedFile?.arrayBuffer()));
 
         let store: TargetStoreInterface = get(TargetStore);
         store.target.image.filename = filename;
         store.target.name = formData.get('targetName')?.toString();
         store.target.type = formData.get('targetType')?.toString();
         store.target.range = formData.get('targetRange')?.toString();
+        store.target.image.filename = filename.toString();
         store.target.rangeUnit = formData.get('targetRangeUnit')?.toString() === "metric" ? 'metric' : 'imperial';
+
+        console.log(store);
+
+        try {
+            const result = await db.insert(table.analysis)
+                .values({
+                    user_id: locals.user?.id,
+                    image_name: filename
+                })
+                .returning({'id': table.analysis.id });
+
+            if (result[0].id) {
+                console.log(result[0].id)
+                fetch(`http://localhost:8000/analyze/${result[0].id}`);
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
 
         const tags = await ExifReader.load(Buffer.from(await uploadedFile?.arrayBuffer()), {expanded: true, includeUnknown: true});
 
@@ -50,7 +83,7 @@ export const actions = {
             console.log(store);
         }
 
-        return { success: true };
+        return { success: true, storeData: JSON.stringify(store) }
     }
 };
 
