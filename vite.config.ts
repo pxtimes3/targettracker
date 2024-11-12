@@ -5,7 +5,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	plugins: [sveltekit(), basicSsl()],
 	server: {
-		proxy: {}
+		proxy: {},
+		fs: {
+			allow: [
+				'temp/',
+			],
+		},
 	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']
