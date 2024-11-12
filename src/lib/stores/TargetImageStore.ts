@@ -1,4 +1,7 @@
+import { browser } from "$app/environment";
 import { writable, type Writable } from "svelte/store";
+
+const STORE_KEY = 'targetTrackerStore';
 
 /**
  * Håller bild-datan som base64-string.
@@ -63,7 +66,7 @@ export interface TargetStoreInterface {
     }
 }
 
-export const TargetStore: Writable<TargetStoreInterface> = writable({
+const initialStore: TargetStoreInterface = {
     target: {
         type: undefined,
         range: undefined,
@@ -108,4 +111,34 @@ export const TargetStore: Writable<TargetStoreInterface> = writable({
             winddirection: undefined,
         }
     }
-})
+};
+
+function createTargetStore()
+{
+    // har vi sparad data?
+    const storedData = browser ? JSON.parse(localStorage.getItem(STORE_KEY) || 'null') : null;
+
+    // pluppa in data
+    const store = writable<TargetStoreInterface>(storedData || initialStore);
+
+    if (browser) {
+        store.subscribe(val => {
+            localStorage.setItem(STORE_KEY, JSON.stringify(val));
+        });
+    }
+
+    return {
+        ...store,
+        reset: () => {
+            store.set(initialStore);
+        },
+        clearStorage: () => {
+            if (browser) {
+                localStorage.removeItem(STORE_KEY);
+            }
+            store.set(initialStore);
+        }
+    }
+}
+
+export const TargetStore = createTargetStore();
