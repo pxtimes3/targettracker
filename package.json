@@ -65,10 +65,12 @@
 		"@zxcvbn-ts/matcher-pwned": "^3.0.4",
 		"drizzle-orm": "^0.36.1",
 		"exifreader": "^4.25.0",
+		"konva": "^9.3.16",
 		"lucide-svelte": "^0.454.0",
 		"luxon": "^3.5.0",
 		"postgres": "^3.4.5",
 		"svelte-captcha-enhance": "^1.2.1",
+		"svelte-konva": "^1.0.0-next.0",
 		"svelte-sonner": "^0.3.28",
 		"ts-luxon": "5.0.7-beta.0"
 	}
