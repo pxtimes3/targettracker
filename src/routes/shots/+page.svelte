@@ -3,7 +3,7 @@
 	import Logo from "@/components/logo/logo.svelte";
 	import DebugPanel from "@/components/shots/DebugPanel.svelte";
 	import { TargetStore } from "@/stores/TargetImageStore";
-	import { ChevronLeft, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare } from "lucide-svelte";
+	import { ChevronLeft, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler } from "lucide-svelte";
 	import { onMount } from "svelte";
 	import type { PageServerData } from "./$types";
 
@@ -44,54 +44,93 @@
 
     // zoom
     const zoomStep = 0.1;
-    const zoom = 100;
+
+    // reference
+    let aIsSet: boolean = $state(false);
+    let xIsSet: boolean = $state(false);
 
     // let activeGroup: number = $state( || 0);
 
     // functions
-    function handleClick(e: MouseEvent) {
-        // console.log(`click @ ${e.clientX}:${e.clientY}`);
+    function handleClick(e: MouseEvent): void
+    {
+        if (!targetCanvas || !$TargetStore.target.scale) {
+            console.error('No target canvas or scale!?');
+            return;
+        }
+        // Canvas center
+        const centerX = targetCanvas.width / 2;
+        const centerY = targetCanvas.height / 2;
+
+        // Var är vi i förhållande till center?
+        const dx = e.clientX - centerX;
+        const dy = e.clientY - centerY;
+
+        // Grader till radianer!
+        const rotation = ($TargetStore.target.rotation * Math.PI) / 180;
+
+        // Revert rotation...
+        const unrotatedX = dx * Math.cos(-rotation) - dy * Math.sin(-rotation);
+        const unrotatedY = dx * Math.sin(-rotation) + dy * Math.cos(-rotation);
+
+        // Revert scale...
+        const unscaledX = unrotatedX / $TargetStore.target.scale;
+        const unscaledY = unrotatedY / $TargetStore.target.scale;
+
+        // Revert 3!?!????
+        const finalX = unscaledX + centerX;
+        const finalY = unscaledY + centerY;
+
+        const adjustedX = finalX - dragOffset.x;
+        const adjustedY = finalY - dragOffset.y;
+
         if (mode === 'poa') {
-            if (!targetCanvas || !$TargetStore.target.scale) {
-                console.error('No target canvas or scale!?');
-                return;
-            }
-
-            // Canvas center
-            const centerX = targetCanvas.width / 2;
-            const centerY = targetCanvas.height / 2;
-
-            // Var är vi i förhållande till center?
-            const dx = e.clientX - centerX;
-            const dy = e.clientY - centerY;
-
-            // Grader till radianer!
-            const rotation = ($TargetStore.target.rotation * Math.PI) / 180;
-
-            // Revert...
-            const unrotatedX = dx * Math.cos(-rotation) - dy * Math.sin(-rotation);
-            const unrotatedY = dx * Math.sin(-rotation) + dy * Math.cos(-rotation);
-
-            // Revert 2...
-            const unscaledX = unrotatedX / $TargetStore.target.scale;
-            const unscaledY = unrotatedY / $TargetStore.target.scale;
-
-            // Revert 3!?!????
-            const finalX = unscaledX + centerX;
-            const finalY = unscaledY + centerY;
-
-            const adjustedX = finalX - dragOffset.x;
-            const adjustedY = finalY - dragOffset.y;
-
             addEditPoa(adjustedX, adjustedY);
         }
+
+        if (mode === 'reference') {
+            addEditReferencePoint(adjustedX, adjustedY);
+        }
+
         if (mode === 'move') {
             mouseStart = { x: e.clientX, y: e.clientY }
             isDragging = true;
         }
     }
 
-    function addEditPoa(x: number, y: number) {
+    function addEditReferencePoint(x: number, y: number): void
+    {
+        if (!$TargetStore.reference) {
+            console.error('No reference in target object!');
+            return;
+        }
+
+        if (!$TargetStore.reference.a || aIsSet === false) {
+            console.log('setting a')
+            const refImage = new Image();
+            refImage.src = 'cursors/circle-a.svg';
+            refImage.onload = () => {
+                console.log('a loaded')
+                $TargetStore.reference.a = [x, y];
+                $TargetStore.reference.aImage = refImage;
+                aIsSet = true;
+                drawCanvas();
+            }
+        } else if (!$TargetStore.reference.x || xIsSet === false) {
+            console.log('setting x')
+            const refImage = new Image();
+            refImage.src = 'cursors/circle-x.svg';
+            refImage.onload = () => {
+                $TargetStore.reference.x = [x, y];
+                $TargetStore.reference.xImage = refImage;
+                xIsSet = true;
+                drawCanvas();
+            }
+        }
+    }
+
+    function addEditPoa(x: number, y: number): void
+    {
         if (!$TargetStore.groups[$TargetStore.activeGroup]) {
             console.error('No groups in store?', $TargetStore.groups);
             return;
@@ -164,7 +203,7 @@
         isDragging = false;
     }
 
-    function handleKeyboard(e: KeyboardEvent)
+    function handleKeyboard(e: KeyboardEvent): void
     {
         if (e.code === 'Escape') {
             e.preventDefault();
@@ -182,12 +221,7 @@
         }
     }
 
-    function handleRotate(degrees: number) {
-        canvasRotation += degrees;
-        drawCanvas();
-    }
-
-    function handleZoom(e: WheelEvent)
+    function handleZoom(e: WheelEvent): void
     {
         if (!$TargetStore.target.scale) {
             console.error('No scale set?');
@@ -205,14 +239,15 @@
         drawCanvas();
     }
 
-    function mousePosition(e: MouseEvent) {
+    function mousePosition(e: MouseEvent): void
+    {
         mouse = {
             x: e.clientX,
             y: e.clientY
         };
     }
 
-    function getChromeArea(e: Event)
+    function getChromeArea(e: Event): void
     {
         if (!e.target) return;
 
@@ -310,16 +345,41 @@
             });
         });
 
+        if ($TargetStore.reference.a && $TargetStore.reference.a.length > 1 && $TargetStore.reference.aImage?.src) {
+            if (!ctx) return;
+            const size = 36 / $TargetStore.target.scale;
+            ctx.drawImage(
+                $TargetStore.reference.aImage,
+                $TargetStore.reference.a[0],
+                $TargetStore.reference.a[1],
+                36,
+                36
+            )
+        }
+
+        if ($TargetStore.reference.x && $TargetStore.reference.x.length > 1 && $TargetStore.reference.xImage?.src) {
+            if (!ctx) return;
+            const size = 36 / $TargetStore.target.scale;
+            ctx.drawImage(
+                $TargetStore.reference.xImage,
+                $TargetStore.reference.x[0],
+                $TargetStore.reference.x[1],
+                36,
+                36
+            )
+        }
+
         ctx.restore();
     }
 
-    function rotateByDegrees(degrees: number) {
+    function rotateByDegrees(degrees: number): void
+    {
         $TargetStore.target.rotation = ($TargetStore.target.rotation + degrees) % 360;
 
         drawCanvas();
     }
 
-    function rotateByInput(e: Event)
+    function rotateByInput(e: Event): void
     {
         if (!e.target) return;
         const target = e.target as HTMLInputElement;
@@ -327,7 +387,8 @@
         // parseFloat för valueAsNumber blir keff iom. att vi visar med ° i inputen
         const deg = parseFloat(target.value);
 
-        rotation = 0; // sätt till 0 för att inte göra total rotation = nuvarande rotation + input.
+        $TargetStore.target.rotation = 0; // sätt till 0 för att inte göra total rotation = nuvarande rotation + input.
+        sliderValue = 0;
         rotateByDegrees(deg);
     }
 
@@ -342,6 +403,7 @@
         drawCanvas();
     }
 
+    // TODO: Göm andra paneler
     function showPanel(e: Event, name: string): void
     {
         if (!e.target) return;
@@ -363,13 +425,22 @@
             return;
         }
 
+
         panel.classList.contains('hidden') ? panel.classList.remove('hidden') : panel.classList.add('hidden');
         panel.style.top = `${button.offsetTop}px`;
         panel.style.left = `${button.offsetWidth + 4}px`;
         button.classList.contains('bg-black/20') ? button.classList.remove('bg-black/20') : button.classList.add('bg-black/20');
     }
 
-    function setMode(setmode: string|undefined)
+    function setReferenceMeasurement(e: Event): void
+    {
+        if (!e.target) return;
+        const input = e.target as HTMLInputElement;
+        const value = input.value
+        $TargetStore.reference.measurement = parseFloat(input.value);
+    }
+
+    function setMode(setmode: string|undefined): void
     {
         // console.log('mode:', setmode);
         if (mode === setmode) return;
@@ -386,6 +457,9 @@
             case 'shot':
                 cursor = 'cursor-shot';
                 break;
+            case 'reference':
+                cursor = 'cursor-dot';
+                break;
             case undefined:
                 cursor = 'cursor-default';
                 break;
@@ -399,6 +473,9 @@
     $effect(() => {
         if (canvasScale !== 1 || canvasRotation !== 0) {
             drawCanvas();
+        }
+        if (aIsSet && xIsSet) {
+            cursor = 'cursor-default';
         }
     });
 
@@ -470,10 +547,24 @@
                     class="pointer-events-none"
                 />
             </button>
+
+            <button
+                title="Set reference"
+                id="reference-button"
+                onclick={(e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); showPanel(e, "reference")}}
+                class="{mode === "reference" ? 'bg-black/20' : ''} w-10 h-10 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+            >
+                <LucideRuler
+                    color="#000"
+                    class="pointer-events-none"
+                />
+            </button>
         </div>
     </aside>
 
-    <!-- panels -->
+    <!-- panels
+         TODO: Conforme le sizes!
+    -->
     <div id="rotate" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 max-w-fit hidden shadow-md">
         <div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
             <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
@@ -496,6 +587,37 @@
             <input type="range" step="0.1" min="-45" max="45" bind:this={rotateSlider} bind:value={sliderValue} oninput={handleRotateSliderChange} class="slider w-full" id="myRange">
         </div>
     </div>
+
+    <div id="reference" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 max-w-fit shadow-md left-11 top-10 max-w-72">
+        <div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
+            <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
+            <p class="justify-self-end">
+                <ChevronLeft size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "reference") } />
+            </p>
+        </div>
+        <div class="p-4">
+            <label for="atoxInput" class="text-sm text-body-color-dark"></label>
+            <div class="input-group text-xs divide-surface-200-800 grid-cols-[auto_1fr_auto] divide-x text-body-color-dark bg-white">
+                <div class="input-group-cell preset-tonal-surface">A &rArr; X</div>
+                <input type="text" id="atoxInput" class="bg-white text-xs" bind:value={$TargetStore.reference.measurement} onchange={setReferenceMeasurement}>
+                <div class="input-group-cell preset-tonal-surface">cm</div>
+            </div>
+            <div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
+                Tip: You can change measurement units in <a href="##" class="anchor underline">the settings panel</a>.
+            </div>
+        </div>
+    </div>
+    {#if mode === "reference"}
+        <div class="absolute p-2 bg-black/70 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
+            {#if !aIsSet}
+                Set start point.
+            {:else if !xIsSet}
+                Set end point.
+            {:else}
+                Drag points to desired position.
+            {/if}
+        </div>
+    {/if}
 
 
 

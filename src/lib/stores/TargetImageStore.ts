@@ -57,9 +57,11 @@ export interface TargetStoreInterface {
         }
     }
     reference: {
-        x: number|undefined;
-        y: number|undefined;
-        z?: number|undefined;
+        a: number[]|undefined;            // [x,y]
+        aImage: HTMLImageElement|undefined;
+        x: number[]|undefined;
+        xImage: HTMLImageElement|undefined;
+        y?: number[]|undefined;
         measurement: number|undefined;    // User supplied;
         cm: number|undefined;             // 1 cm === % av tavlan
         pct: number|undefined;            // det omvända
@@ -101,8 +103,10 @@ const initialStore: TargetStoreInterface = {
     },
     reference: {
         x: undefined,
+        a: undefined,
+        aImage: undefined,
+        xImage: undefined,
         y: undefined,
-        z: undefined,
         measurement: undefined,    // User supplied,
         cm: undefined,             // 1 cm === % av tavlan
         pct: undefined,            // det omvända

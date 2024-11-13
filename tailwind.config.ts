@@ -17,9 +17,10 @@ export default {
                 'layout' : 'auto min-content auto',
             },
             cursor: {
-                'poa'  : 'url(cursors/poa.svg), pointer',
-                'shot' : 'url(cursors/shot.svg), pointer',
-                'move' : 'url(cursors/move.svg), pointer',
+                'poa'  : 'url(cursors/poa.svg), default',
+                'shot' : 'url(cursors/shot.svg), default',
+                'move' : 'url(cursors/move.svg), default',
+                'dot'  : 'url(cursors/dot.svg), default'
             }
         },
     },

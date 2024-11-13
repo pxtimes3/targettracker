@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide lucide-circle-parking"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <circle
+     cx="12"
+     cy="12"
+     r="10"
+     id="circle1" />
+  <path
+     d="m 6.9822167,15.871094 c -0.097591,0.260242 -0.2602416,0.73193 -0.2602416,1.024701 0,0.715665 0.5042181,1.171088 1.2361476,1.171088 0.6343389,0 1.0084363,-0.211447 1.1873524,-0.73193 l 0.6993993,-1.951812 h 4.2939866 l 0.683134,1.951812 c 0.195181,0.520483 0.618074,0.73193 1.203618,0.73193 0.683134,0 1.252412,-0.520484 1.252412,-1.171088 0,-0.292771 -0.162651,-0.764459 -0.260241,-1.024701 l -3.22049,-8.9620703 c -0.292772,-0.8295201 -0.82952,-0.975906 -1.431329,-0.975906 h -0.634339 c -0.650604,0 -1.073497,0.2114463 -1.301208,0.813255 z M 13.553317,13.52892 h -3.122899 l 1.577715,-4.7006144 h 0.03253 z"
+     id="text1"
+     style="font-size:16.2651px;font-family:'Helvetica Rounded';-inkscape-font-specification:'Helvetica Rounded';fill:#000000;stroke:none;stroke-width:1.52485"
+     aria-label="A" />
+</svg>
