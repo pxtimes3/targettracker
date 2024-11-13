@@ -3,12 +3,14 @@
         mouse,
         rotation,
         zoom,
-        window
+        window,
+        mode
     }: {
         mouse: { x:undefined|number, y:undefined|number },
         rotation: number,
         zoom: any,
-        window: { x:undefined|number, y:undefined|number }
+        window: { x:undefined|number, y:undefined|number },
+        mode: string|undefined
     } = $props();
 </script>
 
@@ -16,8 +18,9 @@
             bottom-5
             right-5
             grid
-            grid-flow-col gap-x-4
-
+            grid-cols-4
+            grid-rows-2
+            gap-x-4
             font-mono
             text-xs
             leading-3
@@ -40,5 +43,8 @@
         </div>
         <div>
             Scale: {`${zoom}`}
+        </div>
+        <div>
+            Mode: {mode}
         </div>
     </div>
