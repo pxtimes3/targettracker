@@ -11,33 +11,49 @@ export const cameraImageDataStore: Writable<undefined|string> = writable();
 export interface ShotInterface {
     [key: string|number]: string|object|number|undefined;
     group: number|undefined;
+    image: HTMLImageElement|undefined;
     x: number|undefined;
     y: number|undefined;
     score?: number|undefined;
 }
 
-export interface GroupInterface {
-    [key: string|number]: string|object|number|undefined;
+export interface PoaInterface {
+    [key: string]: undefined|number|HTMLImageElement;
+    image: HTMLImageElement|undefined;
+    x: number|undefined;
+    y: number|undefined;
+}
+
+export type GroupInterface = {
+    [key: string|number]: string|object|number|undefined;  // This allows numeric indexing
     id: number|undefined;
     shots: ShotInterface[]|undefined;
     score?: number|undefined;
+    poa?: PoaInterface;
     metrics: {
         meanradius: number|undefined;
-        size: number|undefined;           // ES
+        size: number|undefined;
         diagonal: number|undefined;
     }
 }
 
 export interface TargetStoreInterface {
-    [key: string|number]: string|object|number|undefined;
+    [key: string|number|symbol]: string|object|number|undefined;
     target: {
+        scale: number|undefined;
+        rotation: number;               // degrees. * Math.PI / 180 => angle
         type: string|undefined;
         range: string|undefined;
         rangeUnit: "metric"|"imperial";
         name: string|undefined;
         image: {
+            image?: HTMLImageElement;
             filename: string|undefined;
             originalsize: [number|undefined, number|undefined];
+            x: number|undefined;
+            y: number|undefined;
+            w: number|undefined;
+            h: number|undefined;
         }
     }
     reference: {
@@ -48,8 +64,8 @@ export interface TargetStoreInterface {
         cm: number|undefined;             // 1 cm === % av tavlan
         pct: number|undefined;            // det omvända
     }
-    activeGroup: number|undefined;
-    groups: GroupInterface[];
+    activeGroup: number;
+    groups: Array<GroupInterface>;
     weather: {
         // averages
         latitude: number|undefined;
@@ -72,9 +88,15 @@ const initialStore: TargetStoreInterface = {
         range: undefined,
         rangeUnit: "metric",
         name: undefined,
+        scale: undefined,
+        rotation: 0,
         image: {
             filename: undefined,
             originalsize: [undefined, undefined],
+            x: undefined,
+            y: undefined,
+            w: undefined,
+            h: undefined,
         }
     },
     reference: {
@@ -85,12 +107,12 @@ const initialStore: TargetStoreInterface = {
         cm: undefined,             // 1 cm === % av tavlan
         pct: undefined,            // det omvända
     },
-    activeGroup: undefined,
+    activeGroup: 1,
     groups: [
         {
             id: 1,
-            shots: [
-            ],
+            shots: [],
+            poa: undefined,
             metrics: {
                 meanradius: 0,
                 size: 0,
