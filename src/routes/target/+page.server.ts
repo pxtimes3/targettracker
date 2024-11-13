@@ -17,7 +17,7 @@ export const load: PageServerLoad = async () => {
 export const actions = {
     targetupload: async ({ locals, request }) => {
         if (!locals.user) {
-		    return new Response('Unauthorized', { status: 401 })
+		    return fail(401, {message: "Unauthorized"});
 	    }
 
         const formData = await request.formData();
@@ -49,7 +49,7 @@ export const actions = {
         store.target.image.filename = filename.toString();
         store.target.rangeUnit = formData.get('targetRangeUnit')?.toString() === "metric" ? 'metric' : 'imperial';
 
-        console.log(store);
+        // console.log(store);
 
         try {
             const result = await db.insert(table.analysis)
