@@ -30,6 +30,7 @@
 		"@types/eslint": "^9.6.1",
 		"@types/luxon": "^3.4.2",
 		"@types/node": "^22.9.0",
+		"@types/pixi.js": "^5.0.0",
 		"@vitejs/plugin-basic-ssl": "^1.1.0",
 		"autoprefixer": "^10.4.20",
 		"drizzle-kit": "^0.28.0",
@@ -65,12 +66,11 @@
 		"@zxcvbn-ts/matcher-pwned": "^3.0.4",
 		"drizzle-orm": "^0.36.1",
 		"exifreader": "^4.25.0",
-		"konva": "^9.3.16",
 		"lucide-svelte": "^0.454.0",
 		"luxon": "^3.5.0",
+		"pixi.js": "^8.5.2",
 		"postgres": "^3.4.5",
 		"svelte-captcha-enhance": "^1.2.1",
-		"svelte-konva": "^1.0.0-next.0",
 		"svelte-sonner": "^0.3.28",
 		"ts-luxon": "5.0.7-beta.0"
 	}

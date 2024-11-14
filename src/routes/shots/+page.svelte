@@ -165,9 +165,16 @@
         setMode(undefined);
     }
 
+    function isMouseOverObject()
+    {
+
+    }
+
     function handleMouseMove(e: MouseEvent): void
     {
         mousePosition(e);
+
+        isMouseOverObject();
 
         if (isDragging && mode === 'move') {
             // Offset
