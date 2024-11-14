@@ -30,7 +30,6 @@
 		"@types/eslint": "^9.6.1",
 		"@types/luxon": "^3.4.2",
 		"@types/node": "^22.9.0",
-		"@types/pixi.js": "^5.0.0",
 		"@vitejs/plugin-basic-ssl": "^1.1.0",
 		"autoprefixer": "^10.4.20",
 		"drizzle-kit": "^0.28.0",
@@ -53,7 +52,8 @@
 		"typescript-eslint": "^8.13.0",
 		"uuid": "^11.0.2",
 		"vite": "^5.4.10",
-		"vitest": "^2.1.4"
+		"vitest": "^2.1.4",
+		"zod": "^3.23.8"
 	},
 	"dependencies": {
 		"@node-rs/argon2": "^2.0.0",

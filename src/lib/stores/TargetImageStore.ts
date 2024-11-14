@@ -1,5 +1,6 @@
 import { browser } from "$app/environment";
 import { writable, type Writable } from "svelte/store";
+import { z } from 'zod';
 
 const STORE_KEY = 'targetTrackerStore';
 
@@ -8,36 +9,49 @@ const STORE_KEY = 'targetTrackerStore';
  */
 export const cameraImageDataStore: Writable<undefined|string> = writable();
 
-export interface ShotInterface {
-    [key: string|number]: string|object|number|undefined;
-    group: number|undefined;
-    image: HTMLImageElement|undefined;
-    x: number|undefined;
-    y: number|undefined;
-    score?: number|undefined;
-}
+const ShotSchema = z.object({
+    group: z.number(),
+    image: z.instanceof(HTMLImageElement).optional(),
+    x: z.number(),
+    y: z.number(),
+    score: z.number().optional()
+}).and(
+    z.record(
+        z.union([z.string(), z.number()]), // key
+		z.union([z.string(), z.number()]).optional() // value
+    )
+);
 
-export interface PoaInterface {
-    [key: string]: undefined|number|HTMLImageElement;
-    image: HTMLImageElement|undefined;
-    x: number|undefined;
-    y: number|undefined;
-}
+export type ShotInterface = z.infer<typeof ShotSchema>;
 
-export type GroupInterface = {
-    [key: string|number]: string|object|number|undefined;  // This allows numeric indexing
-    id: number|undefined;
-    shots: ShotInterface[]|undefined;
-    score?: number|undefined;
-    poa?: PoaInterface;
-    metrics: {
-        meanradius: number|undefined;
-        size: number|undefined;
-        diagonal: number|undefined;
-    }
-}
+const PoaSchema = z.object({
+    x: z.number(),
+    y: z.number()
+}).and(
+    z.record(
+        z.union([z.string(), z.number()]),
+        z.number(),
+    )
+);
 
-export interface TargetStoreInterface {
+export type PoaInterface = z.infer<typeof PoaSchema>
+
+const GroupSchema = z.object({
+    id: z.number(),
+    shots: z.array(ShotSchema).optional(),
+    score: z.number().optional(),
+    poa: PoaSchema.optional(),
+    metrics: z.object({
+        meanradius: z.number().optional(),
+        size: z.number().optional(),
+        diagonal: z.number().optional()
+    }).optional()
+}).passthrough();
+
+export type GroupInterface = z.infer<typeof GroupSchema>;
+
+
+export interface zTargetStoreInterface {
     [key: string|number|symbol]: string|object|number|undefined;
     target: {
         scale: number|undefined;
@@ -84,6 +98,52 @@ export interface TargetStoreInterface {
     }
 }
 
+const TargetStoreSchema = z.object({
+    target: z.object({
+        scale: z.number().optional(),
+        rotation: z.number().optional(),               // degrees. * Math.PI / 180 => angle
+        type: z.string().optional(),
+        range: z.number().optional(),
+        rangeUnit: z.union([z.literal('metric'), z.literal('imperial')]),
+        name: z.string().optional(),
+        image: z.object({
+            image: z.instanceof(HTMLImageElement).optional(),
+            filename: z.string().optional(),
+            originalsize: z.tuple([z.number().optional(), z.number().optional()]),
+            x: z.number().optional(),
+            y: z.number().optional(),
+            w: z.number().optional(),
+            h: z.number().optional(),
+        }),
+    }),
+    reference: z.object({
+        a: z.number().optional(),            // [x,y]
+        x: z.number().optional(),
+        y: z.number().optional(),
+        measurement: z.number().optional(),    // User supplied;
+        cm: z.number().optional(),             // 1 cm === % av tavlan
+        pct: z.number().optional()            // det omvända
+    }),
+    activeGroup: z.number().default(0),
+    groups: z.array(GroupSchema),
+    weather: z.object({
+        // averages
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        altitude: z.number().optional(),
+        timestamp: z.number().optional(),
+        data: z.object({
+            temperature: z.number().optional(),  // Celcius
+            humidity: z.number().optional(),
+            pressure: z.number().optional(),
+            windspeed: z.number().optional(),
+            winddirection: z.number().optional(),
+        })
+    })
+});
+
+export type TargetStoreInterface = z.infer<typeof TargetStoreSchema>;
+
 const initialStore: TargetStoreInterface = {
     target: {
         type: undefined,
@@ -104,14 +164,12 @@ const initialStore: TargetStoreInterface = {
     reference: {
         x: undefined,
         a: undefined,
-        aImage: undefined,
-        xImage: undefined,
         y: undefined,
         measurement: undefined,    // User supplied,
         cm: undefined,             // 1 cm === % av tavlan
         pct: undefined,            // det omvända
     },
-    activeGroup: 1,
+    activeGroup: 0,
     groups: [
         {
             id: 1,
