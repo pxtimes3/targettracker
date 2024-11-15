@@ -122,6 +122,19 @@ export const analysis = pgTable("analysis", {
 	}),
 ]);
 
+export const settings = pgTable("settings", {
+	id: uuid("id").defaultRandom(),
+	user_id: uuid("user_id").notNull().references(() => user.id, { onDelete: 'cascade' }).notNull(),
+	cursortips: boolean("cursortips").default(sql`true`),
+	isometrics: boolean("isometrics").default(sql`true`),
+	mils: boolean("mils").default(sql`true`),
+	showallshots: boolean("showallshots").default(sql`true`),
+	editorhelpclosed: boolean("editorhelpclosed").default(sql`false`),
+	lasttargettype: text("lasttargettype"),
+	lastcaliber: uuid("lastcaliber"),
+	lastgun: uuid("lastgun"),
+});
+
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type InviteCodes = typeof invitecodes.$inferSelect;
