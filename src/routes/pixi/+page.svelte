@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Logo from '@/components/logo/logo.svelte';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
+	import { UserSettingsStore } from '@/stores/UserSettingsStore';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { FederatedPointerEvent, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
@@ -38,9 +39,10 @@
 		'/cursors/shot.svg'
 	]);
 	let assets: string[] = [];
-	let targetContainer = new Container();
+	let targetContainer = new Container({isRenderGroup: true});
 	let groupContainers: Container[] = [];
 	let referenceContainer: Container;
+	let crosshairContainer: Container;
 	let scale: number = $state(0);
 	let isDragging: boolean = $state(false);
 	let dragTarget: DraggableSprite|undefined = undefined;
@@ -60,6 +62,8 @@
 	let refMeasurement: string = $state('0');
 	let refMeasurementDirty: boolean = $state(true);
 	let atoxInput: HTMLInputElement|undefined = $state();
+
+	let settingsForm: HTMLFormElement;
 
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
@@ -130,6 +134,9 @@
 	{
 		applicationState = "Populating application with static assets... ";
 		await Assets.load(staticAssets);
+
+		// const defaultCursor = 'url(\'/cursors/dot.svg\'), auto';
+		// app.renderer.events.cursorStyles.default = defaultCursor;
 	}
 
 	/**
@@ -169,11 +176,97 @@
 		targetContainer.scale = scale;
 	}
 
+	function setupCrosshairs()
+	{
+		crosshairContainer = new Container();
+		targetContainer.addChild(crosshairContainer);
+
+		const nLine = new Graphics();
+		nLine.label = 'N-Line';
+		crosshairContainer.addChild(nLine);
+
+		const sLine = new Graphics();
+		sLine.label = 'S-Line';
+		crosshairContainer.addChild(sLine);
+
+		const eLine = new Graphics();
+		eLine.label = 'E-Line';
+		crosshairContainer.addChild(eLine);
+
+		const wLine = new Graphics();
+		wLine.label = 'W-Line';
+		crosshairContainer.addChild(wLine);
+
+		app.ticker.add(() => {
+			if ($UserSettingsStore.editorcrosshair) {
+				nLine.clear();
+				nLine.beginPath();
+				nLine.setStrokeStyle({
+					width: 4,
+					color: 0x000000,
+					alpha: 0.3,
+					cap: 'round',
+					join: 'round'
+				});
+				const nStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 5});
+				const nEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 3000});
+				nLine.moveTo(nStartPoint.x, nStartPoint.y)
+						.lineTo(nEndPos.x, nEndPos.y)
+						.stroke();
+
+				sLine.clear();
+				sLine.beginPath();
+				sLine.setStrokeStyle({
+					width: 4,
+					color: 0x000000,
+					alpha: 0.3,
+					cap: 'round',
+					join: 'round'
+				});
+				const sStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 5});
+				const sEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 3000});
+				sLine.moveTo(sStartPoint.x, sStartPoint.y)
+						.lineTo(sEndPos.x, sEndPos.y)
+						.stroke();
+
+				wLine.clear();
+				wLine.beginPath();
+				wLine.setStrokeStyle({
+					width: 4,
+					color: 0x000000,
+					alpha: 0.3,
+					cap: 'round',
+					join: 'round'
+				});
+				const wStartPoint = targetContainer.toLocal({x: mouse.x - 5, y: mouse.y + 0});
+				const wEndPos = targetContainer.toLocal({x: mouse.x - 3000, y: mouse.y + 0});
+				wLine.moveTo(wStartPoint.x, wStartPoint.y)
+						.lineTo(wEndPos.x, wEndPos.y)
+						.stroke();
+
+				eLine.clear();
+				eLine.beginPath();
+				eLine.setStrokeStyle({
+					width: 4,
+					color: 0x000000,
+					alpha: 0.3,
+					cap: 'round',
+					join: 'round'
+				});
+				const eStartPoint = targetContainer.toLocal({x: mouse.x + 5, y: mouse.y + 0});
+				const eEndPos = targetContainer.toLocal({x: mouse.x + 3000, y: mouse.y + 0});
+				eLine.moveTo(eStartPoint.x, eStartPoint.y)
+						.lineTo(eEndPos.x, eEndPos.y)
+						.stroke();
+			}
+		});
+	}
 
 	/**
 	 * RefLine för senare användning...
 	 */
-	function setupReferenceLine(): void {
+	function setupReferenceLine(): void
+	{
 		if (!referenceContainer) {
 			referenceContainer = new Container();
 			referenceContainer.label = 'referenceContainer';
@@ -224,7 +317,7 @@
 				const dx = endPos.x - startPos.x;
 				const dy = endPos.y - startPos.y;
 				const length = Math.sqrt(dx * dx + dy * dy);
-				console.log(length.toFixed(2), targetSprite.width);
+				// console.log(length.toFixed(2), targetSprite.width);
 			}
 		});
 	}
@@ -535,6 +628,25 @@
 		}
 	}
 
+	function changeUserSettings(e: Event)
+	{
+		let target;
+
+		if (!e.target) { return; }
+
+		target = e.target as HTMLInputElement;
+		const setting = target.name;
+
+		if (target.type === 'checkbox') {
+			$UserSettingsStore[setting] = target.checked;
+		}
+		if (target.type === 'radio') {
+			$UserSettingsStore[setting] = target.id === 'true' ? true : false;
+		}
+
+		console.log($UserSettingsStore);
+	}
+
 	/**
 	 * Toggles the visibility of a panel associated with a button.
 	 *
@@ -596,11 +708,21 @@
 		if (mode) {
 			mode === "reference" ? referenceContainer.visible = true : referenceContainer.visible = false;
 		}
+
+		if ($UserSettingsStore) {
+			console.log('$UserSettingsStore changed')
+			if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
+				crosshairContainer.visible = true;
+			} else if (crosshairContainer) {
+				crosshairContainer.visible = false;
+			}
+		}
 	});
 
 	function logDebug()
 	{
 		console.log('TargetStore:', $TargetStore);
+		console.log('UserSettingsStore:', $UserSettingsStore);
 		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
 		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved)
 	}
@@ -613,6 +735,7 @@
 			await loadStaticAssets();
 			await drawTarget();
 			setupReferenceLine();
+			setupCrosshairs();
 			applicationState = "Adding groups ... "
 			await addGroups();
 			applicationState = `Loading done.`
@@ -736,7 +859,7 @@
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={() => true} />
+            <LucideX size="14" class="cursor-pointer" onclick={ (e) => showPanel(e, "rotation") } />
         </p>
     </div>
     <div class="pt-4">
@@ -781,7 +904,7 @@
 			<div class="input-group text-xs divide-primary-200-800 grid-cols-[auto_1fr_auto] divide-x text-body-color-dark bg-white">
 				<div class="input-group-cell preset-tonal-primary">A &rArr; X</div>
 				<input type="text" id="atoxInput" bind:this={atoxInput} class="bg-white text-xs" bind:value={refMeasurement} pattern={`^(?!^0$)-?\d+[.,]?\d*$`}>
-				<div class="input-group-cell preset-tonal-primary">cm</div>
+				<div class="input-group-cell preset-tonal-primary">{#if $UserSettingsStore.isometrics}cm{:else}in{/if}</div>
 			</div>
 			{#if !refMeasurementDirty}
 				<div class="z-30 absolute right-[7.75rem] mt-2 text-green-700"><LucideCheck size=20/></div>
@@ -802,18 +925,37 @@
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Settings</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={() => true} />
+            <LucideX size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "settings")} />
         </p>
     </div>
-    <div class="p-4">
-		<div class="">
-			<input type="checkbox" class="checkbox" id="showhelp" /><label for="showhelp">Show tips at cursor.</label>
+	<form id="settingsForm" bind:this={settingsForm}>
+		<div class="p-4 mb-8 grid grid-flow-row gap-y-2">
+			<div class="text-sm text-primary-950">
+				<input type="checkbox" class="checkbox mr-2" id="cursortips" name="cursortips" checked={$UserSettingsStore.cursortips} onchange={(e) => changeUserSettings(e)} />
+				<label for="cursortips" class="text-sm">Show tips at cursor.</label>
+			</div>
+			<div class="text-sm text-primary-950">
+				Units: <input type="radio" name="isometrics" id="true" checked={$UserSettingsStore.isometrics === true} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)} /><label for="metric">Metric</label>
+				<input type="radio" name="isometrics" id="false" checked={$UserSettingsStore.isometrics === false} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)}/><label for="imperial">Imperial</label>
+			</div>
+			<div class="text-sm text-primary-950">
+				Angle: <input type="radio" name="mils" id="true" checked={$UserSettingsStore.mils === true} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)} /><label for="metric">Mils</label>
+				<input type="radio" name="mils" id="false" checked={$UserSettingsStore.mils === false} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)}/><label for="imperial">Minute</label>
+			</div>
+			<div class="text-sm text-primary-950">
+				<input type="checkbox" class="checkbox mr-2" name="showallshots" id="showallshots" checked={$UserSettingsStore.showallshots} onchange={(e) => changeUserSettings(e)}/>
+				<label for="showallshots" class="text-sm">Show shots from all groups.</label>
+			</div>
+			<div class="text-sm text-primary-950">
+				<input type="checkbox" class="checkbox mr-2" name="editorcrosshair" id="editorcrosshair" checked={$UserSettingsStore.editorcrosshair} onchange={(e) => changeUserSettings(e)}/>
+				<label for="editorcrosshair" class="text-sm">Show editor crosshairs.</label>
+			</div>
 		</div>
-	</div>
+	</form>
 </div>
 
 <!-- followcursor -->
-{#if mode === "reference"}
+{#if mode === "reference" && $UserSettingsStore.cursortips}
 	<div class="absolute p-2 bg-black/70 max-w-40 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
 		{#if !aIsSet}
 			Set start point.
