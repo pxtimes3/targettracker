@@ -11,7 +11,6 @@ export const cameraImageDataStore: Writable<undefined|string> = writable();
 
 const ShotSchema = z.object({
     group: z.number(),
-    image: z.instanceof(HTMLImageElement).optional(),
     x: z.number(),
     y: z.number(),
     score: z.number().optional()
@@ -107,7 +106,9 @@ const TargetStoreSchema = z.object({
         rangeUnit: z.union([z.literal('metric'), z.literal('imperial')]),
         name: z.string().optional(),
         image: z.object({
-            image: z.instanceof(HTMLImageElement).optional(),
+            image: browser
+                ? z.instanceof(HTMLImageElement).optional()
+                : z.any().optional(),
             filename: z.string().optional(),
             originalsize: z.tuple([z.number().optional(), z.number().optional()]),
             x: z.number().optional(),
@@ -173,7 +174,18 @@ const initialStore: TargetStoreInterface = {
     groups: [
         {
             id: 1,
-            shots: [],
+            shots: [
+                {
+                    group: 1,
+                    x: 100,
+                    y: 100,
+                },
+                {
+                    group: 1,
+                    x: 200,
+                    y: 200,
+                },
+            ],
             poa: undefined,
             metrics: {
                 meanradius: 0,
