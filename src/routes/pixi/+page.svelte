@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Logo from '@/components/logo/logo.svelte';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
-	import { LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideX } from 'lucide-svelte';
+	import { LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { FederatedPointerEvent, Sprite as PixiSprite, Renderer } from 'pixi.js';
-	import { Application, Assets, Container, Sprite } from 'pixi.js';
+	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
 
@@ -40,6 +40,7 @@
 	let assets: string[] = [];
 	let targetContainer = new Container();
 	let groupContainers: Container[] = [];
+	let referenceContainer: Container;
 	let scale: number = $state(0);
 	let isDragging: boolean = $state(false);
 	let dragTarget: DraggableSprite|undefined = undefined;
@@ -49,6 +50,11 @@
 	let rotation: number = $state(0);
 	let previousRotation: number = $state(0);
 	let slider: number = $state(0);
+
+	let aIsSet: boolean = $state(false);
+	let xIsSet: boolean = $state(false);
+	let refLine: Graphics|undefined;
+	let isDrawingReferenceLine: boolean = $state(false);
 
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
@@ -158,6 +164,67 @@
 		targetContainer.scale = scale;
 	}
 
+
+	/**
+	 * RefLine för senare användning...
+	 */
+	function setupReferenceLine(): void {
+		if (!referenceContainer) {
+			referenceContainer = new Container();
+			referenceContainer.label = 'referenceContainer';
+			targetContainer.addChild(referenceContainer);
+		}
+
+		refLine = new Graphics();
+		refLine.label = 'reference-line';
+		referenceContainer.addChild(refLine);
+
+		app.ticker.add(() => {
+			if (isDrawingReferenceLine && refLine) {
+				const startPoint = referenceContainer.getChildByLabel('ref-a');
+				const endPoint = !xIsSet ? undefined : referenceContainer.getChildByLabel('ref-x');
+
+				if (!startPoint) return;
+
+				refLine.clear();
+				refLine.beginPath();
+				refLine.setStrokeStyle({
+					width: 3,
+					color: 0x000000,
+					alpha: 0.8,
+					cap: 'round',
+					join: 'round'
+				});
+
+				let startPos = { x: startPoint.x, y: startPoint.y };
+				let endPos;
+
+				if (isDragging) {
+					if (dragTarget?.label === 'ref-a') {
+						startPos = { x: dragTarget.x, y: dragTarget.y };
+						endPos = endPoint ? { x: endPoint.x, y: endPoint.y } : targetContainer.toLocal({ x: mouse.x, y: mouse.y });
+					} else if (dragTarget?.label === 'ref-x') {
+						endPos = { x: dragTarget.x, y: dragTarget.y };
+					} else {
+						endPos = endPoint ? { x: endPoint.x, y: endPoint.y } : targetContainer.toLocal({ x: mouse.x, y: mouse.y });
+					}
+				} else {
+					endPos = endPoint ? { x: endPoint.x, y: endPoint.y } : targetContainer.toLocal({ x: mouse.x, y: mouse.y });
+				}
+
+				refLine.moveTo(startPos.x, startPos.y)
+					.lineTo(endPos.x, endPos.y)
+					.stroke();
+
+				const dx = endPos.x - startPos.x;
+				const dy = endPos.y - startPos.y;
+				const length = Math.sqrt(dx * dx + dy * dy);
+				console.log(length.toFixed(2), targetSprite.width);
+			}
+		});
+	}
+
+
 	/**
 	 *	Adderar grupper som redan finns i storen.
 	 */
@@ -228,7 +295,7 @@
 
 		const texture = await Assets.load('/cursors/shot.svg');
 		const sprite = new Sprite(texture) as DraggableSprite;
-    	sprite.label = `shot-${groupContainer.label}`;
+		sprite.label = `shot-${groupContainer.label}-${groupContainer.children.length}`;
     	sprite.eventMode = 'dynamic';
     	sprite.cursor = 'pointer';
 		sprite.interactive = true;
@@ -242,6 +309,7 @@
 		sprite.on('pointerdown', (e) => handleClick(e, sprite));
 
 		groupContainer.addChild(sprite);
+		console.log(`added ${sprite.label}:`, sprite);
 	}
 
 	/**
@@ -262,15 +330,73 @@
 	{
 		// console.log(`click!`, $state.snapshot(mouse), e, target);
 		if (e.button === 0) {
-			// console.log(`target.label: ${target.label}`)
+			console.log(`target.label: ${target.label}`)
+			if (target.label.startsWith('shot-') && (mode === undefined || mode === "shots")) {
+				e.stopPropagation();
+				onDragStart(target as DraggableSprite, e);
+				return;
+			}
+			if (target.label.startsWith('ref-') && (mode === "reference")) {
+				e.stopPropagation();
+				onDragStart(target as DraggableSprite, e);
+				return;
+			}
+			if (target.label.startsWith('target') && mode === "reference") {
+				e.stopPropagation();
+				// onDragStart(target as DraggableSprite, e);
+				addReferencePoint(e.globalX, e.globalY)
+				return;
+			}
 			if (target.label === 'target' && (mode === undefined || mode === "shots")) {
 				if (dragTarget) { dragTarget = undefined; }
-				const localPos = targetContainer.toLocal(e.global);
-            	addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+				addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 			}
-			if (target.label === 'shot') {
-				onDragStart(target as DraggableSprite, e);
-			}
+		}
+	}
+
+	async function addReferencePoint(x: number, y: number): Promise<void>
+	{
+		if (!aIsSet) {
+			const texture = await Assets.load('/cursors/circle-a.svg');
+			const sprite = new Sprite(texture) as DraggableSprite;
+			sprite.label = `ref-a`;
+			sprite.eventMode = 'dynamic';
+			sprite.cursor = 'pointer';
+			sprite.interactive = true;
+			sprite.anchor.set(0.5);
+			sprite.scale = (1/targetContainer.scale.x);
+
+			const localPos = referenceContainer.toLocal({ x, y }, app.stage);
+			sprite.x = localPos.x;
+			sprite.y = localPos.y;
+
+			sprite.on('pointerdown', (e) => handleClick(e, sprite));
+
+			referenceContainer.addChild(sprite);
+			aIsSet = true;
+			console.log(`added ${sprite.label}:`, sprite);
+			return;
+		}
+
+		if (aIsSet && !xIsSet) {
+			const texture = await Assets.load('/cursors/circle-x.svg');
+			const sprite = new Sprite(texture) as DraggableSprite;
+			sprite.label = `ref-x`;
+			sprite.eventMode = 'dynamic';
+			sprite.cursor = 'pointer';
+			sprite.interactive = true;
+			sprite.anchor.set(0.5);
+			sprite.scale = (1/targetContainer.scale.x);
+
+			const localPos = referenceContainer.toLocal({ x, y }, app.stage);
+			sprite.x = localPos.x;
+			sprite.y = localPos.y;
+
+			sprite.on('pointerdown', (e) => handleClick(e, sprite));
+
+			referenceContainer.addChild(sprite);
+			xIsSet = true;
+			console.log(`added ${sprite.label}:`, sprite);
 		}
 	}
 
@@ -291,16 +417,18 @@
 		dragTarget.alpha = 0.5;
 		dragTarget.eventMode = 'dynamic';
 
-		const globalPosition = event.global;
+		// Convert global position to local position
+		const groupContainer = target.parent;
+		const localPos = groupContainer.toLocal(event.global);
+
 		dragTarget.drag = {
 			dragging: true,
-			data: globalPosition,
-			offsetX: dragTarget.x - globalPosition.x,
-			offsetY: dragTarget.y - globalPosition.y,
+			data: localPos,
+			offsetX: target.x - localPos.x,
+			offsetY: target.y - localPos.y,
 			startPosition: { x: target.x, y: target.y }
 		};
 
-		// Add movement tracking to the stage instead
 		app.stage.eventMode = 'dynamic';
 		app.stage.on('pointermove', onDragMove);
 		app.stage.on('pointerup', onDragEnd);
@@ -317,9 +445,15 @@
 	function onDragMove(event: FederatedPointerEvent): void
 	{
 		if (isDragging && dragTarget?.drag?.dragging) {
-			const newPosition = event.global;
-			dragTarget.x = newPosition.x + dragTarget.drag.offsetX;
-			dragTarget.y = newPosition.y + dragTarget.drag.offsetY;
+			// Convert global position to local position within the group container
+			const groupContainer = dragTarget.parent;
+			const newPosition = groupContainer.toLocal(event.global);
+			dragTarget.x = newPosition.x;
+			dragTarget.y = newPosition.y;
+
+			if (dragTarget.label?.startsWith('ref-')) {
+            	isDrawingReferenceLine = true;
+        	}
 		}
 	}
 
@@ -413,6 +547,7 @@
         button.classList.toggle('bg-black/20');
     }
 
+
 	$effect(() => {
 		if (chromeArea) {
 			canvasContainer.style.width  = `${chromeArea.x}px`;
@@ -426,6 +561,11 @@
 		if (slider) {
 			rotateTarget(rotation);
 		}
+
+		isDrawingReferenceLine = (mode === "reference" && (
+			(aIsSet && !xIsSet) ||
+			(aIsSet && xIsSet && isDragging)
+		));
 	});
 
 	onMount(async () => {
@@ -435,13 +575,16 @@
 		if (app) {
 			await loadStaticAssets();
 			await drawTarget();
+			setupReferenceLine();
 			applicationState = "Adding groups ... "
 			await addGroups();
 			applicationState = `Loading done.`
 			setTimeout(() => {
 				loadingDone();
 			}, 300);
-		}
+		};
+
+		// mode = "reference";
 	});
 
 	onDestroy(async () => {
@@ -505,11 +648,24 @@
 				class="pointer-events-none"
 			/>
 		</button>
+
+		<button
+			class="w-16 h-12 mt-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			title="Settings"
+			id="settings-button"
+			onclick={(e) => { showPanel(e, "settings") }}
+		>
+			<SlidersHorizontal
+				size="20"
+				color="#000"
+				class="pointer-events-none"
+			/>
+		</button>
 	</div>
 </aside>
 
 <!-- panels -->
-<div id="rotate" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 max-w-fit hidden">
+<div id="rotate" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
@@ -545,6 +701,58 @@
     </div>
 </div>
 
+<div id="reference" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64 hidden">
+	<div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
+		<p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
+		<p class="justify-self-end">
+			<LucideX size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "reference") } />
+		</p>
+	</div>
+	<div class="p-4">
+		<label for="atoxInput" class="text-sm text-body-color-dark"></label>
+		<div class="grid grid-cols[1fr_1fr] grid-flow-col">
+			<div class="input-group text-xs divide-primary-200-800 grid-cols-[auto_1fr_auto] divide-x text-body-color-dark bg-white">
+				<div class="input-group-cell preset-tonal-primary">A &rArr; X</div>
+				<input type="text" id="atoxInput" class="bg-white text-xs" bind:value={$TargetStore.reference.measurement} >
+				<div class="input-group-cell preset-tonal-primary">cm</div>
+			</div>
+			<button class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase">Set</button>
+		</div>
+		<div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
+			Tip: You can change measurement units in <a href="##" class="anchor underline">the settings panel</a>.
+		</div>
+	</div>
+</div>
+
+<div id="settings" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+    <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
+        <p class="tracking-widest pointer-events-none justify-self-start">Settings</p>
+        <p class="justify-self-end">
+            <LucideX size="14" class="cursor-pointer" onclick={() => true} />
+        </p>
+    </div>
+    <div class="p-4">
+		<div class="">
+			<input type="checkbox" class="checkbox" id="showhelp" /><label for="showhelp">Show tips at cursor.</label>
+		</div>
+	</div>
+</div>
+
+<!-- followcursor -->
+{#if mode === "reference"}
+	<div class="absolute p-2 bg-black/70 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
+		{#if !aIsSet}
+			Set start point.
+		{:else if !xIsSet}
+			Set end point.
+		{:else}
+			Drag points to desired position<br/>
+			or press Set.
+		{/if}
+	</div>
+{/if}
+
+<!-- canvas -->
 <div
 	role="application"
 	aria-roledescription="The funny thing is that if you can't see properly, why would you use this service? Anyways, compliance is bliss!"
