@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Logo from '@/components/logo/logo.svelte';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
-	import { LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideX, SlidersHorizontal } from 'lucide-svelte';
+	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { FederatedPointerEvent, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
@@ -52,9 +52,14 @@
 	let slider: number = $state(0);
 
 	let aIsSet: boolean = $state(false);
+	let aIsMoved: boolean = $state(true);
 	let xIsSet: boolean = $state(false);
+	let xIsMoved: boolean = $state(true);
 	let refLine: Graphics|undefined;
 	let isDrawingReferenceLine: boolean = $state(false);
+	let refMeasurement: string = $state('0');
+	let refMeasurementDirty: boolean = $state(true);
+	let atoxInput: HTMLInputElement|undefined = $state();
 
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
@@ -347,7 +352,7 @@
 				addReferencePoint(e.globalX, e.globalY)
 				return;
 			}
-			if (target.label === 'target' && (mode === undefined || mode === "shots")) {
+			if (target.label === 'target' && mode === "shots") {
 				if (dragTarget) { dragTarget = undefined; }
 				addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 			}
@@ -453,6 +458,12 @@
 
 			if (dragTarget.label?.startsWith('ref-')) {
             	isDrawingReferenceLine = true;
+				if (dragTarget.label === 'ref-a') {
+					aIsMoved = true;
+				}
+				if (dragTarget.label === 'ref-x') {
+					xIsMoved = true;
+				}
         	}
 		}
 	}
@@ -506,12 +517,23 @@
 	 *
 	 * @param setmode - The new mode to be set. If not provided, the mode remains unchanged.
 	 */
-    function setMode(setmode?: string): void {
+    function setMode(setmode?: string): void
+	{
         if (mode !== setmode) {
             mode = setmode;
         }
     }
 
+
+	function setRefMeasurement()
+	{
+		if (aIsSet && xIsSet && atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i)) {
+			$TargetStore.reference.measurement = parseFloat(refMeasurement);
+			aIsMoved = false;
+			xIsMoved = false;
+			refMeasurementDirty = false;
+		}
+	}
 
 	/**
 	 * Toggles the visibility of a panel associated with a button.
@@ -566,7 +588,22 @@
 			(aIsSet && !xIsSet) ||
 			(aIsSet && xIsSet && isDragging)
 		));
+
+		if (aIsMoved || xIsMoved) {
+			refMeasurementDirty = true;
+		}
+
+		if (mode) {
+			mode === "reference" ? referenceContainer.visible = true : referenceContainer.visible = false;
+		}
 	});
+
+	function logDebug()
+	{
+		console.log('TargetStore:', $TargetStore);
+		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
+		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved)
+	}
 
 	onMount(async () => {
 		await getChromeArea();
@@ -599,7 +636,7 @@
 	onload={getChromeArea}
 />
 <aside
-	class="absolute z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
+	class="absolute grid grid-flow-row place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
 >
 	<button
 		id="targetTrackerMenu"
@@ -611,8 +648,8 @@
 			height=36
 		/>
 	</button>
-	<hr class="max-w-[70%] ml-[15%] opacity-40"/>
 	<div id="tools" class="grid grid-flow-row">
+		<hr class="max-w-[70%] ml-[15%] opacity-40"/>
 		<button
 			title="Set reference"
 			id="reference-button"
@@ -627,6 +664,7 @@
 
 		<button
 			title="Set point of aim"
+			disabled={ refMeasurementDirty ? true : false }
 			onclick={() => {mode === "poa" ? setMode(undefined) : setMode("poa"); }}
 			class="{mode === "poa" ? 'bg-black/20' : ''} w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
@@ -637,7 +675,21 @@
 		</button>
 
 		<button
-			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			title={ refMeasurementDirty ? 'Set reference points first' : 'Set point of aim' }
+			disabled={ refMeasurementDirty ? true : false }
+			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
+			class="{mode === "shots" ? 'bg-black/20' : ''} w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+		>
+			<LucideLocate
+				color="#000"
+				class="pointer-events-none"
+			/>
+		</button>
+
+		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3"/>
+
+		<button
+			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Rotate target"
 			id="rotate-button"
 			onclick={(e) => { showPanel(e, "rotate") }}
@@ -649,8 +701,10 @@
 			/>
 		</button>
 
+		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3"/>
+
 		<button
-			class="w-16 h-12 mt-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Settings"
 			id="settings-button"
 			onclick={(e) => { showPanel(e, "settings") }}
@@ -662,6 +716,19 @@
 			/>
 		</button>
 	</div>
+
+	<button
+		class="w-16 h-12 mt-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+		title="Debug"
+		id="debug-button"
+		onclick={(e) => { /*showPanel(e, "settings")*/ logDebug() }}
+	>
+		<LucideBug
+			size="20"
+			color="#000"
+			class="pointer-events-none"
+		/>
+	</button>
 </aside>
 
 <!-- panels -->
@@ -713,10 +780,17 @@
 		<div class="grid grid-cols[1fr_1fr] grid-flow-col">
 			<div class="input-group text-xs divide-primary-200-800 grid-cols-[auto_1fr_auto] divide-x text-body-color-dark bg-white">
 				<div class="input-group-cell preset-tonal-primary">A &rArr; X</div>
-				<input type="text" id="atoxInput" class="bg-white text-xs" bind:value={$TargetStore.reference.measurement} >
+				<input type="text" id="atoxInput" bind:this={atoxInput} class="bg-white text-xs" bind:value={refMeasurement} pattern={`^(?!^0$)-?\d+[.,]?\d*$`}>
 				<div class="input-group-cell preset-tonal-primary">cm</div>
 			</div>
-			<button class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase">Set</button>
+			{#if !refMeasurementDirty}
+				<div class="z-30 absolute right-[7.75rem] mt-2 text-green-700"><LucideCheck size=20/></div>
+			{/if}
+			<button
+				class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase"
+				disabled={aIsSet && xIsSet && refMeasurement.match(/^(?!^0$)-?\d+[.,]?\d*$/i) ? false : true}
+				onclick={setRefMeasurement}
+			>Set</button>
 		</div>
 		<div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
 			Tip: You can change measurement units in <a href="##" class="anchor underline">the settings panel</a>.
@@ -740,14 +814,13 @@
 
 <!-- followcursor -->
 {#if mode === "reference"}
-	<div class="absolute p-2 bg-black/70 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
+	<div class="absolute p-2 bg-black/70 max-w-40 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
 		{#if !aIsSet}
 			Set start point.
 		{:else if !xIsSet}
 			Set end point.
 		{:else}
-			Drag points to desired position<br/>
-			or press Set.
+			Adjust points if necessary then enter the length and press Set.
 		{/if}
 	</div>
 {/if}
