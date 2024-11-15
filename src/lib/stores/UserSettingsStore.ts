@@ -9,11 +9,20 @@ const SettingsSchema = z.object({
 	isometrics: z.boolean(),
 	mils: z.boolean(),
 	showallshots: z.boolean(),
+    editorcrosshair: z.boolean(),
 	editorhelpclosed: z.boolean(),
+    showcircle: z.boolean(),
+    showdiagonal: z.boolean(),
+    showrectangle: z.boolean(),
 	lasttargettype: z.string().optional(),
 	lastcaliber: z.string().uuid().optional(),
 	lastgun: z.string().uuid().optional(),
-});
+}).and(
+    z.record(
+        z.union([z.string(), z.number()]),
+        z.union([z.boolean(), z.string().uuid(), z.undefined()]),
+    )
+);;
 
 export type SettingsInterface = z.infer<typeof SettingsSchema>;
 
@@ -22,13 +31,19 @@ const initSettingsStore: SettingsInterface = {
 	isometrics: true,
 	mils: true,
 	showallshots: true,
-	editorhelpclosed: false,
+    editorcrosshair: true,
+    editorhelpclosed: false,
+
+    showcircle: true,
+    showdiagonal: false,
+    showrectangle: false,
+
 	lasttargettype: undefined,
 	lastcaliber: undefined,
 	lastgun: undefined,
 }
 
-function createTargetStore()
+function createSettingStore()
 {
     // har vi sparad data?
     const storedData = browser ? JSON.parse(localStorage.getItem(STORE_KEY) || 'null') : null;
@@ -41,4 +56,19 @@ function createTargetStore()
             localStorage.setItem(STORE_KEY, JSON.stringify(val));
         });
     }
+
+	return {
+        ...store,
+        reset: () => {
+            store.set(initSettingsStore);
+        },
+        clearStorage: () => {
+            if (browser) {
+                localStorage.removeItem(STORE_KEY);
+            }
+            store.set(initSettingsStore);
+        }
+    }
 }
+
+export const UserSettingsStore = createSettingStore();
