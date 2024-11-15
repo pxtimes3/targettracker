@@ -859,7 +859,7 @@
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={ (e) => showPanel(e, "rotation") } />
+            <LucideX size="14" class="cursor-pointer" onclick={ (e) => showPanel(e, "rotate") } />
         </p>
     </div>
     <div class="pt-4">
