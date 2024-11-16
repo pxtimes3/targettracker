@@ -65,6 +65,9 @@
 
 	let settingsForm: HTMLFormElement;
 
+	const zoomBoundaries = [0.25, 3.0];
+	const zoomStep = 0.1;
+
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
 	 */
@@ -202,7 +205,7 @@
 				nLine.clear();
 				nLine.beginPath();
 				nLine.setStrokeStyle({
-					width: 4,
+					width: 2 * (1/scale),
 					color: 0x000000,
 					alpha: 0.3,
 					cap: 'round',
@@ -217,7 +220,7 @@
 				sLine.clear();
 				sLine.beginPath();
 				sLine.setStrokeStyle({
-					width: 4,
+					width: 2 * (1/scale),
 					color: 0x000000,
 					alpha: 0.3,
 					cap: 'round',
@@ -232,7 +235,7 @@
 				wLine.clear();
 				wLine.beginPath();
 				wLine.setStrokeStyle({
-					width: 4,
+					width: 2 * (1/scale),
 					color: 0x000000,
 					alpha: 0.3,
 					cap: 'round',
@@ -247,7 +250,7 @@
 				eLine.clear();
 				eLine.beginPath();
 				eLine.setStrokeStyle({
-					width: 4,
+					width: 2 * (1/scale),
 					color: 0x000000,
 					alpha: 0.3,
 					cap: 'round',
@@ -398,7 +401,7 @@
     	sprite.cursor = 'pointer';
 		sprite.interactive = true;
 		sprite.anchor.set(0.5);
-		sprite.scale = (1/targetContainer.scale.x);
+		// sprite.scale = 1 * (1/scale);
 
 		const localPos = groupContainer.toLocal({ x, y }, app.stage);
     	sprite.x = localPos.x;
@@ -417,6 +420,31 @@
 	{
 		canvasContainer.classList.remove('opacity-35');
 		loader.classList.add('hidden');
+	}
+
+	function handleWheel(e: WheelEvent): void
+	{
+		if (!targetContainer) return;
+		const currentScale = Math.min(
+                targetContainer.width * scale,
+                targetContainer.height * scale
+        );
+
+		let newScale: number = currentScale;
+
+		console.log(e, scale);
+
+		if (e.deltaY > 0) {
+			newScale = scale + zoomStep;
+		} else if (e.deltaY < 0) {
+			newScale = scale - zoomStep;
+		}
+
+		if (newScale > zoomBoundaries[0] && newScale < zoomBoundaries[1]) {
+			scale = newScale;
+			targetContainer.scale = scale;
+		}
+
 	}
 
 	/**
@@ -618,7 +646,7 @@
     }
 
 
-	function setRefMeasurement()
+	function setRefMeasurement(): void
 	{
 		if (aIsSet && xIsSet && atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i)) {
 			$TargetStore.reference.measurement = parseFloat(refMeasurement);
@@ -628,7 +656,7 @@
 		}
 	}
 
-	function changeUserSettings(e: Event)
+	function changeUserSettings(e: Event): void
 	{
 		let target;
 
@@ -639,10 +667,11 @@
 
 		if (target.type === 'checkbox') {
 			$UserSettingsStore[setting] = target.checked;
-		}
-		if (target.type === 'radio') {
+		} else if (target.type === 'radio') {
 			$UserSettingsStore[setting] = target.id === 'true' ? true : false;
 		}
+
+		// TODO: Push to DB
 
 		console.log($UserSettingsStore);
 	}
@@ -973,6 +1002,7 @@
 	aria-roledescription="The funny thing is that if you can't see properly, why would you use this service? Anyways, compliance is bliss!"
 	bind:this={canvasContainer}
 	onmousemove={mousePosition}
+	onwheel={handleWheel}
 	class="relative grid justify-items-center align-middle place-content-center opacity-35"
 ></div>
 <div bind:this={loader} class="z-50 transition-all top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-center absolute py-6 px-8 w-72 max-w-screen-sm rounded border-2 border-surface-500 bg-surface-300 text-surface-100 shadow-lg">{applicationState}</div>
