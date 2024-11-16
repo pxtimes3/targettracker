@@ -2,7 +2,7 @@
 	import Logo from '@/components/logo/logo.svelte';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
-	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideX, SlidersHorizontal } from 'lucide-svelte';
+	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { FederatedPointerEvent, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
@@ -58,6 +58,7 @@
 	let xIsSet: boolean = $state(false);
 	let xIsMoved: boolean = $state(true);
 	let refLine: Graphics|undefined;
+	let refLineLength: number = $state(0);
 	let isDrawingReferenceLine: boolean = $state(false);
 	let refMeasurement: string = $state('0');
 	let refMeasurementDirty: boolean = $state(true);
@@ -177,6 +178,10 @@
 		);
 
 		targetContainer.scale = scale;
+
+		// update targetStore if dimensions differ
+		$TargetStore.target.image.originalsize[0] != targetSprite.width  ? $TargetStore.target.image.originalsize[0] = targetSprite.width  : '';
+		$TargetStore.target.image.originalsize[1] != targetSprite.height ? $TargetStore.target.image.originalsize[1] = targetSprite.height : '';
 	}
 
 	function setupCrosshairs()
@@ -319,8 +324,11 @@
 
 				const dx = endPos.x - startPos.x;
 				const dy = endPos.y - startPos.y;
-				const length = Math.sqrt(dx * dx + dy * dy);
-				// console.log(length.toFixed(2), targetSprite.width);
+				refLineLength = Math.sqrt(
+					Math.pow(endPos.x - startPos.x, 2) +
+					Math.pow(endPos.y - startPos.y, 2)
+				);
+				// console.log(refLineLength);
 			}
 		});
 	}
@@ -413,6 +421,44 @@
 		console.log(`added ${sprite.label}:`, sprite);
 	}
 
+
+	async function addPoa(x: number, y: number, group?: string): Promise<void>
+	{
+		if (!group) {
+			if (!$TargetStore.activeGroup) {
+				throw new Error('No activeGroup and no group supplied. Exiting.');
+			}
+			group = $TargetStore.activeGroup.toString();
+		}
+
+		const groupContainer = targetContainer.getChildByLabel(group);
+		if (!groupContainer) { throw new Error(`Wanted group with label: ${group} but none was found!`); }
+
+		// lägg inte till ytterligare en PoA om vi redan har en satt
+		if (groupContainer.getChildByLabel(`poa-${groupContainer.label}`)) {
+			console.warn('Group already has a PoA set.');
+			return;
+		}
+
+		const texture = await Assets.load('/cursors/poa.svg');
+		const sprite = new Sprite(texture) as DraggableSprite;
+		sprite.label = `poa-${groupContainer.label}`;
+    	sprite.eventMode = 'dynamic';
+    	sprite.cursor = 'pointer';
+		sprite.interactive = true;
+		sprite.anchor.set(0.5);
+		// sprite.scale = 1 * (1/scale);
+
+		const localPos = groupContainer.toLocal({ x, y }, app.stage);
+    	sprite.x = localPos.x;
+    	sprite.y = localPos.y;
+
+		sprite.on('pointerdown', (e) => handleClick(e, sprite));
+
+		groupContainer.addChild(sprite);
+		console.log(`added ${sprite.label}:`, sprite);
+	}
+
 	/**
 	 * Gör fancy stuff med skit.
 	 */
@@ -456,13 +502,17 @@
 	{
 		// console.log(`click!`, $state.snapshot(mouse), e, target);
 		if (e.button === 0) {
-			console.log(`target.label: ${target.label}`)
-			if (target.label.startsWith('shot-') && (mode === undefined || mode === "shots")) {
+			if (target.label.startsWith('shot-')) {
 				e.stopPropagation();
 				onDragStart(target as DraggableSprite, e);
 				return;
 			}
 			if (target.label.startsWith('ref-') && (mode === "reference")) {
+				e.stopPropagation();
+				onDragStart(target as DraggableSprite, e);
+				return;
+			}
+			if (target.label.startsWith('poa-')) {
 				e.stopPropagation();
 				onDragStart(target as DraggableSprite, e);
 				return;
@@ -473,9 +523,13 @@
 				addReferencePoint(e.globalX, e.globalY)
 				return;
 			}
-			if (target.label === 'target' && mode === "shots") {
+			if (target.label === 'target') {
 				if (dragTarget) { dragTarget = undefined; }
-				addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+				if (mode === "shots") {
+					addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+				} else if (mode === "poa") {
+					addPoa(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+				}
 			}
 		}
 	}
@@ -500,7 +554,8 @@
 
 			referenceContainer.addChild(sprite);
 			aIsSet = true;
-			console.log(`added ${sprite.label}:`, sprite);
+			// console.log(`added ${sprite.label} @ ${sprite._position._x}:${sprite._position._y}:`, sprite);
+			TargetStore.setReference('a', [sprite._position._x, sprite._position._y]);
 			return;
 		}
 
@@ -522,7 +577,8 @@
 
 			referenceContainer.addChild(sprite);
 			xIsSet = true;
-			console.log(`added ${sprite.label}:`, sprite);
+			// console.log(`added ${sprite.label}:`, sprite);
+			TargetStore.setReference('x', [sprite._position._x, sprite._position._y]);
 		}
 	}
 
@@ -649,7 +705,9 @@
 	function setRefMeasurement(): void
 	{
 		if (aIsSet && xIsSet && atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i)) {
-			$TargetStore.reference.measurement = parseFloat(refMeasurement);
+			refMeasurement = refMeasurement.replace(/,/, '.');
+			TargetStore.setReference('measurement', parseFloat(refMeasurement));
+			TargetStore.setReference('linelength', refLineLength);
 			aIsMoved = false;
 			xIsMoved = false;
 			refMeasurementDirty = false;
@@ -687,28 +745,43 @@
 	 * visibility. The panel's position is adjusted relative to the button's position.
 	 * Logs an error if the panel cannot be found.
 	 */
-	// TODO: Göm andra paneler
+	// TODO: Store för active button => css-klass active eller något.
     function showPanel(e: Event, name: string): void {
-        if (!e.target) return;
+		if (e.type != 'load' && !e.target) return;
 
-        const target = e.target as Element;
-        const button = target.tagName === "BUTTON"
-            ? target as HTMLButtonElement
-            : document.getElementById(`${name}-button`) as HTMLButtonElement;
+		let button;
+		let target;
 
-        if (!button) return;
+		if (e.type === 'load') {
+			button = document.getElementById(`${name}-button`) as HTMLButtonElement;
+		} else {
+			target = e.target as Element;
+			button = target.tagName === "BUTTON"
+				? target as HTMLButtonElement
+				: document.getElementById(`${name}-button`) as HTMLButtonElement;
 
-        const panel = document.getElementById(name);
-        if (!panel) {
-            console.error(`${name} couldn't be found!?`);
-            return;
-        }
+			if (!button) return;
+		}
 
-        panel.classList.toggle('hidden');
-        panel.style.top = `${button.offsetTop}px`;
-        panel.style.left = `${button.offsetWidth + 4}px`;
-        button.classList.toggle('bg-black/20');
-    }
+		const panel = document.getElementById(`${name}-panel`);
+		if (!panel) {
+			console.error(`${name} couldn't be found!?`);
+			return;
+		}
+
+		panel.classList.toggle('hidden');
+		panel.style.top = `${button.offsetTop}px`;
+		panel.style.left = `${button.offsetWidth + 4}px`;
+
+		// Hide other panels
+		if (!panel.classList.contains('hidden')) {
+			document.querySelectorAll("div[id$='-panel']").forEach((p) => {
+				if (p.id != panel.id) {
+					p.classList.add('hidden');
+				}
+			});
+		}
+	}
 
 
 	$effect(() => {
@@ -739,7 +812,6 @@
 		}
 
 		if ($UserSettingsStore) {
-			console.log('$UserSettingsStore changed')
 			if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
 				crosshairContainer.visible = true;
 			} else if (crosshairContainer) {
@@ -753,7 +825,8 @@
 		console.log('TargetStore:', $TargetStore);
 		console.log('UserSettingsStore:', $UserSettingsStore);
 		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
-		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved)
+		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved);
+		console.log('refLine:', refLine);
 	}
 
 	onMount(async () => {
@@ -773,7 +846,10 @@
 			}, 300);
 		};
 
+		// TODO: Check om det redan är en påbörjad tavla.
+		// 		 If groups.length > 0?
 		// mode = "reference";
+		// showPanel(new Event('load'), "reference");
 	});
 
 	onDestroy(async () => {
@@ -803,10 +879,22 @@
 	<div id="tools" class="grid grid-flow-row">
 		<hr class="max-w-[70%] ml-[15%] opacity-40"/>
 		<button
+			title="Target information"
+			id="targetinfo-button"
+			onclick={ (e) => showPanel(e, "info") }
+			class="w-16 h-12 mt-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+		>
+			<LucideTarget
+				color="#000"
+				class="pointer-events-none"
+			/>
+		</button>
+
+		<button
 			title="Set reference"
 			id="reference-button"
 			onclick={(e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); showPanel(e, "reference")}}
-			class="{mode === "reference" ? 'bg-black/20' : ''} w-16 h-12 mt-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
 				color="#000"
@@ -815,10 +903,11 @@
 		</button>
 
 		<button
-			title="Set point of aim"
+			title={ refMeasurementDirty ? 'Set reference points first' : 'Set point of aim' }
+			id="poa-button"
 			disabled={ refMeasurementDirty ? true : false }
 			onclick={() => {mode === "poa" ? setMode(undefined) : setMode("poa"); }}
-			class="{mode === "poa" ? 'bg-black/20' : ''} w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocateFixed
 				color="#000"
@@ -827,10 +916,11 @@
 		</button>
 
 		<button
-			title={ refMeasurementDirty ? 'Set reference points first' : 'Set point of aim' }
+			id="shots-button"
+			title={ refMeasurementDirty ? 'Set reference points first' : 'Place shots' }
 			disabled={ refMeasurementDirty ? true : false }
 			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
-			class="{mode === "shots" ? 'bg-black/20' : ''} w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocate
 				color="#000"
@@ -844,7 +934,7 @@
 			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Rotate target"
 			id="rotate-button"
-			onclick={(e) => { showPanel(e, "rotate") }}
+			onclick={(e) => { showPanel(e, "rotate"); setMode("rotate"); }}
 		>
 			<LucideRefreshCcw
 				size="20"
@@ -859,7 +949,7 @@
 			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Settings"
 			id="settings-button"
-			onclick={(e) => { showPanel(e, "settings") }}
+			onclick={(e) => { showPanel(e, "settings"); setMode("settings");}}
 		>
 			<SlidersHorizontal
 				size="20"
@@ -884,7 +974,7 @@
 </aside>
 
 <!-- panels -->
-<div id="rotate" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+<div id="rotate-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
@@ -920,7 +1010,7 @@
     </div>
 </div>
 
-<div id="reference" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64 hidden">
+<div id="reference-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64 hidden">
 	<div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
 		<p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
 		<p class="justify-self-end">
@@ -950,7 +1040,7 @@
 	</div>
 </div>
 
-<div id="settings" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+<div id="settings-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Settings</p>
         <p class="justify-self-end">
@@ -983,6 +1073,35 @@
 	</form>
 </div>
 
+<div id="info-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+    <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
+        <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Target information</p>
+        <p class="justify-self-end">
+            <LucideX size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "settings")} />
+        </p>
+    </div>
+	<div class="p-4 mb-8 grid grid-flow-row gap-y-2">
+		<div class="text-sm text-primary-950">
+			Name
+		</div>
+		<div class="text-sm text-primary-950">
+			Type
+		</div>
+		<div class="text-sm text-primary-950">
+			Note
+		</div>
+		<div class="text-sm text-primary-950">
+			Firearm
+		</div>
+		<div class="text-sm text-primary-950">
+			Ammunition
+		</div>
+		<div class="text-sm text-primary-950">
+			Weather data:
+		</div>
+	</div>
+</div>
+
 <!-- followcursor -->
 {#if mode === "reference" && $UserSettingsStore.cursortips}
 	<div class="absolute p-2 bg-black/70 max-w-40 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
@@ -990,8 +1109,10 @@
 			Set start point.
 		{:else if !xIsSet}
 			Set end point.
-		{:else}
+		{:else if refMeasurementDirty}
 			Adjust points if necessary then enter the length and press Set.
+		{:else}
+			All set! Now add point of aim (required for scoring) or start placing shots on the target.
 		{/if}
 	</div>
 {/if}
