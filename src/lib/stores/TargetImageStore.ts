@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { calculateReferenceValues } from "@/utils/target";
 import { writable, type Writable } from "svelte/store";
 import { z } from 'zod';
 
@@ -105,6 +106,9 @@ const TargetStoreSchema = z.object({
         range: z.number().optional(),
         rangeUnit: z.union([z.literal('metric'), z.literal('imperial')]),
         name: z.string().optional(),
+        firearm: z.string().uuid().optional(),         // firearm-ID
+        ammunition: z.string().uuid().optional(),      // ammo-ID
+        caliberInMm: z.number().optional(),            //
         image: z.object({
             image: browser
                 ? z.instanceof(HTMLImageElement).optional()
@@ -118,12 +122,13 @@ const TargetStoreSchema = z.object({
         }),
     }),
     reference: z.object({
-        a: z.number().optional(),            // [x,y]
-        x: z.number().optional(),
-        y: z.number().optional(),
+        a: z.array(z.number().optional(), z.number().optional()).optional(),            // [x,y]
+        x: z.array(z.number().optional(), z.number().optional()).optional(),
+        y: z.array(z.number().optional(), z.number().optional()).optional(),
+        linelength: z.number().optional(),
         measurement: z.number().optional(),    // User supplied;
-        cm: z.number().optional(),             // 1 cm === % av tavlan
-        pct: z.number().optional()            // det omvända
+        cm: z.number().optional(),             // 1 cm === px
+        px: z.number().optional()              // 100px == mm
     }),
     activeGroup: z.number().default(0),
     groups: z.array(GroupSchema),
@@ -151,6 +156,9 @@ const initialStore: TargetStoreInterface = {
         range: undefined,
         rangeUnit: "metric",
         name: undefined,
+        firearm: undefined,         // firearm-ID
+        ammunition: undefined,
+        caliberInMm: undefined,
         scale: undefined,
         rotation: 0,
         image: {
@@ -166,9 +174,10 @@ const initialStore: TargetStoreInterface = {
         x: undefined,
         a: undefined,
         y: undefined,
+        linelength: undefined,
         measurement: undefined,    // User supplied,
-        cm: undefined,             // 1 cm === % av tavlan
-        pct: undefined,            // det omvända
+        cm: undefined,             // 1 cm === px
+        px: undefined,             // 100px == mm
     },
     activeGroup: 0,
     groups: [
@@ -233,6 +242,32 @@ function createTargetStore()
                 localStorage.removeItem(STORE_KEY);
             }
             store.set(initialStore);
+        },
+        setReference: (key: keyof TargetStoreInterface['reference'], value: number[]|number) => {
+            store.update(state => {
+                const newState = {
+                    ...state,
+                    reference: {
+                        ...state.reference,
+                        [key]: value
+                    }
+                };
+
+                if (newState.reference.a && newState.reference.x && newState.reference.measurement) {
+                    const calculatedValues = calculateReferenceValues(newState.reference, newState.target);
+
+                    // Include calculated values in the final state
+                    return {
+                        ...newState,
+                        reference: {
+                            ...newState.reference,
+                            ...calculatedValues
+                        }
+                    };
+                }
+
+                return newState;
+            });
         }
     }
 }
