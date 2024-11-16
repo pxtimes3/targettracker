@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, pgEnum, pgPolicy, pgRole, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true });
-export const service = pgRole('service', { createRole: true, createDb: true, inherit: true });
+export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true }).existing();
+export const service = pgRole('service', { createRole: true, createDb: true, inherit: true }).existing();
 
 export const rolesEnum = pgEnum("roles", ["user", "vip", "admin", "service"]);
 
