@@ -232,6 +232,11 @@ function createTargetStore()
         });
     }
 
+    let currentState: TargetStoreInterface;
+    store.subscribe(value => {
+        currentState = value;
+    });
+
     return {
         ...store,
         reset: () => {
@@ -268,6 +273,18 @@ function createTargetStore()
 
                 return newState;
             });
+        },
+        mmToPx: (mm: number) => {
+            if (!currentState.reference.cm) {
+                return 0;
+            }
+            return (mm / 10) * currentState.reference.cm;
+        },
+        pxToMm: (px: number) => {
+            if (!currentState.reference.measurement || !currentState.reference.linelength) {
+                return 0;
+            }
+            return (px * currentState.reference.measurement) / currentState.reference.linelength;
         }
     }
 }
