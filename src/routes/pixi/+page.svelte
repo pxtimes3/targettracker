@@ -12,6 +12,7 @@
 	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
+	import { initialize } from '@/utils/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
@@ -92,31 +93,42 @@
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
 	 */
-	async function initialize(): Promise<Application<Renderer>>
-	{
-		applicationState = 'Initalizing application...'
-		const app = new Application();
-  		await app.init({
-			width: chromeArea.x,
-			height: chromeArea.y,
-			backgroundColor: 0xcdcdcc,
-			antialias: true,
-			resolution: window.devicePixelRatio || 1,
-			hello: true
-		});
-
-		canvasContainer.appendChild(app.canvas);
-
-		if (!$TargetStore.target.image.filename) {
-			throw new Error('No target?');
-		} else if (!$TargetStore.target.image.filename.startsWith('uploads')) {
-			applicationState = 'Adding target to assets... ';
-			targetPath = `/temp/${$TargetStore.target.image.filename}`;
-			staticAssets.push(targetPath);
-		}
-
-		return app;
+	async function initializeApp() {
+		app = await initialize(
+			chromeArea,
+			canvasContainer,
+			(state) => applicationState = state,
+			(assets) => staticAssets = assets,
+			staticAssets,
+			$TargetStore
+		);
 	}
+
+	// async function initialize(): Promise<Application<Renderer>>
+	// {
+	// 	applicationState = 'Initalizing application...'
+	// 	const app = new Application();
+  	// 	await app.init({
+	// 		width: chromeArea.x,
+	// 		height: chromeArea.y,
+	// 		backgroundColor: 0xcdcdcc,
+	// 		antialias: true,
+	// 		resolution: window.devicePixelRatio || 1,
+	// 		hello: true
+	// 	});
+
+	// 	canvasContainer.appendChild(app.canvas);
+
+	// 	if (!$TargetStore.target.image.filename) {
+	// 		throw new Error('No target?');
+	// 	} else if (!$TargetStore.target.image.filename.startsWith('uploads')) {
+	// 		applicationState = 'Adding target to assets... ';
+	// 		targetPath = `/temp/${$TargetStore.target.image.filename}`;
+	// 		staticAssets.push(targetPath);
+	// 	}
+
+	// 	return app;
+	// }
 
 	/**
 	 * PIXI verkar lösa det här, men uh...
@@ -171,6 +183,7 @@
 	{
 		applicationState = "Drawing target... ";
 
+		const targetPath = `/temp/${$TargetStore.target.image.filename}`;
 		const texture = await Assets.load(targetPath);
 		texture.source.scaleMode = 'linear';
 
@@ -928,7 +941,7 @@
 
 	onMount(async () => {
 		await getChromeArea();
-		app = await initialize();
+		await initializeApp();
 
 		if (app) {
 			await loadStaticAssets();

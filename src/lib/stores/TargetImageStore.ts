@@ -150,7 +150,7 @@ const TargetStoreSchema = z.object({
 
 export type TargetStoreInterface = z.infer<typeof TargetStoreSchema>;
 
-const initialStore: TargetStoreInterface = {
+export const initialStore: TargetStoreInterface = {
     target: {
         type: undefined,
         range: undefined,

@@ -22,3 +22,5 @@ vite.config.ts.timestamp-*
 
 temp/*
 postgres-data/
+coverage/
+!coverage/.gitkeep

@@ -1,5 +1,6 @@
 import { type TargetStoreInterface } from "@/stores/TargetImageStore";
 import { UserSettingsStore } from "@/stores/UserSettingsStore";
+import { Application, type Renderer } from 'pixi.js';
 import { get } from 'svelte/store';
 
 export function calculateReferenceValues(ref: TargetStoreInterface['reference'], target: TargetStoreInterface['target']): {cm: number, px: number}|undefined
@@ -39,4 +40,38 @@ export function calculateReferenceValues(ref: TargetStoreInterface['reference'],
     let result: {cm: number, px: number} = {cm: mmToPixels(10) || 0, px: pxToMm(100) || 0}
 
     return result;
+}
+
+export async function initialize(
+    chromeArea: {x: number, y: number},
+    canvasContainer: HTMLDivElement,
+    setApplicationState: (state: string) => void,
+    setStaticAssets: (state: string[]) => void,
+    currentStaticAssets: string[],
+    targetStoreState: TargetStoreInterface
+): Promise<Application<Renderer>>
+{
+    setApplicationState('Initializing application...');
+
+    const app = new Application();
+    await app.init({
+        width: chromeArea.x,
+        height: chromeArea.y,
+        backgroundColor: 0xcdcdcc,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        hello: true
+    });
+
+    canvasContainer.appendChild(app.canvas);
+
+    if (!targetStoreState.target.image.filename) {
+        throw new Error('No target?');
+    } else if (!targetStoreState.target.image.filename.startsWith('uploads')) {
+        setApplicationState('Adding target to assets... ');
+        const targetPath = `/temp/${targetStoreState.target.image.filename}`;
+        setStaticAssets([...currentStaticAssets, targetPath]);
+    }
+
+    return app;
 }
