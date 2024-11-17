@@ -202,6 +202,7 @@
 
 	/**
 	 * Skapar sprites för editor-crosshair.
+	 * TODO: Följer inte med vid drag.
 	 */
 	function setupCrosshairs()
 	{
@@ -225,7 +226,7 @@
 		crosshairContainer.addChild(wLine);
 
 		app.ticker.add(() => {
-			if ($UserSettingsStore.editorcrosshair && isDragging === false) {
+			if ($UserSettingsStore.editorcrosshair) {
 				nLine.clear();
 				nLine.beginPath();
 				nLine.setStrokeStyle({
