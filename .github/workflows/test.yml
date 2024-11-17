@@ -42,7 +42,7 @@ jobs:
         run: pnpm install
 
       - name: Run tests with coverage
-        run: pnpm test --coverage
+        run: pnpm vitest --coverage
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v3
