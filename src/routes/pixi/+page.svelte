@@ -1,14 +1,25 @@
 <script lang="ts">
 	import Logo from '@/components/logo/logo.svelte';
+	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { FederatedPointerEvent, Sprite as PixiSprite, Renderer } from 'pixi.js';
+	import type { FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
 
     interface DraggableSprite extends PixiSprite {
+		drag?: {
+			dragging: boolean;
+			data: any;
+			offsetX: number;
+			offsetY: number;
+			startPosition: { x: number; y: number };
+		} | null;
+	}
+
+	interface DraggableContainer extends PixiContainer {
 		drag?: {
 			dragging: boolean;
 			data: any;
@@ -25,8 +36,9 @@
 	let applicationState: string = $state('Loading...');
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
 	let app: Application<Renderer>;
-	let mouse: {[key: string]: number} = $state({x:0, y:0});
-	let chromeArea: {[key: string]: number} = $state({x:0, y:0});
+	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
+	let mouseStart: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
+	let chromeArea: {[key: string]: number; x: number; y: number;} = $state({x:0, y:0});
 	let targetPath: string = $state('');
 	let targetSprite: Sprite;
 	let staticAssets: string[] = $state([
@@ -38,17 +50,16 @@
 		'/cursors/pointer.svg',
 		'/cursors/shot.svg'
 	]);
-	let assets: string[] = [];
-	let targetContainer = new Container({isRenderGroup: true});
+
+	let targetContainer: DraggableContainer;
 	let groupContainers: Container[] = [];
 	let referenceContainer: Container;
 	let crosshairContainer: Container;
 	let scale: number = $state(0);
 	let isDragging: boolean = $state(false);
-	let dragTarget: DraggableSprite|undefined = undefined;
+	let dragTarget: DraggableSprite|undefined|DraggableContainer = undefined;
 	let showMainMenu: boolean = $state(false);
 
-	let rotationSlider: number;
 	let rotation: number = $state(0);
 	let previousRotation: number = $state(0);
 	let slider: number = $state(0);
@@ -100,7 +111,7 @@
 
 	/**
 	 * PIXI verkar lösa det här, men uh...
-	*/
+	 */
 	function mousePosition(e: MouseEvent): void
     {
         mouse = {
@@ -133,7 +144,7 @@
 
 	/**
 	 * Laddar static assets. Cursors, etc.
-	*/
+	 */
 	async function loadStaticAssets(): Promise<void>
 	{
 		applicationState = "Populating application with static assets... ";
@@ -150,7 +161,6 @@
 	async function drawTarget(): Promise<void>
 	{
 		applicationState = "Drawing target... ";
-		app.stage.addChild(targetContainer);
 
 		const texture = await Assets.load(targetPath);
 		texture.source.scaleMode = 'linear';
@@ -158,11 +168,16 @@
 		targetSprite = new Sprite(texture);
 		targetSprite.label = 'targetSprite';
 
+		targetContainer = new Container({isRenderGroup: true});
+		app.stage.addChild(targetContainer);
+
 		targetContainer.label = 'target';
 		targetContainer.eventMode = 'dynamic';
 		targetContainer.on('pointerdown', (e) => handleClick(e, targetContainer));
 
 		targetContainer.addChild(targetSprite);
+		targetContainer.width = targetSprite.width;
+		targetContainer.height = targetSprite.height;
 
 		// place targetContainer at center/center
 		targetContainer.x = app.screen.width / 2;
@@ -184,6 +199,10 @@
 		$TargetStore.target.image.originalsize[1] != targetSprite.height ? $TargetStore.target.image.originalsize[1] = targetSprite.height : '';
 	}
 
+
+	/**
+	 * Skapar sprites för editor-crosshair.
+	 */
 	function setupCrosshairs()
 	{
 		crosshairContainer = new Container();
@@ -206,7 +225,7 @@
 		crosshairContainer.addChild(wLine);
 
 		app.ticker.add(() => {
-			if ($UserSettingsStore.editorcrosshair) {
+			if ($UserSettingsStore.editorcrosshair && isDragging === false) {
 				nLine.clear();
 				nLine.beginPath();
 				nLine.setStrokeStyle({
@@ -410,44 +429,24 @@
 		sprite.interactive = true;
 		sprite.anchor.set(0.5);
 		// sprite.scale = 1 * (1/scale);
-
-		const localPos = groupContainer.toLocal({ x, y }, app.stage);
-    	sprite.x = localPos.x;
-    	sprite.y = localPos.y;
-
-		sprite.on('pointerdown', (e) => handleClick(e, sprite));
-
-		groupContainer.addChild(sprite);
-		console.log(`added ${sprite.label}:`, sprite);
-	}
-
-
-	async function addPoa(x: number, y: number, group?: string): Promise<void>
-	{
-		if (!group) {
-			if (!$TargetStore.activeGroup) {
-				throw new Error('No activeGroup and no group supplied. Exiting.');
+		if (!$TargetStore.target.caliberInMm) {
+			console.log('caliber in px',TargetStore.mmToPx(4.5))
+			// sätt till 4.5mm
+			sprite.width = TargetStore.mmToPx(4.5);
+			sprite.height = sprite.width;
+			// lägg in en varning i editorstore
+			if ($EditorStore.warnings && !$EditorStore.warnings?.find((w) => w.id === 'caliber')) {
+				const newWarning = [...$EditorStore.warnings, {
+					id: 'caliber',
+					message: 'Set caliber in the info-panel to have the cursors display at the correct size.'
+				}];
+				EditorStore.set({ warnings: newWarning });
 			}
-			group = $TargetStore.activeGroup.toString();
+		} else {
+			console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
+			sprite.width = TargetStore.mmToPx($TargetStore.target.caliberInMm) / 10;
+			sprite.height = sprite.width;
 		}
-
-		const groupContainer = targetContainer.getChildByLabel(group);
-		if (!groupContainer) { throw new Error(`Wanted group with label: ${group} but none was found!`); }
-
-		// lägg inte till ytterligare en PoA om vi redan har en satt
-		if (groupContainer.getChildByLabel(`poa-${groupContainer.label}`)) {
-			console.warn('Group already has a PoA set.');
-			return;
-		}
-
-		const texture = await Assets.load('/cursors/poa.svg');
-		const sprite = new Sprite(texture) as DraggableSprite;
-		sprite.label = `poa-${groupContainer.label}`;
-    	sprite.eventMode = 'dynamic';
-    	sprite.cursor = 'pointer';
-		sprite.interactive = true;
-		sprite.anchor.set(0.5);
-		// sprite.scale = 1 * (1/scale);
 
 		const localPos = groupContainer.toLocal({ x, y }, app.stage);
     	sprite.x = localPos.x;
@@ -456,8 +455,55 @@
 		sprite.on('pointerdown', (e) => handleClick(e, sprite));
 
 		groupContainer.addChild(sprite);
-		console.log(`added ${sprite.label}:`, sprite);
+		// console.log(`added ${sprite.label}:`, sprite);
 	}
+
+	/**
+	 * Adds a Point of Attention (PoA) sprite to a specified group within the target container.
+	 *
+	 * @param x - The x-coordinate for the PoA sprite's position.
+	 * @param y - The y-coordinate for the PoA sprite's position.
+	 * @param group - Optional. The label of the group to which the PoA should be added. Defaults to the active group in the TargetStore.
+	 * @throws Will throw an error if no active group is found or if the specified group does not exist.
+	 * @returns A promise that resolves when the PoA sprite is successfully added.
+	 *
+	 * The function checks if the group already contains a PoA sprite and logs a warning if so.
+	 * It loads a texture for the PoA sprite, sets its properties, and positions it within the group container.
+	 * The sprite is made interactive and listens for pointer down events to handle clicks.
+	 */
+    async function addPoa(x: number, y: number, group?: string): Promise<void> {
+        group = group || $TargetStore.activeGroup?.toString();
+        if (!group) {
+            throw new Error('No activeGroup and no group supplied. Exiting.');
+        }
+
+        const groupContainer = targetContainer.getChildByLabel(group);
+        if (!groupContainer) {
+            throw new Error(`Wanted group with label: ${group} but none was found!`);
+        }
+
+        if (groupContainer.getChildByLabel(`poa-${groupContainer.label}`)) {
+            console.warn('Group already has a PoA set.');
+            return;
+        }
+
+        const texture = await Assets.load('/cursors/poa.svg');
+        const sprite = new Sprite(texture) as DraggableSprite;
+        sprite.label = `poa-${groupContainer.label}`;
+        sprite.eventMode = 'dynamic';
+        sprite.cursor = 'pointer';
+        sprite.interactive = true;
+        sprite.anchor.set(0.5);
+
+        const localPos = groupContainer.toLocal({ x, y }, app.stage);
+        sprite.x = localPos.x;
+        sprite.y = localPos.y;
+
+        sprite.on('pointerdown', (e) => handleClick(e, sprite));
+
+        groupContainer.addChild(sprite);
+        // console.log(`added ${sprite.label}:`, sprite);
+    }
 
 	/**
 	 * Gör fancy stuff med skit.
@@ -468,29 +514,32 @@
 		loader.classList.add('hidden');
 	}
 
-	function handleWheel(e: WheelEvent): void
-	{
+	/**
+	 * Handles the wheel event to zoom in or out on the target container.
+	 *
+	 * Adjusts the scale of the target container based on the wheel event's deltaY value,
+	 * ensuring the new scale remains within defined zoom boundaries.
+	 *
+	 * @param e - The wheel event containing the deltaY value for zooming.
+	 */
+    function handleWheel(e: WheelEvent): void {
 		if (!targetContainer) return;
-		const currentScale = Math.min(
-                targetContainer.width * scale,
-                targetContainer.height * scale
-        );
 
-		let newScale: number = currentScale;
+		// Prevent any default scrolling behavior
+		e.preventDefault();
 
-		console.log(e, scale);
+		// Get the current scale (considering the current transformation)
+		const currentScale = targetContainer.scale.x;  // or targetContainer.scale since x and y should be the same
 
-		if (e.deltaY > 0) {
-			newScale = scale + zoomStep;
-		} else if (e.deltaY < 0) {
-			newScale = scale - zoomStep;
-		}
+		// Calculate new scale
+		let newScale = currentScale;
+		newScale += e.deltaY > 0 ? -zoomStep : zoomStep;
 
-		if (newScale > zoomBoundaries[0] && newScale < zoomBoundaries[1]) {
+		// Check boundaries
+		if (newScale >= zoomBoundaries[0] && newScale <= zoomBoundaries[1]) {
 			scale = newScale;
-			targetContainer.scale = scale;
+			targetContainer.scale.set(scale);
 		}
-
 	}
 
 	/**
@@ -500,7 +549,8 @@
 	 */
 	function handleClick(e: FederatedPointerEvent, target: Sprite | DraggableSprite | Container): void
 	{
-		// console.log(`click!`, $state.snapshot(mouse), e, target);
+		console.log(`click!`, e.button, e.buttons, $state.snapshot(mouse), e, target);
+		mouseStart = mouse;
 		if (e.button === 0) {
 			if (target.label.startsWith('shot-')) {
 				e.stopPropagation();
@@ -532,55 +582,60 @@
 				}
 			}
 		}
+
+		// middleclick
+		if (e.button === 1) {
+			e.stopPropagation();
+			e.preventDefault();
+			dragTarget = targetContainer;
+			onDragStart(targetContainer as DraggableContainer, e);
+		}
 	}
 
+
+	/**
+	 * Adds reference points A and X to the canvas at specified coordinates.
+	 * Creates draggable sprites with event handlers and updates the TargetStore.
+	 *
+	 * @param {number} x - The x coordinate for the reference point
+	 * @param {number} y - The y coordinate for the reference point
+	 * @returns {Promise<void>}
+	 */
 	async function addReferencePoint(x: number, y: number): Promise<void>
 	{
-		if (!aIsSet) {
-			const texture = await Assets.load('/cursors/circle-a.svg');
-			const sprite = new Sprite(texture) as DraggableSprite;
-			sprite.label = `ref-a`;
-			sprite.eventMode = 'dynamic';
-			sprite.cursor = 'pointer';
-			sprite.interactive = true;
-			sprite.anchor.set(0.5);
-			sprite.scale = (1/targetContainer.scale.x);
+        const createSprite = async (texturePath: string, label: string) => {
+            const texture = await Assets.load(texturePath);
+            const sprite = new Sprite(texture) as DraggableSprite;
+            sprite.label = label;
+            sprite.eventMode = 'dynamic';
+            sprite.cursor = 'pointer';
+            sprite.interactive = true;
+            sprite.anchor.set(0.5);
+            sprite.scale = 1 / targetContainer.scale.x;
 
-			const localPos = referenceContainer.toLocal({ x, y }, app.stage);
-			sprite.x = localPos.x;
-			sprite.y = localPos.y;
+            const localPos = referenceContainer.toLocal({ x, y }, app.stage);
+            sprite.x = localPos.x;
+            sprite.y = localPos.y;
 
-			sprite.on('pointerdown', (e) => handleClick(e, sprite));
+            sprite.on('pointerdown', (e) => handleClick(e, sprite));
+            referenceContainer.addChild(sprite);
 
-			referenceContainer.addChild(sprite);
-			aIsSet = true;
-			// console.log(`added ${sprite.label} @ ${sprite._position._x}:${sprite._position._y}:`, sprite);
-			TargetStore.setReference('a', [sprite._position._x, sprite._position._y]);
-			return;
-		}
+            return sprite;
+        };
 
-		if (aIsSet && !xIsSet) {
-			const texture = await Assets.load('/cursors/circle-x.svg');
-			const sprite = new Sprite(texture) as DraggableSprite;
-			sprite.label = `ref-x`;
-			sprite.eventMode = 'dynamic';
-			sprite.cursor = 'pointer';
-			sprite.interactive = true;
-			sprite.anchor.set(0.5);
-			sprite.scale = (1/targetContainer.scale.x);
+        if (!aIsSet) {
+            const sprite = await createSprite('/cursors/circle-a.svg', 'ref-a');
+            aIsSet = true;
+            TargetStore.setReference('a', [sprite._position._x, sprite._position._y]);
+            return;
+        }
 
-			const localPos = referenceContainer.toLocal({ x, y }, app.stage);
-			sprite.x = localPos.x;
-			sprite.y = localPos.y;
-
-			sprite.on('pointerdown', (e) => handleClick(e, sprite));
-
-			referenceContainer.addChild(sprite);
-			xIsSet = true;
-			// console.log(`added ${sprite.label}:`, sprite);
-			TargetStore.setReference('x', [sprite._position._x, sprite._position._y]);
-		}
-	}
+        if (!xIsSet) {
+            const sprite = await createSprite('/cursors/circle-x.svg', 'ref-x');
+            xIsSet = true;
+            TargetStore.setReference('x', [sprite._position._x, sprite._position._y]);
+        }
+    }
 
 	/**
 	 * Initiates the drag operation for a draggable sprite.
@@ -592,24 +647,31 @@
 	 * Calculates the initial drag offsets and stores the starting position.
 	 * Attaches event listeners to the stage for handling drag movement and end.
 	 */
-	function onDragStart(target: DraggableSprite, event: FederatedPointerEvent): void
+	function onDragStart(target: DraggableSprite|DraggableContainer, e: FederatedPointerEvent): void
 	{
 		isDragging = true;
 		dragTarget = target;
 		dragTarget.alpha = 0.5;
 		dragTarget.eventMode = 'dynamic';
 
-		// Convert global position to local position
+		// global position => local position
 		const groupContainer = target.parent;
-		const localPos = groupContainer.toLocal(event.global);
+		const localPos = groupContainer.toLocal(e.global);
 
 		dragTarget.drag = {
 			dragging: true,
 			data: localPos,
-			offsetX: target.x - localPos.x,
-			offsetY: target.y - localPos.y,
+			offsetX: 0,
+			offsetY: 0,
 			startPosition: { x: target.x, y: target.y }
 		};
+
+		mouseStart = mouse;
+
+		if (dragTarget != targetContainer) {
+			dragTarget.drag.offsetX = target.x - localPos.x;
+			dragTarget.drag.offsetY = target.y - localPos.y;
+		}
 
 		app.stage.eventMode = 'dynamic';
 		app.stage.on('pointermove', onDragMove);
@@ -624,14 +686,20 @@
 	 *
 	 * @param event - The pointer event containing the new global position.
 	 */
-	function onDragMove(event: FederatedPointerEvent): void
+	function onDragMove(e: FederatedPointerEvent): void
 	{
 		if (isDragging && dragTarget?.drag?.dragging) {
 			// Convert global position to local position within the group container
 			const groupContainer = dragTarget.parent;
-			const newPosition = groupContainer.toLocal(event.global);
-			dragTarget.x = newPosition.x;
-			dragTarget.y = newPosition.y;
+			const newPosition = groupContainer.toLocal(e.global);
+			if (dragTarget === targetContainer) {
+				dragTarget.x = dragTarget.drag.startPosition.x + (e.clientX - mouseStart.x);
+				dragTarget.y = dragTarget.drag.startPosition.y + (e.clientY - mouseStart.y);
+				return;
+			} else {
+				dragTarget.x = newPosition.x;
+				dragTarget.y = newPosition.y;
+			}
 
 			if (dragTarget.label?.startsWith('ref-')) {
             	isDrawingReferenceLine = true;
@@ -702,37 +770,49 @@
     }
 
 
-	function setRefMeasurement(): void
+    /**
+     * Sets reference measurement values in the target store if validation passes.
+     * Converts decimal separators and updates measurement and line length references.
+     */
+    function setRefMeasurement(): void
 	{
-		if (aIsSet && xIsSet && atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i)) {
-			refMeasurement = refMeasurement.replace(/,/, '.');
-			TargetStore.setReference('measurement', parseFloat(refMeasurement));
-			TargetStore.setReference('linelength', refLineLength);
-			aIsMoved = false;
-			xIsMoved = false;
-			refMeasurementDirty = false;
-		}
-	}
+        const isValid = aIsSet &&
+                        xIsSet &&
+                        atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i);
 
-	function changeUserSettings(e: Event): void
+        if (isValid) {
+            const normalizedMeasurement = refMeasurement.replace(/,/, '.');
+
+            TargetStore.setReference('measurement', parseFloat(normalizedMeasurement));
+            TargetStore.setReference('linelength', refLineLength);
+
+            // Reset state flags
+            aIsMoved = false;
+            xIsMoved = false;
+            refMeasurementDirty = false;
+        }
+    }
+
+
+    /**
+     * Updates user settings based on form input changes
+     * @param {Event} e - The change event from the form input
+     */
+    function changeUserSettings(e: Event): void
 	{
-		let target;
+        const target = e.target as HTMLInputElement;
+        if (!target) return;
 
-		if (!e.target) { return; }
+        const setting = target.name;
 
-		target = e.target as HTMLInputElement;
-		const setting = target.name;
+        $UserSettingsStore[setting] = target.type === 'checkbox'
+            ? target.checked
+            : target.id === 'true';
 
-		if (target.type === 'checkbox') {
-			$UserSettingsStore[setting] = target.checked;
-		} else if (target.type === 'radio') {
-			$UserSettingsStore[setting] = target.id === 'true' ? true : false;
-		}
+        // TODO: Push to DB
+        // console.log($UserSettingsStore);
+    }
 
-		// TODO: Push to DB
-
-		console.log($UserSettingsStore);
-	}
 
 	/**
 	 * Toggles the visibility of a panel associated with a button.
@@ -746,7 +826,8 @@
 	 * Logs an error if the panel cannot be found.
 	 */
 	// TODO: Store för active button => css-klass active eller något.
-    function showPanel(e: Event, name: string): void {
+    function showPanel(e: Event, name: string): void
+	{
 		if (e.type != 'load' && !e.target) return;
 
 		let button;
@@ -818,12 +899,18 @@
 				crosshairContainer.visible = false;
 			}
 		}
+
+		if ($EditorStore) {
+			// console.log(`EditorStore updated.`, $EditorStore)
+		}
 	});
 
 	function logDebug()
 	{
 		console.log('TargetStore:', $TargetStore);
 		console.log('UserSettingsStore:', $UserSettingsStore);
+		console.log('EditorStore:', $EditorStore);
+		console.log('---');
 		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
 		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved);
 		console.log('refLine:', refLine);
@@ -1114,6 +1201,15 @@
 		{:else}
 			All set! Now add point of aim (required for scoring) or start placing shots on the target.
 		{/if}
+	</div>
+{/if}
+
+{#if Array.isArray($EditorStore.warnings) && $EditorStore.warnings.length > 0}
+	<div class="z-[100] absolute right-10 bottom-10 bg-slate-400 p-4 text-sm">
+		Warnings:
+		{#each $EditorStore.warnings as warning}
+			<p>{warning.message}</p>
+		{/each}
 	</div>
 {/if}
 
