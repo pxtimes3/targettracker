@@ -1,4 +1,13 @@
 <script lang="ts">
+	/**
+	 * TODO: Resize fungerar inte som den ska.
+	 * TODO: Scoring.
+	 * TODO: Add firearm.
+	 * TODO: Add ammunition.
+	 * TODO: Add weather data.
+	 * TODO: Save.
+	 * TODO: Ladda data från db.analysis.
+	 */
 	import Logo from '@/components/logo/logo.svelte';
 	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
