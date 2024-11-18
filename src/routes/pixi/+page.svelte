@@ -1,6 +1,5 @@
 <script lang="ts">
 	/**
-	 * TODO: Resize fungerar inte som den ska.
 	 * TODO: Scoring.
 	 * TODO: Add firearm.
 	 * TODO: Add ammunition.
@@ -180,7 +179,7 @@
 	 * Ritar target i @param targetContainer, placerar center/center och skalar ned
 	 * att passa fönstret.
 	 */
-	async function drawTarget(): Promise<void>
+	async function drawTarget(e?: Event): Promise<void>
 	{
 		applicationState = "Drawing target... ";
 
@@ -889,6 +888,35 @@
 	}
 
 
+	function handleResize(e?: Event): void
+	{
+		if (!app) return;
+
+		if (e?.target) {
+			const target = e.target as Window;
+			chromeArea.x = target.innerWidth;
+			chromeArea.y = target.innerHeight;
+		} else {
+			chromeArea.x = window.innerWidth;
+			chromeArea.y = window.innerHeight;
+		}
+
+		app.renderer.resize(chromeArea.x, chromeArea.y);
+
+		if (targetContainer) {
+			scale = Math.min(
+				(window.innerHeight - 100) / targetSprite.height,
+				(window.innerWidth - 100) / targetSprite.width
+			);
+
+			targetContainer.scale.set(scale);
+
+			targetContainer.x = app.screen.width / 2;
+			targetContainer.y = app.screen.height / 2;
+		}
+	}
+
+
 	$effect(() => {
 		if (chromeArea) {
 			canvasContainer.style.width  = `${chromeArea.x}px`;
@@ -973,6 +1001,7 @@
 
 <svelte:window
 	onload={getChromeArea}
+	onresize={handleResize}
 />
 <aside
 	class="absolute grid grid-flow-row place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
@@ -1244,6 +1273,6 @@
 	bind:this={canvasContainer}
 	onmousemove={mousePosition}
 	onwheel={handleWheel}
-	class="relative grid justify-items-center align-middle place-content-center opacity-35"
+	class="relative grid justify-items-center align-middle place-content-center opacity-35 w-[100vw] h-[100vh]"
 ></div>
 <div bind:this={loader} class="z-50 transition-all top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-center absolute py-6 px-8 w-72 max-w-screen-sm rounded border-2 border-surface-500 bg-surface-300 text-surface-100 shadow-lg">{applicationState}</div>
