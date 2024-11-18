@@ -22,8 +22,9 @@ export default defineConfig({
             }
         },
         coverage: {
-            provider: 'v8', // or 'c8'
-            reporter: ['text', 'json', 'html'],
+            provider: 'v8',
+            reporter: ['json', 'json-summary', 'html'],
+            reportsDirectory: './coverage',
             exclude: [
                 'node_modules/',
                 'tests/',
@@ -31,7 +32,6 @@ export default defineConfig({
                 '**/*.test.ts',
                 '**/targettracker.analysis/**',
                 '**/.svelte-kit/**',
-                // any other files you want to exclude
             ]
         }
     },

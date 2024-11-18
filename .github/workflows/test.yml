@@ -58,26 +58,11 @@ jobs:
       - name: Extract coverage percentage
         id: coverage
         run: |
-          if [ -f "coverage/coverage-summary.json" ]; then
-            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
-          else
-            echo "Using v8 coverage format"
-            COVERAGE=$(cat coverage/coverage-final.json | jq -r '
-              [.. | objects | select(.lines?) |
-                select(.lines.total > 0) |
-                (.lines.hit / .lines.total * 100)
-              ] |
-              if length > 0 then
-                (add / length | round)
-              else
-                0
-              end
-            ')
-          fi
-          # Debug output
-          echo "Raw coverage JSON:"
-          cat coverage/coverage-final.json | jq '.' | head -n 20
-          echo "Calculated coverage value: $COVERAGE"
+          echo "Coverage summary:"
+          cat coverage/coverage-summary.json | jq '.'
+
+          COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+          echo "Lines coverage: $COVERAGE%"
           echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
 
       - name: Debug Coverage Output
