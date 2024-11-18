@@ -68,14 +68,27 @@ jobs:
           COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
           echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
 
+      - name: Debug Coverage Value
+        run: |
+          echo "Coverage percentage: ${{ steps.coverage.outputs.percentage }}"
+
+      - name: Create Badge JSON
+        id: badge_json
+        run: |
+          echo '{
+            "schemaVersion": 1,
+            "label": "coverage",
+            "message": "${{ steps.coverage.outputs.percentage }}%",
+            "color": "green"
+          }' > badge.json
+          cat badge.json
+
       - name: Create Coverage Badge
         uses: schneegans/dynamic-badges-action@v1.6.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
-          gistID: 98db29cf88c66c9094372d748c698c85
-          filename: coverage.json
-          label: coverage
-          message: ${{ steps.coverage.outputs.percentage }}%
-          valColorRange: ${{ steps.coverage.outputs.percentage }}
-          maxColorRange: 100
-          minColorRange: 0
+          gistID: "98db29cf88c66c9094372d748c698c85"
+          filename: "coverage.json"
+          label: "coverage"
+          message: "${{ steps.coverage.outputs.percentage }}%"
+          color: "green"
