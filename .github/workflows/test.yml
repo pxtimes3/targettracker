@@ -50,10 +50,8 @@ jobs:
 
       - name: List coverage files
         run: |
-          echo "Coverage directory contents:"
-          ls -la coverage/
-          echo "Coverage summary content:"
-          cat coverage/coverage-summary.json || echo "No summary file"
+          echo "Coverage summary?:"
+          ls -la coverage/coverage-summary.json || echo "No summary file"
 
       - name: Extract coverage percentage
         id: coverage
@@ -65,11 +63,11 @@ jobs:
           echo "Lines coverage: $COVERAGE%"
           echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
 
-      - name: Debug Coverage Output
-        run: |
-          echo "GITHUB_OUTPUT contents:"
-          cat $GITHUB_OUTPUT
-          echo "Direct coverage value: ${{ steps.coverage.outputs.percentage }}"
+      # - name: Debug Coverage Output
+      #   run: |
+      #     echo "GITHUB_OUTPUT contents:"
+      #     cat $GITHUB_OUTPUT
+      #     echo "Direct coverage value: ${{ steps.coverage.outputs.percentage }}"
 
       - name: Update Coverage Gist
         run: |
