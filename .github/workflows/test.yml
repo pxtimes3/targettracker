@@ -2,9 +2,7 @@ name: Test
 
 on:
   workflow_dispatch:
-    inputs:
-      importAll:
-        required: false
+
   push:
     branches: [ main, develop ]
   pull_request:
@@ -48,47 +46,55 @@ jobs:
         run: sudo apt-get install jq -y
 
       - name: Run tests with coverage
-        run: pnpm vitest --coverage
+        run: pnpm test --coverage
 
-      # Debug step to see what files we have
-      - name: List coverage directory
+      - name: List coverage files
         run: |
+          echo "Coverage directory contents:"
           ls -la coverage/
-          cat coverage/coverage-summary.json || echo "Summary file not found"
-
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-report
-          path: coverage/
+          echo "Coverage summary content:"
+          cat coverage/coverage-summary.json || echo "No summary file"
 
       - name: Extract coverage percentage
         id: coverage
         run: |
-          COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
-          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          if [ -f "coverage/coverage-summary.json" ]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+            echo "Raw coverage value: $COVERAGE"
+            echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "Using v8 coverage format"
+            COVERAGE=$(cat coverage/coverage-final.json | jq -r '[.. | objects | select(.lines?) | .lines.pct] | add / length')
+            echo "Raw coverage value: $COVERAGE"
+            echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Debug Coverage Value
+      - name: Debug Coverage Output
         run: |
-          echo "Coverage percentage: ${{ steps.coverage.outputs.percentage }}"
+          echo "GITHUB_OUTPUT contents:"
+          cat $GITHUB_OUTPUT
+          echo "Direct coverage value: ${{ steps.coverage.outputs.percentage }}"
 
-      - name: Create Badge JSON
-        id: badge_json
+      - name: Update Coverage Gist
         run: |
-          echo '{
-            "schemaVersion": 1,
-            "label": "coverage",
-            "message": "${{ steps.coverage.outputs.percentage }}%",
-            "color": "green"
-          }' > badge.json
-          cat badge.json
+          COVERAGE="${{ steps.coverage.outputs.percentage }}"
+          echo "Coverage value for gist: $COVERAGE"
 
-      - name: Create Coverage Badge
-        uses: schneegans/dynamic-badges-action@v1.6.0
-        with:
-          auth: ${{ secrets.GIST_SECRET }}
-          gistID: "98db29cf88c66c9094372d748c698c85"
-          filename: "coverage.json"
-          label: "coverage"
-          message: "${{ steps.coverage.outputs.percentage }}%"
-          color: "green"
+          # Ensure we have a valid number, default to 0 if empty
+          if [ -z "$COVERAGE" ]; then
+            COVERAGE="0"
+          fi
+
+          JSON_CONTENT="{\"schemaVersion\":1,\"label\":\"coverage\",\"message\":\"${COVERAGE}%\",\"color\":\"green\"}"
+          GIST_CONTENT="{\"files\":{\"coverage.json\":{\"content\":${JSON_CONTENT}}}}"
+
+          echo "Sending to GitHub API:"
+          echo "$GIST_CONTENT"
+
+          curl -L \
+            -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GIST_SECRET }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/gists/98db29cf88c66c9094372d748c698c85 \
+            -d "$GIST_CONTENT"
