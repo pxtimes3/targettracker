@@ -137,7 +137,7 @@ const TargetStoreSchema = z.object({
         latitude: z.number().optional(),
         longitude: z.number().optional(),
         altitude: z.number().optional(),
-        timestamp: z.number().optional(),
+        timestamp: z.string().optional(),
         data: z.object({
             temperature: z.number().optional(),  // Celcius
             humidity: z.number().optional(),
@@ -181,7 +181,7 @@ export const initialStore: TargetStoreInterface = {
     },
     activeGroup: 0,
     groups: [
-        {
+        /*{
             id: 1,
             shots: [
                 {
@@ -201,7 +201,7 @@ export const initialStore: TargetStoreInterface = {
                 size: 0,
                 diagonal: 0
             }
-        }
+        }*/
     ],
     weather: {
         latitude:  undefined,
