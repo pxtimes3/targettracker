@@ -7,6 +7,7 @@
 	 * TODO: Add weather data.
 	 * TODO: Save.
 	 * TODO: Ladda data från db.analysis.
+	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
 	 */
 	import Logo from '@/components/logo/logo.svelte';
 	import { EditorStore } from '@/stores/EditorStore';
