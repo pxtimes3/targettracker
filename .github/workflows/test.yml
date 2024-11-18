@@ -42,8 +42,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install jq
+        run: sudo apt-get install jq -y
+
       - name: Run tests with coverage
         run: pnpm vitest --coverage
+
+      # Debug step to see what files we have
+      - name: List coverage directory
+        run: |
+          ls -la coverage/
+          cat coverage/coverage-summary.json || echo "Summary file not found"
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v3
