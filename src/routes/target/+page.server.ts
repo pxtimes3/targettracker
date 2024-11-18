@@ -1,3 +1,4 @@
+import { VITE_ANALYSIS_URL } from '$env/static/private';
 import * as table from '$lib/server/db/schema';
 import { db } from '@/server/db';
 import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore.js';
@@ -61,7 +62,7 @@ export const actions = {
 
             if (result[0].id) {
                 console.log(result[0].id)
-                fetch(`http://localhost:8000/analyze/${result[0].id}`);
+                fetch(`${VITE_ANALYSIS_URL}${result[0].id}`);
             }
 
         } catch (error) {

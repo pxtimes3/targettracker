@@ -1,0 +1,112 @@
+name: Test
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install jq
+        run: sudo apt-get install jq -y
+
+      - name: Run tests with coverage
+        run: pnpm vitest --coverage
+
+      - name: List coverage files
+        run: |
+          echo "Coverage summary?:"
+          ls -la coverage/coverage-summary.json || echo "No summary file"
+
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          echo "Coverage summary:"
+          cat coverage/coverage-summary.json | jq '.'
+
+          COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+          echo "Lines coverage: $COVERAGE%"
+          echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+
+      # - name: Debug Coverage Output
+      #   run: |
+      #     echo "GITHUB_OUTPUT contents:"
+      #     cat $GITHUB_OUTPUT
+      #     echo "Direct coverage value: ${{ steps.coverage.outputs.percentage }}"
+
+      - name: Update Coverage Gist
+        run: |
+          COVERAGE="${{ steps.coverage.outputs.percentage }}"
+          echo "Coverage value for gist: $COVERAGE"
+
+          # Ensure we have a valid number, default to 0 if empty or null
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "null" ]; then
+            COVERAGE="0"
+          fi
+
+          # Create the JSON with proper escaping
+          JSON_CONTENT=$(jq -n \
+            --arg msg "${COVERAGE}%" \
+            '{
+              schemaVersion: 1,
+              label: "coverage",
+              message: $msg,
+              color: "green"
+            }')
+
+          GIST_CONTENT=$(jq -n \
+            --arg content "$JSON_CONTENT" \
+            '{
+              files: {
+                "coverage.json": {
+                  content: $content
+                }
+              }
+            }')
+
+          echo "Sending to GitHub API:"
+          echo "$GIST_CONTENT"
+
+          curl -L \
+            -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GIST_SECRET }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/gists/98db29cf88c66c9094372d748c698c85 \
+            -d "$GIST_CONTENT"

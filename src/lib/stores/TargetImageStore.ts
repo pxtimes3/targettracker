@@ -137,7 +137,7 @@ const TargetStoreSchema = z.object({
         latitude: z.number().optional(),
         longitude: z.number().optional(),
         altitude: z.number().optional(),
-        timestamp: z.number().optional(),
+        timestamp: z.string().optional(),
         data: z.object({
             temperature: z.number().optional(),  // Celcius
             humidity: z.number().optional(),
@@ -150,7 +150,7 @@ const TargetStoreSchema = z.object({
 
 export type TargetStoreInterface = z.infer<typeof TargetStoreSchema>;
 
-const initialStore: TargetStoreInterface = {
+export const initialStore: TargetStoreInterface = {
     target: {
         type: undefined,
         range: undefined,
@@ -181,7 +181,7 @@ const initialStore: TargetStoreInterface = {
     },
     activeGroup: 0,
     groups: [
-        {
+        /*{
             id: 1,
             shots: [
                 {
@@ -201,7 +201,7 @@ const initialStore: TargetStoreInterface = {
                 size: 0,
                 diagonal: 0
             }
-        }
+        }*/
     ],
     weather: {
         latitude:  undefined,

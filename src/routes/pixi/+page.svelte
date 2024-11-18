@@ -1,17 +1,21 @@
 <script lang="ts">
 	/**
-	 * TODO: Resize fungerar inte som den ska.
 	 * TODO: Scoring.
 	 * TODO: Add firearm.
 	 * TODO: Add ammunition.
 	 * TODO: Add weather data.
 	 * TODO: Save.
-	 * TODO: Ladda data från db.analysis.
+	 * TODO: Enkelklick för att markera shot => assign to group.
+	 * TODO: Dragmarkering av shots => assign to group.
+	 * Vanlig "dra ut en ruta för att markera".
+	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
 	 */
 	import Logo from '@/components/logo/logo.svelte';
 	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
+	import { fetchAnalysis, initialize } from '@/utils/target';
+	import type { UUID } from 'crypto';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
@@ -92,30 +96,15 @@
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
 	 */
-	async function initialize(): Promise<Application<Renderer>>
-	{
-		applicationState = 'Initalizing application...'
-		const app = new Application();
-  		await app.init({
-			width: chromeArea.x,
-			height: chromeArea.y,
-			backgroundColor: 0xcdcdcc,
-			antialias: true,
-			resolution: window.devicePixelRatio || 1,
-			hello: true
-		});
-
-		canvasContainer.appendChild(app.canvas);
-
-		if (!$TargetStore.target.image.filename) {
-			throw new Error('No target?');
-		} else if (!$TargetStore.target.image.filename.startsWith('uploads')) {
-			applicationState = 'Adding target to assets... ';
-			targetPath = `/temp/${$TargetStore.target.image.filename}`;
-			staticAssets.push(targetPath);
-		}
-
-		return app;
+	async function initializeApp() {
+		app = await initialize(
+			chromeArea,
+			canvasContainer,
+			(state) => applicationState = state,
+			(assets) => staticAssets = assets,
+			staticAssets,
+			$TargetStore
+		);
 	}
 
 	/**
@@ -167,10 +156,11 @@
 	 * Ritar target i @param targetContainer, placerar center/center och skalar ned
 	 * att passa fönstret.
 	 */
-	async function drawTarget(): Promise<void>
+	async function drawTarget(e?: Event): Promise<void>
 	{
 		applicationState = "Drawing target... ";
 
+		const targetPath = `/temp/${$TargetStore.target.image.filename}`;
 		const texture = await Assets.load(targetPath);
 		texture.source.scaleMode = 'linear';
 
@@ -387,7 +377,7 @@
 	 *
 	 * @param {GroupInterface} group - The group object containing an ID and optional shots.
 	 */
-    async function createGroup(group: GroupInterface): Promise<void>
+    async function createGroup(group: GroupInterface): Promise<Container>
 	{
         const groupContainer = new Container();
         groupContainer.label = group.id.toString();
@@ -402,6 +392,8 @@
         } else {
             applicationState = `No shots in group ${group.id + 1}.`;
         }
+
+		return groupContainer;
     }
 
 	/**
@@ -422,14 +414,19 @@
 	async function addShot(x: number, y: number, group?: string): Promise<void>
 	{
 		if (!group) {
-			if (!$TargetStore.activeGroup) {
-				throw new Error('No activeGroup and no group supplied. Exiting.');
+			if ($TargetStore.activeGroup) {
+				group = $TargetStore.activeGroup.toString();
+			} else {
+				group = '1';
+				$TargetStore.activeGroup = parseInt(group);
 			}
-			group = $TargetStore.activeGroup.toString();
 		}
 
-		const groupContainer = targetContainer.getChildByLabel(group);
-		if (!groupContainer) { throw new Error(`Wanted group with label: ${group} but none was found!`); }
+		let groupContainer = targetContainer.getChildByLabel(group);
+		if (!groupContainer) {
+			// throw new Error(`Wanted group with label: ${group} but none was found!`);
+			groupContainer = await createGroup({id: parseInt(group)});
+		}
 
 		const texture = await Assets.load('/cursors/shot.svg');
 		const sprite = new Sprite(texture) as DraggableSprite;
@@ -465,7 +462,7 @@
 		sprite.on('pointerdown', (e) => handleClick(e, sprite));
 
 		groupContainer.addChild(sprite);
-		// console.log(`added ${sprite.label}:`, sprite);
+		console.log(`added ${sprite.label}:`, sprite);
 	}
 
 	/**
@@ -875,6 +872,103 @@
 	}
 
 
+	function handleResize(e?: Event): void
+	{
+		if (!app) return;
+
+		if (e?.target) {
+			const target = e.target as Window;
+			chromeArea.x = target.innerWidth;
+			chromeArea.y = target.innerHeight;
+		} else {
+			chromeArea.x = window.innerWidth;
+			chromeArea.y = window.innerHeight;
+		}
+
+		app.renderer.resize(chromeArea.x, chromeArea.y);
+
+		if (targetContainer) {
+			scale = Math.min(
+				(window.innerHeight - 100) / targetSprite.height,
+				(window.innerWidth - 100) / targetSprite.width
+			);
+
+			targetContainer.scale.set(scale);
+
+			targetContainer.x = app.screen.width / 2;
+			targetContainer.y = app.screen.height / 2;
+		}
+	}
+
+
+	function converTopLeftCoordinates(x:number, y:number)
+	{
+		const targetWidth  = $TargetStore.target.image.originalsize[0];
+		const targetHeight = $TargetStore.target.image.originalsize[1];
+		const center = {x: targetWidth / 2, y: targetHeight / 2};
+
+		return targetContainer.toGlobal({x, y});
+		return {x: 0, y: 0}
+	}
+
+
+	function logDebug()
+	{
+		console.log('TargetStore:', $TargetStore);
+		console.log('UserSettingsStore:', $UserSettingsStore);
+		console.log('EditorStore:', $EditorStore);
+		console.log('---');
+		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
+		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved);
+		console.log('refLine:', refLine);
+	}
+
+	onMount(async () => {
+		await getChromeArea();
+		await initializeApp();
+
+		if (app) {
+			await loadStaticAssets();
+			await drawTarget();
+			try {
+				if (data.user?.id && $TargetStore.target.image.filename) {
+					const res = await fetchAnalysis(data.user.id as UUID, $TargetStore.target.image.filename);
+					if (res && res.predictions?.length > 0) {
+						console.log(res.count)
+						res.predictions.forEach((pred) => {
+							const coords = converTopLeftCoordinates(pred.xy[0], pred.xy[1]);
+							addShot(coords.x, coords.y);
+						});
+					}
+				}
+			} catch (error) {
+				// Handle error appropriately
+				console.error('Failed to fetch analysis:', error);
+			}
+
+			setupReferenceLine();
+			setupCrosshairs();
+			applicationState = "Adding groups ... "
+			await addGroups();
+			applicationState = `Loading done.`
+			setTimeout(() => {
+				loadingDone();
+			}, 300);
+		};
+
+		// TODO: Check om det redan är en påbörjad tavla.
+		// 		 If groups.length > 0?
+		// mode = "reference";
+		// showPanel(new Event('load'), "reference");
+	});
+
+	onDestroy(async () => {
+		if (app) {
+			await Assets.unload(staticAssets)
+			app.destroy(true, true);
+		}
+	});
+
 	$effect(() => {
 		if (chromeArea) {
 			canvasContainer.style.width  = `${chromeArea.x}px`;
@@ -914,51 +1008,11 @@
 			// console.log(`EditorStore updated.`, $EditorStore)
 		}
 	});
-
-	function logDebug()
-	{
-		console.log('TargetStore:', $TargetStore);
-		console.log('UserSettingsStore:', $UserSettingsStore);
-		console.log('EditorStore:', $EditorStore);
-		console.log('---');
-		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
-		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved);
-		console.log('refLine:', refLine);
-	}
-
-	onMount(async () => {
-		await getChromeArea();
-		app = await initialize();
-
-		if (app) {
-			await loadStaticAssets();
-			await drawTarget();
-			setupReferenceLine();
-			setupCrosshairs();
-			applicationState = "Adding groups ... "
-			await addGroups();
-			applicationState = `Loading done.`
-			setTimeout(() => {
-				loadingDone();
-			}, 300);
-		};
-
-		// TODO: Check om det redan är en påbörjad tavla.
-		// 		 If groups.length > 0?
-		// mode = "reference";
-		// showPanel(new Event('load'), "reference");
-	});
-
-	onDestroy(async () => {
-		if (app) {
-			await Assets.unload(staticAssets)
-			app.destroy(true, true);
-		}
-	});
 </script>
 
 <svelte:window
 	onload={getChromeArea}
+	onresize={handleResize}
 />
 <aside
 	class="absolute grid grid-flow-row place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
@@ -1230,6 +1284,6 @@
 	bind:this={canvasContainer}
 	onmousemove={mousePosition}
 	onwheel={handleWheel}
-	class="relative grid justify-items-center align-middle place-content-center opacity-35"
+	class="relative grid justify-items-center align-middle place-content-center opacity-35 w-[100vw] h-[100vh]"
 ></div>
 <div bind:this={loader} class="z-50 transition-all top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-center absolute py-6 px-8 w-72 max-w-screen-sm rounded border-2 border-surface-500 bg-surface-300 text-surface-100 shadow-lg">{applicationState}</div>

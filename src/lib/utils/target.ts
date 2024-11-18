@@ -1,6 +1,41 @@
+import { deserialize } from "$app/forms";
 import { type TargetStoreInterface } from "@/stores/TargetImageStore";
 import { UserSettingsStore } from "@/stores/UserSettingsStore";
+import { Application, type Renderer } from 'pixi.js';
 import { get } from 'svelte/store';
+
+interface ActionSuccess {
+    type: 'success';
+    status: number;
+    data: Array<{
+        id: string;
+        submitted: string;
+        updated: string;
+        user_id: string;
+        image_name: string;
+        result: string;
+        error: null;
+    }>;
+}
+
+interface ActionFailure {
+    type: 'failure';
+    status: number;
+    data: {
+        error: string;
+    };
+}
+
+type ActionResponse = ActionSuccess | ActionFailure;
+
+interface AnalysisResult {
+    predictions: Array<{
+        x: number;
+        y: number;
+        group?: string;
+    }>;
+    count: number;
+}
 
 export function calculateReferenceValues(ref: TargetStoreInterface['reference'], target: TargetStoreInterface['target']): {cm: number, px: number}|undefined
 {
@@ -39,4 +74,74 @@ export function calculateReferenceValues(ref: TargetStoreInterface['reference'],
     let result: {cm: number, px: number} = {cm: mmToPixels(10) || 0, px: pxToMm(100) || 0}
 
     return result;
+}
+
+export async function initialize(
+    chromeArea: {x: number, y: number},
+    canvasContainer: HTMLDivElement,
+    setApplicationState: (state: string) => void,
+    setStaticAssets: (state: string[]) => void,
+    currentStaticAssets: string[],
+    targetStoreState: TargetStoreInterface
+): Promise<Application<Renderer>>
+{
+    setApplicationState('Initializing application...');
+
+    const app = new Application();
+    await app.init({
+        width: chromeArea.x,
+        height: chromeArea.y,
+        backgroundColor: 0xcdcdcc,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        hello: true
+    });
+
+    canvasContainer.appendChild(app.canvas);
+
+    if (!targetStoreState.target.image.filename) {
+        throw new Error('No target?');
+    } else if (!targetStoreState.target.image.filename.startsWith('uploads')) {
+        setApplicationState('Adding target to assets... ');
+        const targetPath = `/temp/${targetStoreState.target.image.filename}`;
+        setStaticAssets([...currentStaticAssets, targetPath]);
+    }
+
+    return app;
+}
+
+
+export async function fetchAnalysis(user_id: string, imagename: string): Promise<AnalysisResult | null>
+{
+    try {
+        const formData = new FormData();
+        formData.append('user_id', user_id);
+        formData.append('imagename', imagename);
+
+        const response = await fetch('?/fetchanalysis', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = deserialize(await response.text()) as ActionResponse;
+
+        console.log(JSON.parse(result.data[0].result));
+
+        if (result.type === 'success' && result.data[0]?.result) {
+            return JSON.parse(result.data[0].result) as AnalysisResult;
+        }
+
+        if (result.type === 'failure') {
+            throw new Error(result.data.error);
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error fetching analysis:', error);
+        throw error;
+    }
 }
