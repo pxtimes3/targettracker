@@ -70,7 +70,7 @@ jobs:
         uses: schneegans/dynamic-badges-action@v1.6.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
-          gistID: <your-gist-id>
+          gistID: 98db29cf88c66c9094372d748c698c85
           filename: coverage.json
           label: coverage
           message: ${{ steps.coverage.outputs.percentage }}%
