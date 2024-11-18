@@ -185,7 +185,7 @@
                 }
 
                 setTimeout(() => {
-                    goto('/shots/');
+                    goto('/pixi/');
                 }, 3000);
             } else if (result.status === 400) {
                 uploadStatus = "failed";
