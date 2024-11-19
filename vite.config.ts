@@ -1,15 +1,19 @@
-import { sentrySvelteKit } from "@sentry/sveltekit";
+// import { sentrySvelteKit } from "@sentry/sveltekit";
 import { sveltekit } from '@sveltejs/kit/vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vite";
 
 export default defineConfig({
-	plugins: [sentrySvelteKit({
-        sourceMapsUploadOptions: {
-            org: "mamoco-hobby",
-            project: "targettracker"
-        }
-    }), sveltekit(), basicSsl()],
+	plugins: [
+		// sentrySvelteKit({
+		// 	sourceMapsUploadOptions: {
+		// 		org: "mamoco-hobby",
+		// 		project: "targettracker"
+		// 	}
+		// }),
+		sveltekit(),
+		basicSsl()
+	],
 	server: {
 		proxy: {},
 		fs: {

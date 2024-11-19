@@ -17,7 +17,7 @@
 	import { fetchAnalysis, initialize } from '@/utils/target';
 	import type { UUID } from 'crypto';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
+	import type { ContainerChild, FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Point, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
@@ -65,7 +65,7 @@
 	]);
 
 	let targetContainer: DraggableContainer;
-	let groupContainers: Container[] = [];
+	let groupContainers: Container[] = $state([]);
 	let referenceContainer: Container;
 	let crosshairContainer: Container;
 	let scale: number = $state(0);
@@ -89,6 +89,8 @@
 	let atoxInput: HTMLInputElement|undefined = $state();
 
 	let settingsForm: HTMLFormElement;
+
+	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
 
 	const zoomBoundaries = [0.25, 3.0];
 	const zoomStep = 0.1;
@@ -347,7 +349,6 @@
 					Math.pow(endPos.x - startPos.x, 2) +
 					Math.pow(endPos.y - startPos.y, 2)
 				);
-				// console.log(refLineLength);
 			}
 		});
 	}
@@ -366,6 +367,7 @@
         const { groups } = $TargetStore;
         if (groups.length) {
             applicationState = `Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'}...`;
+			console.log(`Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'}...`);
             groups.forEach(createGroup);
         }
     }
@@ -384,6 +386,7 @@
         groupContainers.push(groupContainer);
 
         applicationState = `Adding group: ${group.id + 1}`;
+		console.log(`Adding group: ${group.id}`)
         targetContainer.addChild(groupContainer);
 
         if (group.shots?.length) {
@@ -437,7 +440,7 @@
 		sprite.anchor.set(0.5);
 		// sprite.scale = 1 * (1/scale);
 		if (!$TargetStore.target.caliberInMm) {
-			console.log('caliber in px',TargetStore.mmToPx(4.5))
+			// console.log('caliber in px',TargetStore.mmToPx(4.5))
 			// sätt till 4.5mm
 			sprite.width = TargetStore.mmToPx(4.5);
 			sprite.height = sprite.width;
@@ -462,7 +465,7 @@
 		sprite.on('pointerdown', (e) => handleClick(e, sprite));
 
 		groupContainer.addChild(sprite);
-		console.log(`added ${sprite.label}:`, sprite);
+		console.log(`added shot ${sprite.label} to group ${groupContainer.label}`);
 	}
 
 	/**
@@ -552,15 +555,30 @@
 	/**
 	 * Musklick.
 	 * @param e: FederatedPointerEvent
-	 * @param v: Vad klickade vi på?
 	 */
 	function handleClick(e: FederatedPointerEvent, target: Sprite | DraggableSprite | Container): void
 	{
 		console.log(`click!`, e.button, e.buttons, $state.snapshot(mouse), e, target);
 		mouseStart = mouse;
+
 		if (e.button === 0) {
 			if (target.label.startsWith('shot-')) {
 				e.stopPropagation();
+
+				if (selected.includes(target) && e.shiftKey) {
+					const idx = selected.findIndex((sp) => sp === target);
+					selected.splice(idx, 1);
+				} else if (!selected.includes(target) && !e.shiftKey) {
+					// töm selected
+					selected = [];
+					selected.push(target);
+				} else if (!selected.includes(target) && e.shiftKey) {
+					selected.push(target);
+				} else if (selected.includes(target) && !e.shiftKey) {
+					selected = [];
+					selected.push(target);
+				}
+
 				onDragStart(target as DraggableSprite, e);
 				return;
 			}
@@ -580,23 +598,52 @@
 				addReferencePoint(e.globalX, e.globalY)
 				return;
 			}
+
 			if (target.label === 'target') {
+				// töm selected
+				selected = [];
+
 				if (dragTarget) { dragTarget = undefined; }
 				if (mode === "shots") {
 					addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 				} else if (mode === "poa") {
 					addPoa(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 				}
+				return;
 			}
+
+
 		}
 
 		// middleclick
 		if (e.button === 1) {
 			e.stopPropagation();
 			e.preventDefault();
-			dragTarget = targetContainer;
-			onDragStart(targetContainer as DraggableContainer, e);
+
+			if (target.label === 'target') {
+				dragTarget = targetContainer;
+				onDragStart(targetContainer as DraggableContainer, e);
+				return;
+			}
+
+			if (target.label.startsWith('shot-')) {
+				e.preventDefault();
+				e.stopPropagation();
+
+				removeShot(target);
+			}
 		}
+	}
+
+
+	function removeShot(target: DraggableSprite | Sprite | Container<ContainerChild>): void
+	{
+		try {
+			target.parent.removeChild(target) || new Error('Failed to remove shot!');
+		} catch (error) {
+			console.error('Failed to remove shot!', target, error);
+		}
+
 	}
 
 
@@ -658,7 +705,7 @@
 	{
 		isDragging = true;
 		dragTarget = target;
-		dragTarget.alpha = 0.5;
+		// dragTarget.alpha = 0.5;
 		dragTarget.eventMode = 'dynamic';
 
 		// global position => local position
@@ -731,14 +778,14 @@
 	 */
 	function onDragEnd(event: FederatedPointerEvent): void
 	{
-		if (dragTarget) {
+		if (dragTarget && isDragging) {
 			isDragging = false;
 
 			app.stage.off('pointermove', onDragMove);
 			app.stage.off('pointerup', onDragEnd);
 			app.stage.off('pointerupoutside', onDragEnd);
 
-			dragTarget.alpha = 1;
+			// dragTarget.alpha = 1;
 			dragTarget.drag = null;
 			dragTarget = undefined;
 		}
@@ -901,14 +948,9 @@
 	}
 
 
-	function converTopLeftCoordinates(x:number, y:number)
+	function converTopLeftCoordinates(x:number, y:number): Point
 	{
-		const targetWidth  = $TargetStore.target.image.originalsize[0];
-		const targetHeight = $TargetStore.target.image.originalsize[1];
-		const center = {x: targetWidth / 2, y: targetHeight / 2};
-
 		return targetContainer.toGlobal({x, y});
-		return {x: 0, y: 0}
 	}
 
 
@@ -950,6 +992,19 @@
 			setupCrosshairs();
 			applicationState = "Adding groups ... "
 			await addGroups();
+
+			let tick = 0;
+			app.ticker.add(() => {
+				if (selected) {
+					// console.log(tick++)
+					const shots = targetContainer.getChildrenByLabel(/shot-\d-\d/i, true);
+					shots.forEach((shot) => { selected.includes(shot) ? shot.alpha = 0.5 : shot.alpha = 1 })
+				}
+
+
+			});
+
+
 			applicationState = `Loading done.`
 			setTimeout(() => {
 				loadingDone();
@@ -1276,6 +1331,21 @@
 		{/each}
 	</div>
 {/if}
+
+<div class="absolute z-50 top-2 right-2 text-black">
+	Selected:<br/>
+	{#if selected.length > 0}
+		{#each selected as shot}
+			{shot.label}<br />
+		{/each}
+	{/if}
+	{#if groupContainers && groupContainers.length > 0}
+		Assign selected to group:
+		{#each groupContainers as group}
+			{group.label}{typeof group}
+		{/each}
+	{/if}
+</div>
 
 <!-- canvas -->
 <div
