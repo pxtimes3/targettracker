@@ -63,6 +63,7 @@
 		"@node-rs/argon2": "^2.0.0",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
+		"@sentry/sveltekit": "^8.38.0",
 		"@types/nodemailer": "^6.4.16",
 		"@zxcvbn-ts/core": "^3.0.4",
 		"@zxcvbn-ts/language-common": "^3.0.4",

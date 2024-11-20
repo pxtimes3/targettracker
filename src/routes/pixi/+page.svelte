@@ -9,15 +9,17 @@
 	 * TODO: Dragmarkering av shots => assign to group.
 	 * Vanlig "dra ut en ruta för att markera".
 	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
+	 * TODO: Skapas en tom grupp som sedan inte fylls med shots.
 	 */
 	import Logo from '@/components/logo/logo.svelte';
-	import { EditorStore } from '@/stores/EditorStore';
+	import { activePanel, EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
+	import { SelectionTool } from '@/utils/editor';
 	import { fetchAnalysis, initialize } from '@/utils/target';
 	import type { UUID } from 'crypto';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
+	import type { ContainerChild, FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Point, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
@@ -65,7 +67,7 @@
 	]);
 
 	let targetContainer: DraggableContainer;
-	let groupContainers: Container[] = [];
+	let groupContainers: Container[] = $state([]);
 	let referenceContainer: Container;
 	let crosshairContainer: Container;
 	let scale: number = $state(0);
@@ -89,6 +91,10 @@
 	let atoxInput: HTMLInputElement|undefined = $state();
 
 	let settingsForm: HTMLFormElement;
+
+	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
+	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
+	let selectionTool: SelectionTool;
 
 	const zoomBoundaries = [0.25, 3.0];
 	const zoomStep = 0.1;
@@ -170,7 +176,7 @@
 		targetContainer = new Container({isRenderGroup: true});
 		app.stage.addChild(targetContainer);
 
-		targetContainer.label = 'target';
+		targetContainer.label = 'targetContainer';
 		targetContainer.eventMode = 'dynamic';
 		targetContainer.on('pointerdown', (e) => handleClick(e, targetContainer));
 
@@ -206,6 +212,8 @@
 	function setupCrosshairs()
 	{
 		crosshairContainer = new Container();
+		crosshairContainer.label = 'crosshairContainer';
+
 		targetContainer.addChild(crosshairContainer);
 
 		const nLine = new Graphics();
@@ -347,7 +355,6 @@
 					Math.pow(endPos.x - startPos.x, 2) +
 					Math.pow(endPos.y - startPos.y, 2)
 				);
-				// console.log(refLineLength);
 			}
 		});
 	}
@@ -365,8 +372,18 @@
 
         const { groups } = $TargetStore;
         if (groups.length) {
-            applicationState = `Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'}...`;
-            groups.forEach(createGroup);
+            applicationState = `Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`;
+			console.log(`Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`);
+
+            groups.forEach((group) => {
+				if (!targetContainer.getChildrenByLabel(group.id.toString())) {
+					createGroup(group);
+				} else {
+					group.shots?.forEach((shot) => {
+						addShot(shot.x, shot.y, group.id.toString());
+					});
+				}
+			});
         }
     }
 
@@ -379,11 +396,12 @@
 	 */
     async function createGroup(group: GroupInterface): Promise<Container>
 	{
-        const groupContainer = new Container();
+		const groupContainer = new Container();
         groupContainer.label = group.id.toString();
         groupContainers.push(groupContainer);
 
-        applicationState = `Adding group: ${group.id + 1}`;
+        applicationState = `Creating group: ${group.id + 1}`;
+		console.log(`Creating group: ${group.id} ${groupContainer.uid}`);
         targetContainer.addChild(groupContainer);
 
         if (group.shots?.length) {
@@ -395,6 +413,44 @@
 
 		return groupContainer;
     }
+
+	/**
+	 * Assigns selected shots to either a new or existing group container.
+	 * Creates a new group if "createNew" is selected, otherwise adds shots to specified group.
+	 * Updates shot labels to match their new group assignment.
+	 * @throws {Error} Logs error if target group is not found
+	 */
+	function assignSelectedShotsToGroup(): void
+	{
+		let newGroup: Container|null|undefined;
+
+		if (!assignToGroupSelect || !assignToGroupSelect.value) return;
+
+		console.log(assignToGroupSelect.value);
+
+		if (assignToGroupSelect.value === "createNew") {
+			newGroup = new Container();
+			newGroup.label = (groupContainers.length + 1).toString();
+			targetContainer.addChild(newGroup);
+			groupContainers.push(newGroup);
+			console.log(`adding to newGroup: ${newGroup?.label}`);
+		} else {
+			newGroup = targetContainer.getChildByLabel(assignToGroupSelect.value);
+			console.log(`adding to existing: ${newGroup?.label}`);
+		}
+
+
+		if (!newGroup) {
+			console.error(`Was supposed to assign to group ${assignToGroupSelect.value} but no such group was found!`);
+			return;
+		}
+
+		selected.forEach((shot) => {
+			newGroup.addChild(shot);
+			shot.label = shot.label.replace(/\d+$/, `${newGroup.label}`);
+		});
+	}
+
 
 	/**
 	 * Adds a shot sprite to a specified group within the target container.
@@ -413,34 +469,38 @@
 	 */
 	async function addShot(x: number, y: number, group?: string): Promise<void>
 	{
+		console.log(`function addShot called to add shot at position ${x}:${y} in group ${group}`)
 		if (!group) {
 			if ($TargetStore.activeGroup) {
+				console.log(`TargetStore has active group ${$TargetStore.activeGroup}`);
 				group = $TargetStore.activeGroup.toString();
 			} else {
 				group = '1';
+				console.log(`TargetStore has no active group ${$TargetStore.activeGroup}`);
 				$TargetStore.activeGroup = parseInt(group);
 			}
 		}
 
-		let groupContainer = targetContainer.getChildByLabel(group);
+		let groupContainer = targetContainer.getChildByLabel(group.toString().trim());
 		if (!groupContainer) {
-			// throw new Error(`Wanted group with label: ${group} but none was found!`);
+			console.log(`Wanted group with label: ${group} but none was found! Creating group with label: ${group}`);
+			showChildren(targetContainer);
 			groupContainer = await createGroup({id: parseInt(group)});
 		}
 
 		const texture = await Assets.load('/cursors/shot.svg');
-		const sprite = new Sprite(texture) as DraggableSprite;
-		sprite.label = `shot-${groupContainer.label}-${groupContainer.children.length}`;
-    	sprite.eventMode = 'dynamic';
-    	sprite.cursor = 'pointer';
-		sprite.interactive = true;
-		sprite.anchor.set(0.5);
-		// sprite.scale = 1 * (1/scale);
+		const shot = new Sprite(texture) as DraggableSprite;
+		shot.label = `shot-${groupContainer.children.length}-${groupContainer.label}`;
+    	shot.eventMode = 'dynamic';
+    	shot.cursor = 'pointer';
+		shot.interactive = true;
+		shot.anchor.set(0.5);
+		// shot.scale = 1 * (1/scale);
 		if (!$TargetStore.target.caliberInMm) {
-			console.log('caliber in px',TargetStore.mmToPx(4.5))
+			// console.log('caliber in px',TargetStore.mmToPx(4.5))
 			// sätt till 4.5mm
-			sprite.width = TargetStore.mmToPx(4.5);
-			sprite.height = sprite.width;
+			shot.width = TargetStore.mmToPx(4.5);
+			shot.height = shot.width;
 			// lägg in en varning i editorstore
 			if ($EditorStore.warnings && !$EditorStore.warnings?.find((w) => w.id === 'caliber')) {
 				const newWarning = [...$EditorStore.warnings, {
@@ -451,18 +511,18 @@
 			}
 		} else {
 			console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
-			sprite.width = TargetStore.mmToPx($TargetStore.target.caliberInMm) / 10;
-			sprite.height = sprite.width;
+			shot.width = TargetStore.mmToPx($TargetStore.target.caliberInMm) / 10;
+			shot.height = shot.width;
 		}
 
 		const localPos = groupContainer.toLocal({ x, y }, app.stage);
-    	sprite.x = localPos.x;
-    	sprite.y = localPos.y;
+    	shot.x = localPos.x;
+    	shot.y = localPos.y;
 
-		sprite.on('pointerdown', (e) => handleClick(e, sprite));
+		shot.on('pointerdown', (e) => handleClick(e, shot));
 
-		groupContainer.addChild(sprite);
-		console.log(`added ${sprite.label}:`, sprite);
+		groupContainer.addChild(shot);
+		console.log(`added shot ${shot.label} to group ${groupContainer.label}`);
 	}
 
 	/**
@@ -552,15 +612,30 @@
 	/**
 	 * Musklick.
 	 * @param e: FederatedPointerEvent
-	 * @param v: Vad klickade vi på?
 	 */
 	function handleClick(e: FederatedPointerEvent, target: Sprite | DraggableSprite | Container): void
 	{
 		console.log(`click!`, e.button, e.buttons, $state.snapshot(mouse), e, target);
 		mouseStart = mouse;
+
 		if (e.button === 0) {
 			if (target.label.startsWith('shot-')) {
 				e.stopPropagation();
+
+				if (selected.includes(target) && e.shiftKey) {
+					const idx = selected.findIndex((sp) => sp === target);
+					selected.splice(idx, 1);
+				} else if (!selected.includes(target) && !e.shiftKey) {
+					// töm selected
+					selected = [];
+					selected.push(target);
+				} else if (!selected.includes(target) && e.shiftKey) {
+					selected.push(target);
+				} else if (selected.includes(target) && !e.shiftKey) {
+					selected = [];
+					selected.push(target);
+				}
+
 				onDragStart(target as DraggableSprite, e);
 				return;
 			}
@@ -580,23 +655,52 @@
 				addReferencePoint(e.globalX, e.globalY)
 				return;
 			}
+
 			if (target.label === 'target') {
+				// töm selected
+				selected = [];
+
 				if (dragTarget) { dragTarget = undefined; }
 				if (mode === "shots") {
 					addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 				} else if (mode === "poa") {
 					addPoa(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 				}
+				return;
 			}
+
+
 		}
 
 		// middleclick
 		if (e.button === 1) {
 			e.stopPropagation();
 			e.preventDefault();
-			dragTarget = targetContainer;
-			onDragStart(targetContainer as DraggableContainer, e);
+
+			if (target.label === 'target') {
+				dragTarget = targetContainer;
+				onDragStart(targetContainer as DraggableContainer, e);
+				return;
+			}
+
+			if (target.label.startsWith('shot-')) {
+				e.preventDefault();
+				e.stopPropagation();
+
+				removeShot(target);
+			}
 		}
+	}
+
+
+	function removeShot(target: DraggableSprite | Sprite | Container<ContainerChild>): void
+	{
+		try {
+			target.parent.removeChild(target) || new Error('Failed to remove shot!');
+		} catch (error) {
+			console.error('Failed to remove shot!', target, error);
+		}
+
 	}
 
 
@@ -658,7 +762,7 @@
 	{
 		isDragging = true;
 		dragTarget = target;
-		dragTarget.alpha = 0.5;
+		// dragTarget.alpha = 0.5;
 		dragTarget.eventMode = 'dynamic';
 
 		// global position => local position
@@ -731,14 +835,14 @@
 	 */
 	function onDragEnd(event: FederatedPointerEvent): void
 	{
-		if (dragTarget) {
+		if (dragTarget && isDragging) {
 			isDragging = false;
 
 			app.stage.off('pointermove', onDragMove);
 			app.stage.off('pointerup', onDragEnd);
 			app.stage.off('pointerupoutside', onDragEnd);
 
-			dragTarget.alpha = 1;
+			// dragTarget.alpha = 1;
 			dragTarget.drag = null;
 			dragTarget = undefined;
 		}
@@ -901,16 +1005,26 @@
 	}
 
 
-	function converTopLeftCoordinates(x:number, y:number)
+	function converTopLeftCoordinates(x:number, y:number): Point
 	{
-		const targetWidth  = $TargetStore.target.image.originalsize[0];
-		const targetHeight = $TargetStore.target.image.originalsize[1];
-		const center = {x: targetWidth / 2, y: targetHeight / 2};
-
 		return targetContainer.toGlobal({x, y});
-		return {x: 0, y: 0}
 	}
 
+	function showChildren(parent: Container, indent = 0) {
+		if (indent === 0) {
+			console.log(`${'-'.repeat(indent)}label: ${parent.label}, uid: ${parent.uid}, parent: ${parent.parent?.label || parent.parent?.uid || '-'}`);
+		}
+
+		if (parent.children.length > 0) {
+			parent.children.forEach((child) => {
+				let string = `${'-'.repeat(indent)}label: ${child.label}, uid: ${child.uid}, parent: ${parent.parent?.label || parent.parent?.uid || '-'}`;
+				console.log(string, child);
+				if (child.children.length > 0) {
+					showChildren(child, indent + 1);
+				}
+			});
+		}
+	}
 
 	function logDebug()
 	{
@@ -918,9 +1032,8 @@
 		console.log('UserSettingsStore:', $UserSettingsStore);
 		console.log('EditorStore:', $EditorStore);
 		console.log('---');
-		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
-		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved);
-		console.log('refLine:', refLine);
+		showChildren(app.stage);
+
 	}
 
 	onMount(async () => {
@@ -937,7 +1050,7 @@
 						console.log(res.count)
 						res.predictions.forEach((pred) => {
 							const coords = converTopLeftCoordinates(pred.xy[0], pred.xy[1]);
-							addShot(coords.x, coords.y);
+							addShot(coords.x, coords.y, '1');
 						});
 					}
 				}
@@ -950,11 +1063,34 @@
 			setupCrosshairs();
 			applicationState = "Adding groups ... "
 			await addGroups();
+
+			let tick = 0;
+			app.ticker.add(() => {
+				if (selected) {
+					// console.log(tick++)
+					const shots = targetContainer.getChildrenByLabel(/shot-\d-\d/i, true);
+					shots.forEach((shot) => { selected.includes(shot) ? shot.alpha = 0.5 : shot.alpha = 1 })
+				}
+
+
+			});
+
+
 			applicationState = `Loading done.`
 			setTimeout(() => {
 				loadingDone();
 			}, 300);
 		};
+
+		if (app && targetContainer) {
+            selectionTool = new SelectionTool(targetContainer);
+
+            // Listen for selection events
+            window.addEventListener('shotsSelected', ((event: CustomEvent) => {
+                const selectedShots = event.detail.shots;
+                selected = selectedShots;
+            }) as EventListener);
+        }
 
 		// TODO: Check om det redan är en påbörjad tavla.
 		// 		 If groups.length > 0?
@@ -967,6 +1103,10 @@
 			await Assets.unload(staticAssets)
 			app.destroy(true, true);
 		}
+		if (selectionTool) {
+            selectionTool.destroy();
+        }
+        window.removeEventListener('shotsSelected', () => {});
 	});
 
 	$effect(() => {
@@ -1032,7 +1172,7 @@
 		<button
 			title="Target information"
 			id="targetinfo-button"
-			onclick={ (e) => showPanel(e, "info") }
+			onclick={ (e) => {$activePanel = "info-panel";}  }
 			class="w-16 h-12 mt-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideTarget
@@ -1044,7 +1184,7 @@
 		<button
 			title="Set reference"
 			id="reference-button"
-			onclick={(e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); showPanel(e, "reference")}}
+			onclick={ (e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); $activePanel="reference-panel" }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
@@ -1085,7 +1225,7 @@
 			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Rotate target"
 			id="rotate-button"
-			onclick={(e) => { showPanel(e, "rotate"); setMode("rotate"); }}
+			onclick={ (e) => { showPanel(e, "rotate"); setMode("rotate"); $activePanel="rotate-panel"; }}
 		>
 			<LucideRefreshCcw
 				size="20"
@@ -1100,7 +1240,7 @@
 			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Settings"
 			id="settings-button"
-			onclick={(e) => { showPanel(e, "settings"); setMode("settings");}}
+			onclick={ (e) => { showPanel(e, "settings"); setMode("settings"); $activePanel='settings-panel' }}
 		>
 			<SlidersHorizontal
 				size="20"
@@ -1125,7 +1265,7 @@
 </aside>
 
 <!-- panels -->
-<div id="rotate-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+<div id="rotate-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
@@ -1161,7 +1301,7 @@
     </div>
 </div>
 
-<div id="reference-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64 hidden">
+<div id="reference-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64">
 	<div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
 		<p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
 		<p class="justify-self-end">
@@ -1191,7 +1331,7 @@
 	</div>
 </div>
 
-<div id="settings-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+<div id="settings-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Settings</p>
         <p class="justify-self-end">
@@ -1224,7 +1364,7 @@
 	</form>
 </div>
 
-<div id="info-panel" class="absolute z-50 grid grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64 hidden">
+<div id="info-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' } grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Target information</p>
         <p class="justify-self-end">
@@ -1276,6 +1416,36 @@
 		{/each}
 	</div>
 {/if}
+
+<div class="absolute z-50 top-2 right-2 text-black">
+	<div
+		class="grid grid-cols-1 grid-flow-row"
+	>
+		{#if selected.length > 0}
+			<div class="col-span-2">
+				{selected.length === 1 ? `${selected.length} shot` : `${selected.length} shots`} selected.
+			</div>
+
+
+			{#if groupContainers && groupContainers.length > 0}
+				<div class="grid grid-cols-2">
+					<select name="assignToGroupSelect" id="assignToGroupSelect" bind:this={assignToGroupSelect}>
+						<option value={null} selected>Assign selected to group:</option>
+						{#each groupContainers as group}
+							<option value={group.label}>Group {group.label} {group.uid}</option>
+						{/each}
+						<option value="createNew">Add to new group</option>
+					</select>
+					<button
+						onclick={ (e) => assignSelectedShotsToGroup(e) }
+					>
+						Go
+					</button>
+				</div>
+			{/if}
+		{/if}
+	</div>
+</div>
 
 <!-- canvas -->
 <div

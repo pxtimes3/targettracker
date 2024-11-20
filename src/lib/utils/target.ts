@@ -30,6 +30,7 @@ type ActionResponse = ActionSuccess | ActionFailure;
 
 interface AnalysisResult {
     predictions: Array<{
+		[x: string]: any;
         x: number;
         y: number;
         group?: string;
@@ -127,7 +128,7 @@ export async function fetchAnalysis(user_id: string, imagename: string): Promise
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const result = deserialize(await response.text()) as ActionResponse;
+        const result: {[key:string]: any} = deserialize(await response.text()) as ActionResponse;
 
         console.log(JSON.parse(result.data[0].result));
 
