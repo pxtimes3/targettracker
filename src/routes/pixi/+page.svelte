@@ -9,9 +9,10 @@
 	 * TODO: Dragmarkering av shots => assign to group.
 	 * Vanlig "dra ut en ruta för att markera".
 	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
+	 * TODO: Skapas en tom grupp som sedan inte fylls med shots.
 	 */
 	import Logo from '@/components/logo/logo.svelte';
-	import { EditorStore } from '@/stores/EditorStore';
+	import { activePanel, EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
 	import { fetchAnalysis, initialize } from '@/utils/target';
