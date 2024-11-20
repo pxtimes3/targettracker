@@ -1,21 +1,21 @@
 <script lang="ts">
 	/**
+	 * TODO: Lyft ut addShot till egen klass (shottool.ts?)
+	 * TODO: Lyft ut grupphanteringen till en egen klass.
+	 * TODO: Lyft ut crosshairs och
 	 * TODO: Scoring.
 	 * TODO: Add firearm.
 	 * TODO: Add ammunition.
 	 * TODO: Add weather data.
 	 * TODO: Save.
-	 * TODO: Enkelklick för att markera shot => assign to group.
-	 * TODO: Dragmarkering av shots => assign to group.
-	 * Vanlig "dra ut en ruta för att markera".
 	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
-	 * TODO: Skapas en tom grupp som sedan inte fylls med shots.
 	 */
 	import Logo from '@/components/logo/logo.svelte';
 	import { activePanel, EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
-	import { SelectionTool } from '@/utils/editor';
+	import { ReferenceTool } from '@/utils/editor/referencetool';
+	import { SelectionTool } from '@/utils/editor/selectiontool';
 	import { fetchAnalysis, initialize } from '@/utils/target';
 	import type { UUID } from 'crypto';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
@@ -89,6 +89,7 @@
 	let refMeasurement: string = $state('0');
 	let refMeasurementDirty: boolean = $state(true);
 	let atoxInput: HTMLInputElement|undefined = $state();
+	let referenceTool: ReferenceTool|undefined = $state();
 
 	let settingsForm: HTMLFormElement;
 
@@ -297,67 +298,6 @@
 		});
 	}
 
-	/**
-	 * RefLine för senare användning...
-	 */
-	function setupReferenceLine(): void
-	{
-		if (!referenceContainer) {
-			referenceContainer = new Container();
-			referenceContainer.label = 'referenceContainer';
-			targetContainer.addChild(referenceContainer);
-		}
-
-		refLine = new Graphics();
-		refLine.label = 'reference-line';
-		referenceContainer.addChild(refLine);
-
-		app.ticker.add(() => {
-			if (isDrawingReferenceLine && refLine) {
-				const startPoint = referenceContainer.getChildByLabel('ref-a');
-				const endPoint = !xIsSet ? undefined : referenceContainer.getChildByLabel('ref-x');
-
-				if (!startPoint) return;
-
-				refLine.clear();
-				refLine.beginPath();
-				refLine.setStrokeStyle({
-					width: 3,
-					color: 0x000000,
-					alpha: 0.8,
-					cap: 'round',
-					join: 'round'
-				});
-
-				let startPos = { x: startPoint.x, y: startPoint.y };
-				let endPos;
-
-				if (isDragging) {
-					if (dragTarget?.label === 'ref-a') {
-						startPos = { x: dragTarget.x, y: dragTarget.y };
-						endPos = endPoint ? { x: endPoint.x, y: endPoint.y } : targetContainer.toLocal({ x: mouse.x, y: mouse.y });
-					} else if (dragTarget?.label === 'ref-x') {
-						endPos = { x: dragTarget.x, y: dragTarget.y };
-					} else {
-						endPos = endPoint ? { x: endPoint.x, y: endPoint.y } : targetContainer.toLocal({ x: mouse.x, y: mouse.y });
-					}
-				} else {
-					endPos = endPoint ? { x: endPoint.x, y: endPoint.y } : targetContainer.toLocal({ x: mouse.x, y: mouse.y });
-				}
-
-				refLine.moveTo(startPos.x, startPos.y)
-					.lineTo(endPos.x, endPos.y)
-					.stroke();
-
-				const dx = endPos.x - startPos.x;
-				const dy = endPos.y - startPos.y;
-				refLineLength = Math.sqrt(
-					Math.pow(endPos.x - startPos.x, 2) +
-					Math.pow(endPos.y - startPos.y, 2)
-				);
-			}
-		});
-	}
 
 
 	/**
@@ -639,9 +579,9 @@
 				onDragStart(target as DraggableSprite, e);
 				return;
 			}
-			if (target.label.startsWith('ref-') && (mode === "reference")) {
+			if (target.label.startsWith('target') && mode === "reference") {
 				e.stopPropagation();
-				onDragStart(target as DraggableSprite, e);
+				referenceTool.addReferencePoint(e.globalX, e.globalY);
 				return;
 			}
 			if (target.label.startsWith('poa-')) {
@@ -649,10 +589,10 @@
 				onDragStart(target as DraggableSprite, e);
 				return;
 			}
-			if (target.label.startsWith('target') && mode === "reference") {
+			if (target.label.startsWith('ref-')) {
+				console.log(`click on ref-point`);
 				e.stopPropagation();
-				// onDragStart(target as DraggableSprite, e);
-				addReferencePoint(e.globalX, e.globalY)
+				onDragStart(target as DraggableSprite, e);
 				return;
 			}
 
@@ -668,8 +608,6 @@
 				}
 				return;
 			}
-
-
 		}
 
 		// middleclick
@@ -702,51 +640,6 @@
 		}
 
 	}
-
-
-	/**
-	 * Adds reference points A and X to the canvas at specified coordinates.
-	 * Creates draggable sprites with event handlers and updates the TargetStore.
-	 *
-	 * @param {number} x - The x coordinate for the reference point
-	 * @param {number} y - The y coordinate for the reference point
-	 * @returns {Promise<void>}
-	 */
-	async function addReferencePoint(x: number, y: number): Promise<void>
-	{
-        const createSprite = async (texturePath: string, label: string) => {
-            const texture = await Assets.load(texturePath);
-            const sprite = new Sprite(texture) as DraggableSprite;
-            sprite.label = label;
-            sprite.eventMode = 'dynamic';
-            sprite.cursor = 'pointer';
-            sprite.interactive = true;
-            sprite.anchor.set(0.5);
-            sprite.scale = 1 / targetContainer.scale.x;
-
-            const localPos = referenceContainer.toLocal({ x, y }, app.stage);
-            sprite.x = localPos.x;
-            sprite.y = localPos.y;
-
-            sprite.on('pointerdown', (e) => handleClick(e, sprite));
-            referenceContainer.addChild(sprite);
-
-            return sprite;
-        };
-
-        if (!aIsSet) {
-            const sprite = await createSprite('/cursors/circle-a.svg', 'ref-a');
-            aIsSet = true;
-            TargetStore.setReference('a', [sprite._position._x, sprite._position._y]);
-            return;
-        }
-
-        if (!xIsSet) {
-            const sprite = await createSprite('/cursors/circle-x.svg', 'ref-x');
-            xIsSet = true;
-            TargetStore.setReference('x', [sprite._position._x, sprite._position._y]);
-        }
-    }
 
 	/**
 	 * Initiates the drag operation for a draggable sprite.
@@ -811,16 +704,6 @@
 				dragTarget.x = newPosition.x;
 				dragTarget.y = newPosition.y;
 			}
-
-			if (dragTarget.label?.startsWith('ref-')) {
-            	isDrawingReferenceLine = true;
-				if (dragTarget.label === 'ref-a') {
-					aIsMoved = true;
-				}
-				if (dragTarget.label === 'ref-x') {
-					xIsMoved = true;
-				}
-        	}
 		}
 	}
 
@@ -887,21 +770,7 @@
      */
     function setRefMeasurement(): void
 	{
-        const isValid = aIsSet &&
-                        xIsSet &&
-                        atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i);
-
-        if (isValid) {
-            const normalizedMeasurement = refMeasurement.replace(/,/, '.');
-
-            TargetStore.setReference('measurement', parseFloat(normalizedMeasurement));
-            TargetStore.setReference('linelength', refLineLength);
-
-            // Reset state flags
-            aIsMoved = false;
-            xIsMoved = false;
-            refMeasurementDirty = false;
-        }
+        referenceTool.setRefMeasurement(refMeasurement);
     }
 
 
@@ -1055,26 +924,22 @@
 					}
 				}
 			} catch (error) {
-				// Handle error appropriately
 				console.error('Failed to fetch analysis:', error);
 			}
 
-			setupReferenceLine();
+			// setupReferenceLine();
 			setupCrosshairs();
 			applicationState = "Adding groups ... "
 			await addGroups();
 
-			let tick = 0;
+			// selection check... -.-
 			app.ticker.add(() => {
 				if (selected) {
 					// console.log(tick++)
 					const shots = targetContainer.getChildrenByLabel(/shot-\d-\d/i, true);
 					shots.forEach((shot) => { selected.includes(shot) ? shot.alpha = 0.5 : shot.alpha = 1 })
 				}
-
-
 			});
-
 
 			applicationState = `Loading done.`
 			setTimeout(() => {
@@ -1084,12 +949,21 @@
 
 		if (app && targetContainer) {
             selectionTool = new SelectionTool(targetContainer);
+			referenceTool = new ReferenceTool(targetContainer);
 
-            // Listen for selection events
             window.addEventListener('shotsSelected', ((event: CustomEvent) => {
                 const selectedShots = event.detail.shots;
                 selected = selectedShots;
             }) as EventListener);
+
+
+			window.addEventListener('referenceMeasurementSet', () => {
+				if (referenceTool) {
+					refMeasurementDirty = referenceTool.isDirty;
+				}
+			});
+
+
         }
 
 		// TODO: Check om det redan är en påbörjad tavla.
@@ -1103,10 +977,16 @@
 			await Assets.unload(staticAssets)
 			app.destroy(true, true);
 		}
+
 		if (selectionTool) {
             selectionTool.destroy();
         }
         window.removeEventListener('shotsSelected', () => {});
+
+		if (referenceTool) {
+			referenceTool.destroy();
+		}
+		window.removeEventListener('referenceMeasurementSet', () => {});
 	});
 
 	$effect(() => {
@@ -1133,7 +1013,7 @@
 		}
 
 		if (mode) {
-			mode === "reference" ? referenceContainer.visible = true : referenceContainer.visible = false;
+			referenceTool?.setVisible(mode === "reference");
 		}
 
 		if ($UserSettingsStore) {
@@ -1301,11 +1181,11 @@
     </div>
 </div>
 
-<div id="reference-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64">
+<div id="reference-panel" class="absolute z-50 {$activePanel === 'reference-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64">
 	<div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
 		<p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
 		<p class="justify-self-end">
-			<LucideX size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "reference") } />
+			<LucideX size="14" class="cursor-pointer" onclick={(e) => { $activePanel = ''; }} />
 		</p>
 	</div>
 	<div class="p-4">
@@ -1316,14 +1196,16 @@
 				<input type="text" id="atoxInput" bind:this={atoxInput} class="bg-white text-xs" bind:value={refMeasurement} pattern={`^(?!^0$)-?\d+[.,]?\d*$`}>
 				<div class="input-group-cell preset-tonal-primary">{#if $UserSettingsStore.isometrics}cm{:else}in{/if}</div>
 			</div>
+
 			{#if !refMeasurementDirty}
 				<div class="z-30 absolute right-[7.75rem] mt-2 text-green-700"><LucideCheck size=20/></div>
 			{/if}
-			<button
-				class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase"
-				disabled={aIsSet && xIsSet && refMeasurement.match(/^(?!^0$)-?\d+[.,]?\d*$/i) ? false : true}
-				onclick={setRefMeasurement}
-			>Set</button>
+				<button
+					class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase"
+
+					onclick={setRefMeasurement}
+				>Set</button>
+
 		</div>
 		<div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
 			Tip: You can change measurement units in <a href="##" class="anchor underline">the settings panel</a>.
@@ -1437,7 +1319,7 @@
 						<option value="createNew">Add to new group</option>
 					</select>
 					<button
-						onclick={ (e) => assignSelectedShotsToGroup(e) }
+						onclick={ (e) => assignSelectedShotsToGroup() }
 					>
 						Go
 					</button>
