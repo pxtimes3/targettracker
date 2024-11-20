@@ -953,6 +953,21 @@
 		return targetContainer.toGlobal({x, y});
 	}
 
+	function showChildren(parent: Container, indent = 0) {
+		if (indent === 0) {
+			console.log(`${'-'.repeat(indent)}label: ${parent.label}, uid: ${parent.uid}, parent: ${parent.parent?.label || parent.parent?.uid || '-'}`);
+		}
+
+		if (parent.children.length > 0) {
+			parent.children.forEach((child) => {
+				let string = `${'-'.repeat(indent)}label: ${child.label}, uid: ${child.uid}, parent: ${parent.parent?.label || parent.parent?.uid || '-'}`;
+				console.log(string, child);
+				if (child.children.length > 0) {
+					showChildren(child, indent + 1);
+				}
+			});
+		}
+	}
 
 	function logDebug()
 	{
@@ -960,9 +975,8 @@
 		console.log('UserSettingsStore:', $UserSettingsStore);
 		console.log('EditorStore:', $EditorStore);
 		console.log('---');
-		console.log('atoxInputMatches?:', atoxInput?.value.match(/^(?!^0$)-?\d+[.,]?\d*$/i));
-		console.log('refMeasurementDirty:', refMeasurementDirty, aIsMoved, xIsMoved);
-		console.log('refLine:', refLine);
+		showChildren(app.stage);
+
 	}
 
 	onMount(async () => {
