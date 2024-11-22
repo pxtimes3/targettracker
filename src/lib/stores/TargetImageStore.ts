@@ -3,6 +3,8 @@ import { calculateReferenceValues } from "@/utils/target";
 import { writable, type Writable } from "svelte/store";
 import { z } from 'zod';
 
+// TODO: Save to database.
+
 const STORE_KEY = 'targetTrackerStore';
 
 /**
@@ -11,6 +13,7 @@ const STORE_KEY = 'targetTrackerStore';
 export const cameraImageDataStore: Writable<undefined|string> = writable();
 
 const ShotSchema = z.object({
+    id: z.string(),
     group: z.number(),
     x: z.number(),
     y: z.number(),
@@ -247,6 +250,77 @@ function createTargetStore()
                 localStorage.removeItem(STORE_KEY);
             }
             store.set(initialStore);
+        },
+        setShot: (label: string, groupid: number, x: number, y: number, score: number = 0) => {
+            store.update(state => {
+                const group: number = state.groups.findIndex((g) => g.id === groupid);
+                if (group === -1) throw new Error(`Tried to add to group: ${groupid} but none were found!`);
+
+                const shot: ShotInterface = {id: label, x: x, y: y, group: groupid, score: score};
+
+                state.groups[group].shots?.push(shot);
+
+                // TODO: Räkna ut/uppdatera MR, ES etc...
+
+                return state;
+            })
+        },
+        updateShot: (label: string, groupid: number, x: number, y: number, score: number = 0, newgroup?: number) => {
+            store.update(state => {
+                const group: GroupInterface|undefined = state.groups.find((g) => g.id === groupid);
+                if (!group) throw new Error(`Tried to find group: ${groupid} but none were found!`);
+                if (!group.shots || group.shots.length === 0) throw new Error(`Tried to update shot id: ${label} in group: ${groupid} but group has no shots!`);
+
+                let shot: ShotInterface|undefined = group.shots.find((shot) => shot.id === label);
+                if (!shot) throw new Error(`Tried to find shot with id: ${label} but no shot was found!`);
+
+                shot = {
+                    ...shot,
+                    x: x,
+                    y: y,
+                    score: score
+                }
+
+                if (newgroup) {
+                    if (!state.groups.find((g) => { g.id === newgroup })) {
+                        this.createGroup()
+                    }
+
+                    this.moveShotToGroup(newgroup)
+                }
+
+                return state;
+            })
+        },
+        deleteShot: (label: string, groupid: number) => {
+            // TODO: Delete shot
+        },
+        moveShotToGroup: (shot: ShotInterface, group: GroupInterface) => {
+            // TODO: Move shot
+        },
+        createNewGroup: () => {
+            store.update(state => {
+                const newGroup: GroupInterface = {
+                    id: state.groups.length + 1,
+                    shots: [],
+                    poa: {x: 0, y: 0},
+                    metrics: {},
+                    score: 0,
+                };
+                state.groups.push();
+
+                return state;
+            });
+        },
+        deleteGroup: (groupId: number) => {
+            store.update(state => {
+                const groupIndex = state.groups.find((grp) => grp.id === groupId);
+                if (!groupIndex) throw new Error(`No group with ${groupId} exists!?`);
+
+                // TODO: Delete group, bästa sätt? Pop? Splice? Sugar & Spice?
+
+                return state;
+            })
         },
         setReference: (key: keyof TargetStoreInterface['reference'], value: number[]|number) => {
             store.update(state => {
