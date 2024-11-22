@@ -3,7 +3,7 @@ import { calculateReferenceValues } from "@/utils/target";
 import { writable, type Writable } from "svelte/store";
 import { z } from 'zod';
 
-// TODO: Save to database.
+// TODO: Save to database periodsvis.
 
 const STORE_KEY = 'targetTrackerStore';
 
@@ -265,6 +265,16 @@ function createTargetStore()
                 return state;
             })
         },
+        /**
+         * Uppdaterar position och score för shot.
+         *
+         * @param label    Parsead från sprite.label till motsv. id i store.
+         * @param groupid  Används för att lokalisera vilket shot som ska uppdateras
+         * @param x        Position
+         * @param y
+         * @param score    Ev. score
+         * @param newgroup Används inte. Flyttande av shots sköts av ShotPoaTool.ts
+         */
         updateShot: (label: string, groupid: number, x: number, y: number, score: number = 0, newgroup?: number) => {
             store.update(state => {
                 const group: GroupInterface|undefined = state.groups.find((g) => g.id === groupid);
@@ -280,44 +290,6 @@ function createTargetStore()
                     y: y,
                     score: score
                 }
-
-                if (newgroup) {
-                    if (!state.groups.find((g) => { g.id === newgroup })) {
-                        this.createGroup()
-                    }
-
-                    this.moveShotToGroup(newgroup)
-                }
-
-                return state;
-            })
-        },
-        deleteShot: (label: string, groupid: number) => {
-            // TODO: Delete shot
-        },
-        moveShotToGroup: (shot: ShotInterface, group: GroupInterface) => {
-            // TODO: Move shot
-        },
-        createNewGroup: () => {
-            store.update(state => {
-                const newGroup: GroupInterface = {
-                    id: state.groups.length + 1,
-                    shots: [],
-                    poa: {x: 0, y: 0},
-                    metrics: {},
-                    score: 0,
-                };
-                state.groups.push();
-
-                return state;
-            });
-        },
-        deleteGroup: (groupId: number) => {
-            store.update(state => {
-                const groupIndex = state.groups.find((grp) => grp.id === groupId);
-                if (!groupIndex) throw new Error(`No group with ${groupId} exists!?`);
-
-                // TODO: Delete group, bästa sätt? Pop? Splice? Sugar & Spice?
 
                 return state;
             })

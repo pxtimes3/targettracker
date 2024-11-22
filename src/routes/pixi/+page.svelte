@@ -10,10 +10,12 @@
 	 * TODO: Save.
 	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
 	 */
+	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
 	import { activePanel, EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
+	import { ShotPoaTool } from '@/utils/editor/placeshotpoatool';
 	import { ReferenceTool } from '@/utils/editor/referencetool';
 	import { SelectionTool } from '@/utils/editor/selectiontool';
 	import { fetchAnalysis, initialize } from '@/utils/target';
@@ -83,8 +85,6 @@
 	let aIsMoved: boolean = $state(true);
 	let xIsSet: boolean = $state(false);
 	let xIsMoved: boolean = $state(true);
-	let refLine: Graphics|undefined;
-	let refLineLength: number = $state(0);
 	let isDrawingReferenceLine: boolean = $state(false);
 	let refMeasurement: string = $state('0');
 	let refMeasurementDirty: boolean = $state(true);
@@ -93,6 +93,7 @@
 
 	let settingsForm: HTMLFormElement;
 
+	let shotPoaTool: ShotPoaTool;
 	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 	let selectionTool: SelectionTool;
@@ -447,7 +448,7 @@
 					id: 'caliber',
 					message: 'Set caliber in the info-panel to have the cursors display at the correct size.'
 				}];
-				EditorStore.set({ warnings: newWarning });
+				EditorStore.set({...$EditorStore, warnings: newWarning });
 			}
 		} else {
 			console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
@@ -581,7 +582,7 @@
 			}
 			if (target.label.startsWith('target') && mode === "reference") {
 				e.stopPropagation();
-				referenceTool.addReferencePoint(e.globalX, e.globalY);
+				referenceTool?.addReferencePoint(e.globalX, e.globalY);
 				return;
 			}
 			if (target.label.startsWith('poa-')) {
@@ -596,13 +597,14 @@
 				return;
 			}
 
-			if (target.label === 'target') {
+			if (target.label === 'targetContainer') {
 				// töm selected
 				selected = [];
 
 				if (dragTarget) { dragTarget = undefined; }
 				if (mode === "shots") {
-					addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+					// addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+					shotPoaTool.addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString())
 				} else if (mode === "poa") {
 					addPoa(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 				}
@@ -770,7 +772,7 @@
      */
     function setRefMeasurement(): void
 	{
-        referenceTool.setRefMeasurement(refMeasurement);
+        referenceTool?.setRefMeasurement(refMeasurement);
     }
 
 
@@ -900,6 +902,7 @@
 		console.log('TargetStore:', $TargetStore);
 		console.log('UserSettingsStore:', $UserSettingsStore);
 		console.log('EditorStore:', $EditorStore);
+		console.log(`Mode: ${mode}`);
 		console.log('---');
 		showChildren(app.stage);
 
@@ -948,6 +951,7 @@
 		};
 
 		if (app && targetContainer) {
+			shotPoaTool = new ShotPoaTool(targetContainer);
             selectionTool = new SelectionTool(targetContainer);
 			referenceTool = new ReferenceTool(targetContainer);
 
@@ -981,12 +985,15 @@
 		if (selectionTool) {
             selectionTool.destroy();
         }
-        window.removeEventListener('shotsSelected', () => {});
 
 		if (referenceTool) {
 			referenceTool.destroy();
 		}
-		window.removeEventListener('referenceMeasurementSet', () => {});
+
+		if (browser) {
+			window.removeEventListener('shotsSelected', () => {});
+			window.removeEventListener('referenceMeasurementSet', () => {});
+		}
 	});
 
 	$effect(() => {
@@ -1085,11 +1092,11 @@
 				class="pointer-events-none"
 			/>
 		</button>
-
+		<!--disabled={ refMeasurementDirty ? true : false }-->
 		<button
 			id="shots-button"
 			title={ refMeasurementDirty ? 'Set reference points first' : 'Place shots' }
-			disabled={ refMeasurementDirty ? true : false }
+
 			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
