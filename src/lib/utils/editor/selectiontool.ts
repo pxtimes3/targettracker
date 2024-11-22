@@ -51,8 +51,6 @@ export class SelectionTool {
             width,
             height
         );
-
-        this.selectionRect.endFill();
     }
 
     private onSelectionEnd(event: FederatedPointerEvent): void {
