@@ -78,7 +78,8 @@ export class ReferenceTool {
         );
     }
 
-    public async addReferencePoint(x: number, y: number): Promise<void> {
+    public async addReferencePoint(x: number, y: number): Promise<void>
+    {
         const createSprite = async (texturePath: string, label: string) => {
             const texture = await Assets.load(texturePath);
             const sprite = new Sprite(texture);
