@@ -10,6 +10,7 @@
 	 * TODO: Save.
 	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
 	 */
+	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
 	import { activePanel, EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
@@ -88,6 +89,7 @@
 	let isDrawingReferenceLine: boolean = $state(false);
 	let refMeasurement: string = $state('0');
 	let refMeasurementDirty: boolean = $state(true);
+	let refMeasurementComplete: boolean = $state(false);
 	let atoxInput: HTMLInputElement|undefined = $state();
 	let referenceTool: ReferenceTool|undefined = $state();
 
@@ -447,7 +449,7 @@
 					id: 'caliber',
 					message: 'Set caliber in the info-panel to have the cursors display at the correct size.'
 				}];
-				EditorStore.set({ warnings: newWarning });
+				EditorStore.set({...$EditorStore, warnings: newWarning });
 			}
 		} else {
 			console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
@@ -581,7 +583,7 @@
 			}
 			if (target.label.startsWith('target') && mode === "reference") {
 				e.stopPropagation();
-				referenceTool.addReferencePoint(e.globalX, e.globalY);
+				referenceTool?.addReferencePoint(e.globalX, e.globalY);
 				return;
 			}
 			if (target.label.startsWith('poa-')) {
@@ -770,7 +772,7 @@
      */
     function setRefMeasurement(): void
 	{
-        referenceTool.setRefMeasurement(refMeasurement);
+        referenceTool?.setRefMeasurement(refMeasurement);
     }
 
 
@@ -901,7 +903,8 @@
 		console.log('UserSettingsStore:', $UserSettingsStore);
 		console.log('EditorStore:', $EditorStore);
 		console.log('---');
-		showChildren(app.stage);
+		console.log(`Mode: ${mode}`);
+		// showChildren(app.stage);
 
 	}
 
@@ -956,14 +959,13 @@
                 selected = selectedShots;
             }) as EventListener);
 
-
 			window.addEventListener('referenceMeasurementSet', () => {
-				if (referenceTool) {
-					refMeasurementDirty = referenceTool.isDirty;
+				if (!referenceTool) {
+					throw new Error(`Couldn't initialize ReferenceTool!`);
 				}
+				refMeasurementDirty = referenceTool.isDirty;
+				refMeasurementComplete = referenceTool.isComplete;
 			});
-
-
         }
 
 		// TODO: Check om det redan är en påbörjad tavla.
@@ -981,12 +983,15 @@
 		if (selectionTool) {
             selectionTool.destroy();
         }
-        window.removeEventListener('shotsSelected', () => {});
 
 		if (referenceTool) {
 			referenceTool.destroy();
 		}
-		window.removeEventListener('referenceMeasurementSet', () => {});
+
+		if (browser) {
+        	window.removeEventListener('shotsSelected', () => {});
+			window.removeEventListener('referenceMeasurementSet', () => {});
+		}
 	});
 
 	$effect(() => {
@@ -1007,10 +1012,6 @@
 			(aIsSet && !xIsSet) ||
 			(aIsSet && xIsSet && isDragging)
 		));
-
-		if (aIsMoved || xIsMoved) {
-			refMeasurementDirty = true;
-		}
 
 		if (mode) {
 			referenceTool?.setVisible(mode === "reference");
@@ -1074,9 +1075,9 @@
 		</button>
 
 		<button
-			title={ refMeasurementDirty ? 'Set reference points first' : 'Set point of aim' }
+			title={ refMeasurementComplete ? 'Set reference points first' : 'Set point of aim' }
 			id="poa-button"
-			disabled={ refMeasurementDirty ? true : false }
+			disabled={ refMeasurementComplete ? false : true }
 			onclick={() => {mode === "poa" ? setMode(undefined) : setMode("poa"); }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
@@ -1088,8 +1089,8 @@
 
 		<button
 			id="shots-button"
-			title={ refMeasurementDirty ? 'Set reference points first' : 'Place shots' }
-			disabled={ refMeasurementDirty ? true : false }
+			title={ refMeasurementComplete ? 'Set reference points first' : 'Place shots' }
+			disabled={ refMeasurementComplete ? false : true }
 			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
@@ -1282,7 +1283,7 @@
 			Set start point.
 		{:else if !xIsSet}
 			Set end point.
-		{:else if refMeasurementDirty}
+		{:else if referenceTool?.isDirty}
 			Adjust points if necessary then enter the length and press Set.
 		{:else}
 			All set! Now add point of aim (required for scoring) or start placing shots on the target.
