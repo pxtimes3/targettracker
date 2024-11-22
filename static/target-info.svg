@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide lucide-target"
+   version="1.1"
+   id="svg3"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <path
+     id="circle1"
+     style="color:#000000;fill:#000000;-inkscape-stroke:none;stroke:none"
+     d="M 12 1 C 5.9367246 1 1 5.9367246 1 12 C 1 18.063276 5.9367246 23 12 23 C 17.066371 23 21.342895 19.551622 22.613281 14.880859 L 20.529297 14.880859 C 19.331965 18.443701 15.974055 21 12 21 C 7.0176026 21 3 16.982397 3 12 C 3 7.0176026 7.0176026 3 12 3 C 13.590828 3 15.08221 3.4110743 16.376953 4.1308594 L 16.849609 4.1308594 L 16.849609 2.1308594 C 15.385386 1.4080088 13.739721 1 12 1 z " />
+  <path
+     id="circle2"
+     style="color:#000000;fill:#000000;-inkscape-stroke:none;stroke:none"
+     d="M 12 5 C 8.1458591 5 5 8.1458591 5 12 C 5 15.854141 8.1458591 19 12 19 C 14.827751 19 17.27251 17.304993 18.375 14.880859 L 16.091797 14.880859 C 15.189189 16.164466 13.697802 17 12 17 C 9.2267372 17 7 14.773263 7 12 C 7 9.2267372 9.2267372 7 12 7 C 12.968462 7 13.869204 7.2725934 14.632812 7.7441406 L 14.664062 5.53125 C 13.841725 5.1904564 12.942778 5 12 5 z " />
+  <path
+     id="circle3"
+     style="color:#000000;fill:#000000;-inkscape-stroke:none;stroke:none"
+     d="M 12 9 C 10.354994 9 9 10.354994 9 12 C 9 13.645006 10.354994 15 12 15 C 12.764605 15 13.465695 14.707044 13.998047 14.228516 L 13.998047 11.123047 L 14.867188 11.123047 C 14.488438 9.899298 13.340844 9 12 9 z M 12 11 C 12.564128 11 13 11.435872 13 12 C 13 12.564128 12.564128 13 12 13 C 11.435872 13 11 12.564128 11 12 C 11 11.435872 11.435872 11 12 11 z " />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:'DejaVuSansM Nerd Font Mono';-inkscape-font-specification:'DejaVuSansM Nerd Font Mono, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;display:inline;fill:#000000;stroke:none;stroke-opacity:1;fill-opacity:1"
+     x="13.879897"
+     y="13.879898"
+     id="text3"><tspan
+       id="tspan3"
+       x="13.879897"
+       y="13.879898"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:'DejaVuSansM Nerd Font Mono';-inkscape-font-specification:'DejaVuSansM Nerd Font Mono, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke:none;stroke-opacity:1;fill:#000000;fill-opacity:1">i</tspan></text>
+</svg>
