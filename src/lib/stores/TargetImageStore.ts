@@ -54,53 +54,6 @@ const GroupSchema = z.object({
 export type GroupInterface = z.infer<typeof GroupSchema>;
 
 
-export interface zTargetStoreInterface {
-    [key: string|number|symbol]: string|object|number|undefined;
-    target: {
-        scale: number|undefined;
-        rotation: number;               // degrees. * Math.PI / 180 => angle
-        type: string|undefined;
-        range: string|undefined;
-        rangeUnit: "metric"|"imperial";
-        name: string|undefined;
-        image: {
-            image?: HTMLImageElement;
-            filename: string|undefined;
-            originalsize: [number|undefined, number|undefined];
-            x: number|undefined;
-            y: number|undefined;
-            w: number|undefined;
-            h: number|undefined;
-        }
-    }
-    reference: {
-        a: number[]|undefined;            // [x,y]
-        aImage: HTMLImageElement|undefined;
-        x: number[]|undefined;
-        xImage: HTMLImageElement|undefined;
-        y?: number[]|undefined;
-        measurement: number|undefined;    // User supplied;
-        cm: number|undefined;             // 1 cm === % av tavlan
-        pct: number|undefined;            // det omvända
-    }
-    activeGroup: number;
-    groups: Array<GroupInterface>;
-    weather: {
-        // averages
-        latitude: number|undefined;
-        longitude: number|undefined;
-        altitude: number|undefined;
-        timestamp: string|undefined;
-        data: {
-            temperature: number|undefined;  // Celcius
-            humidity: number|undefined;
-            pressure: number|undefined,
-            windspeed: number|undefined,
-            winddirection: number|undefined,
-        }
-    }
-}
-
 const TargetStoreSchema = z.object({
     target: z.object({
         scale: z.number().optional(),
@@ -133,6 +86,7 @@ const TargetStoreSchema = z.object({
         cm: z.number().optional(),             // 1 cm === px
         px: z.number().optional()              // 100px == mm
     }),
+    analysisFetched: z.boolean().default(false),
     activeGroup: z.number().default(0),
     groups: z.array(GroupSchema),
     weather: z.object({
@@ -165,7 +119,7 @@ export const initialStore: TargetStoreInterface = {
         scale: undefined,
         rotation: 0,
         image: {
-            filename: undefined,
+            filename: "debugtarget.jpg",
             originalsize: [undefined, undefined],
             x: undefined,
             y: undefined,
@@ -182,6 +136,7 @@ export const initialStore: TargetStoreInterface = {
         cm: undefined,             // 1 cm === px
         px: undefined,             // 100px == mm
     },
+    analysisFetched: false,
     activeGroup: 0,
     groups: [
         /*{
@@ -224,7 +179,9 @@ export const initialStore: TargetStoreInterface = {
 function createTargetStore()
 {
     // har vi sparad data?
-    const storedData = browser ? JSON.parse(localStorage.getItem(STORE_KEY) || 'null') : null;
+    let storedData = browser ? JSON.parse(localStorage.getItem(STORE_KEY) || 'null') : null;
+    // TODO: Remove @ release
+    if (storedData) { storedData = null }
 
     // pluppa in data
     const store = writable<TargetStoreInterface>(storedData || initialStore);

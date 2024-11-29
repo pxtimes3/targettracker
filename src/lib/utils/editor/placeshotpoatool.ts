@@ -1,5 +1,6 @@
 // TODO: PlaceShotPoaTool.ts - Unit testing.
 // TODO: PlaceShotPoaTool.ts - Integrationstester.
+// TODO: Skalan beter sig.
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type GroupInterface, type TargetStoreInterface } from '@/stores/TargetImageStore';
 import type { FederatedPointerEvent } from 'pixi.js';
@@ -23,28 +24,28 @@ export class ShotPoaTool {
         this.texturePath = '/cursors/shot.svg';
     }
 
-    public async addShot(x: number, y: number, group: string): Promise<void>
+    public async addShot(x: number, y: number, group: string, createGroup: boolean = false): Promise<void>
     {
         const label = `shot-${this.getShotsTotal + 1}-${group}`;
         const shot = await this.createSprite(label);
-        const groupContainer = await this.getGroupContainer(group);
         const position = this.targetContainer.toLocal({x,y});
+
+        const groupContainer = await this.getGroupContainer(group);
+        if (!groupContainer) { throw new Error(`No groupContainer with label ${group} found!`); }
+
+        const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
+        if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
+
+        const shots = storeGroup.shots;
+        if (!shots) { console.error(`No shots array found in store-group ${group}!`, storeGroup); return; }
 
         shot.position.set(position.x, position.y);
         shot.scale.set(this.setScale());
-        shot.width = 32 * (1 / this.targetContainer.scale.x);
+        shot.width = 48;
+
         shot.height = shot.width;
 
         groupContainer?.addChild(shot);
-
-        const storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
-        if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
-
-        let shots = storeGroup.shots;
-        if (!shots) {
-            console.error(`Tried to add shot to ${storeGroup.shots} but failed!`);
-            return;
-        }
 
         shots.push({
             id: this.getShotsTotal.toString(),
@@ -53,8 +54,6 @@ export class ShotPoaTool {
             y: position.y,
             score: 0,
         });
-
-        console.log(this.targetStore.groups)
 
         shot.on('pointerdown', (e) => {
             e.stopPropagation();
@@ -70,7 +69,8 @@ export class ShotPoaTool {
         const position = this.targetContainer.toLocal({x,y});
 
         poa.position.set(position.x, position.y)
-        poa.scale.set(24 / (1 / this.targetContainer.scale.x));
+        poa.scale.set(48 * this.setScale());
+        // poa.width = 48;
 
         groupContainer?.addChild(poa);
 
@@ -87,6 +87,23 @@ export class ShotPoaTool {
 
     public createGroup(): {group: GroupInterface, container: Container} | null
     {
+        const newGroup: GroupInterface | null = this.createNewTargetStoreGroup();
+        if (newGroup === null) {
+            console.error('Newgroup was null!');
+            return null;
+        } else {
+            console.log('newGroup:', newGroup);
+        }
+
+        const groupContainer = this.createNewGroupContainer(newGroup.id)
+        if (groupContainer === null) return null;
+
+        console.log('created group:', newGroup, groupContainer);
+        return {group: newGroup, container: groupContainer};
+    }
+
+    private createNewTargetStoreGroup(): GroupInterface | null
+    {
         const newGroup: GroupInterface = {
             id: this.targetStore.groups.length + 1,
             shots: [],
@@ -95,23 +112,28 @@ export class ShotPoaTool {
             score: 0,
         };
 
-        let groupContainer: Container;
-
         try {
             this.targetStore.groups.push(newGroup);
+            console.log(this.targetStore.groups);
+            return this.targetStore.groups[this.targetStore.groups.length];
         } catch (e) {
             // TODO: Logging.
             throw new Error(`Failed to push new group to store!`);
         }
 
-        try {
-            groupContainer = new Container();
-            groupContainer.label = newGroup.id.toString();
+        return null;
+    }
 
-            console.log(`Creating group: ${newGroup.id} ${groupContainer.uid}`);
+    private createNewGroupContainer(id: number): Container | null
+    {
+        try {
+            let groupContainer = new Container();
+            groupContainer.label = id.toString();
+
+            console.log(`Creating group: ${groupContainer.label} ${groupContainer.uid}`);
             this.targetContainer.addChild(groupContainer);
 
-            return { group: newGroup, container: groupContainer }
+            return groupContainer
         } catch (e) {
             // TODO: Logging.
             console.error(`Failed to create new group!`, e);
@@ -220,7 +242,7 @@ export class ShotPoaTool {
         this.isDragging = false;
         this.dragTarget = null;
         this.dragStartPosition = null;
-        
+
         this.targetContainer.off('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.off('pointerup', this.handleDragEnd.bind(this));
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
