@@ -101,7 +101,11 @@ export async function initialize(
     canvasContainer.appendChild(app.canvas);
 
     if (!targetStoreState.target.image.filename) {
-        throw new Error('No target?');
+        console.error('No target?');
+    } else if (targetStoreState.target.image.filename.startsWith('debug')) {
+        console.warn(`Loading debugtarget... `)
+        const targetPath = `/img/debugtarget.jpg`;
+        setStaticAssets([...currentStaticAssets, targetPath]);
     } else if (!targetStoreState.target.image.filename.startsWith('uploads')) {
         setApplicationState('Adding target to assets... ');
         const targetPath = `/temp/${targetStoreState.target.image.filename}`;
@@ -130,8 +134,6 @@ export async function fetchAnalysis(user_id: string, imagename: string): Promise
 
         const result: {[key:string]: any} = deserialize(await response.text()) as ActionResponse;
 
-        console.log(JSON.parse(result.data[0].result));
-
         if (result.type === 'success' && result.data[0]?.result) {
             return JSON.parse(result.data[0].result) as AnalysisResult;
         }
@@ -146,3 +148,4 @@ export async function fetchAnalysis(user_id: string, imagename: string): Promise
         throw error;
     }
 }
+
