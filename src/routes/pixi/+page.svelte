@@ -47,15 +47,10 @@
 
 	let { data } : { data: PageServerData } = $props();
 
-	let canvasContainer: HTMLDivElement;
-	let loader: HTMLDivElement;
-	let applicationState: string = $state('Loading...');
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
 	let app: Application<Renderer>;
 	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
 	let mouseStart: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
-	let chromeArea: {[key: string]: number; x: number; y: number;} = $state({x:0, y:0});
-	let targetPath: string = $state('');
 	let targetSprite: Sprite;
 	let staticAssets: string[] = $state([
 		'/cursors/circle-a.svg',
@@ -69,7 +64,6 @@
 
 	let targetContainer: DraggableContainer;
 	let groupContainers: Container[] = $state([]);
-	let referenceContainer: Container;
 	let crosshairContainer: Container;
 	let scale: number = $state(0);
 	let isDragging: boolean = $state(false);
@@ -96,6 +90,13 @@
 	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 	let selectionTool: SelectionTool;
+
+
+	let canvasContainer: HTMLDivElement;
+    let loader: HTMLDivElement;
+    let applicationState: string = $state('Loading...');
+    let target: Target;
+    let chromeArea: {x: number, y: number} = $state({x: 0, y: 0});
 
 	const zoomBoundaries = [0.25, 3.0];
 	const zoomStep = 0.1;
@@ -537,24 +538,12 @@
 	 *
 	 * @param e - The wheel event containing the deltaY value for zooming.
 	 */
-    function handleWheel(e: WheelEvent): void {
-		if (!targetContainer) return;
+    function handleWheel(e: WheelEvent): void
+	{
+		if (!target) return;
 
-		// Prevent any default scrolling behavior
 		e.preventDefault();
-
-		// Get the current scale (considering the current transformation)
-		const currentScale = targetContainer.scale.x;  // or targetContainer.scale since x and y should be the same
-
-		// Calculate new scale
-		let newScale = currentScale;
-		newScale += e.deltaY > 0 ? -zoomStep : zoomStep;
-
-		// Check boundaries
-		if (newScale >= zoomBoundaries[0] && newScale <= zoomBoundaries[1]) {
-			scale = newScale;
-			targetContainer.scale.set(scale);
-		}
+		target.handleWheel(e);
 	}
 
 	/**
@@ -768,8 +757,8 @@
 	 */
     function setMode(setmode?: string): void
 	{
-        if (mode !== setmode) {
-            mode = setmode;
+        if ($EditorStore.mode !== setmode) {
+            $EditorStore.mode = setmode;
         }
     }
 
@@ -780,7 +769,9 @@
      */
     function setRefMeasurement(): void
 	{
-        referenceTool?.setRefMeasurement(refMeasurement);
+		console.log(refMeasurement);
+		// if (!target) console.error('No target!');
+        target.setRefMeasurement(refMeasurement);
     }
 
 
@@ -857,7 +848,7 @@
 
 	function handleResize(e?: Event): void
 	{
-		if (!app) return;
+		if (!target) return;
 
 		if (e?.target) {
 			const target = e.target as Window;
@@ -868,26 +859,20 @@
 			chromeArea.y = window.innerHeight;
 		}
 
-		app.renderer.resize(chromeArea.x, chromeArea.y);
-
-		if (targetContainer) {
-			scale = Math.min(
-				(window.innerHeight - 100) / targetSprite.height,
-				(window.innerWidth - 100) / targetSprite.width
-			);
-
-			targetContainer.scale.set(scale);
-
-			targetContainer.x = app.screen.width / 2;
-			targetContainer.y = app.screen.height / 2;
-		}
+		// target.handleResize(chromeArea.x, chromeArea.y);
+		target.handleResize();
 	}
 
-
-	// function converTopLeftCoordinates(x:number, y:number): Point
-	// {
-	// 	return targetContainer.toGlobal({x, y});
-	// }
+	function logDebug()
+	{
+		console.log('TargetStore:', $TargetStore);
+		console.log('UserSettingsStore:', $UserSettingsStore);
+		console.log('EditorStore:', $EditorStore);
+		console.log(`Mode: ${$EditorStore.mode}`);
+		console.log(`Chromarea: ${chromeArea.x}:${chromeArea.y}`)
+		console.log('---');
+		showChildren(target.app.stage);
+	}
 
 	function showChildren(parent: Container, indent = 0) {
 		if (indent === 0) {
@@ -905,21 +890,9 @@
 		}
 	}
 
-	function logDebug()
-	{
-		console.log('TargetStore:', $TargetStore);
-		console.log('UserSettingsStore:', $UserSettingsStore);
-		console.log('EditorStore:', $EditorStore);
-		console.log(`Mode: ${mode}`);
-		console.log('---');
-		showChildren(app.stage);
-
-	}
-
 	onMount(async () => {
 		await getChromeArea();
-		// await initializeApp();
-		let target = new Target(chromeArea, staticAssets);
+		target = new Target(chromeArea, staticAssets);
         await target.initialize(canvasContainer, (state) => applicationState = state);
 
 		if (target) {
@@ -931,54 +904,6 @@
         if (data.user?.id) {
             await target.initializeAnalysis(data.user.id);
         }
-
-		/*
-		if (app) {
-			await loadStaticAssets();
-			await drawTarget();
-
-
-			// setupReferenceLine();
-			setupCrosshairs();
-			applicationState = "Adding groups ... "
-			await addGroups();
-
-			// selection check... -.-
-			app.ticker.add(() => {
-				if (selected) {
-					// console.log(tick++)
-					const shots = targetContainer.getChildrenByLabel(/shot-\d-\d/i, true);
-					shots.forEach((shot) => { selected.includes(shot) ? shot.alpha = 0.5 : shot.alpha = 1 })
-				}
-			});
-
-			applicationState = `Loading done.`
-			setTimeout(() => {
-				loadingDone();
-			}, 300);
-		};
-
-		if (app && targetContainer) {
-			shotPoaTool = new ShotPoaTool(targetContainer);
-            selectionTool = new SelectionTool(targetContainer);
-			referenceTool = new ReferenceTool(targetContainer);
-
-			try {
-				if (data.user?.id && $TargetStore.target.image.filename && $TargetStore.analysisFetched === false) {
-					const res = await fetchAnalysis(data.user.id as UUID, $TargetStore.target.image.filename);
-					if (res && res.predictions?.length > 0) {
-						console.log(res.count)
-						res.predictions.forEach((pred) => {
-							const coords = converTopLeftCoordinates(pred.xy[0], pred.xy[1]);
-							console.log('coords', coords)
-							shotPoaTool.addShot(coords.x, coords.y, '1', true);
-						});
-					}
-				}
-			} catch (error) {
-				console.error('Failed to fetch analysis:', error);
-			}
-			*/
 
 		window.addEventListener('shotsSelected', ((event: CustomEvent) => {
 			const selectedShots = event.detail.shots;
@@ -1098,7 +1023,7 @@
 		<button
 			title="Set reference"
 			id="reference-button"
-			onclick={ (e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); $activePanel="reference-panel" }}
+			onclick={ (e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); $activePanel="reference-panel"; console.log($EditorStore) }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler

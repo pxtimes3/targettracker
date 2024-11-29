@@ -24,8 +24,10 @@ export class ShotPoaTool {
         this.texturePath = '/cursors/shot.svg';
     }
 
-    public async addShot(x: number, y: number, group: string, createGroup: boolean = false): Promise<void>
+    public async addShot(x: number, y: number, group: string): Promise<void>
     {
+        console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
+
         const label = `shot-${this.getShotsTotal + 1}-${group}`;
         const shot = await this.createSprite(label);
         const position = this.targetContainer.toLocal({x,y});
@@ -87,8 +89,8 @@ export class ShotPoaTool {
 
     public createGroup(): {group: GroupInterface, container: Container} | null
     {
-        const newGroup: GroupInterface | null = this.createNewTargetStoreGroup();
-        if (newGroup === null) {
+        const newGroup: GroupInterface | undefined = this.createNewTargetStoreGroup();
+        if (!newGroup) {
             console.error('Newgroup was null!');
             return null;
         } else {
@@ -96,13 +98,13 @@ export class ShotPoaTool {
         }
 
         const groupContainer = this.createNewGroupContainer(newGroup.id)
-        if (groupContainer === null) return null;
+        if (groupContainer === null) { console.error(`Failed to createNewGroupContainer`); return null; };
 
         console.log('created group:', newGroup, groupContainer);
         return {group: newGroup, container: groupContainer};
     }
 
-    private createNewTargetStoreGroup(): GroupInterface | null
+    public createNewTargetStoreGroup(): GroupInterface | undefined
     {
         const newGroup: GroupInterface = {
             id: this.targetStore.groups.length + 1,
@@ -114,17 +116,16 @@ export class ShotPoaTool {
 
         try {
             this.targetStore.groups.push(newGroup);
-            console.log(this.targetStore.groups);
-            return this.targetStore.groups[this.targetStore.groups.length];
+            const createdGroup = this.targetStore.groups[this.targetStore.groups.length - 1];
+            console.log(`Created new group:`, createdGroup);
+            return createdGroup;
         } catch (e) {
             // TODO: Logging.
             throw new Error(`Failed to push new group to store!`);
         }
-
-        return null;
     }
 
-    private createNewGroupContainer(id: number): Container | null
+    public createNewGroupContainer(id: number): Container | null
     {
         try {
             let groupContainer = new Container();

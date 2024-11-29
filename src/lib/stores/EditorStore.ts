@@ -15,7 +15,8 @@ const EditorStoreSchema = z.object({
     warnings: z.array(WarningSchema).optional(),
     isRefDirty: z.boolean(),
     isRefComplete: z.boolean(),
-    selected: z.array(z.any())
+    selected: z.array(z.any()),
+    mode: z.any()
 })
 
 export type EditorStoreInterface = z.infer<typeof EditorStoreSchema>;
@@ -33,5 +34,6 @@ export const EditorStore: Writable<EditorStoreInterface> = writable({
     warnings: [],
     isRefDirty: true,
     isRefComplete: false,
-    selected: []
+    selected: [],
+    mode: undefined
 });

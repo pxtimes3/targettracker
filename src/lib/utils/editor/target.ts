@@ -1,24 +1,74 @@
-// classes/Target.ts
+// TODO: Rotation.
+// TODO: Cursor verkar inte funka.
+// TODO: Unit testing.
+
+import { deserialize } from '$app/forms';
+import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
 import { ShotPoaTool } from '@/utils/editor/placeshotpoatool';
-import type { Application as ApplicationType, Container as ContainerType, Renderer as RendererType, Sprite as SpriteType } from 'pixi.js';
+import type { Application as ApplicationType, Container as ContainerType, FederatedPointerEvent, Renderer as RendererType, Sprite as SpriteType } from 'pixi.js';
 import { Application, Assets, Container, Sprite } from 'pixi.js';
 import { get } from 'svelte/store';
+import { ReferenceTool } from './referencetool';
+import { SelectionTool } from './selectiontool';
+
+interface ActionSuccess {
+    type: 'success';
+    status: number;
+    data: Array<{
+        id: string;
+        submitted: string;
+        updated: string;
+        user_id: string;
+        image_name: string;
+        result: string;
+        error: null;
+    }>;
+}
+
+interface ActionFailure {
+    type: 'failure';
+    status: number;
+    data: {
+        error: string;
+    };
+}
+
+type ActionResponse = ActionSuccess | ActionFailure;
+
+interface AnalysisResult {
+    predictions: Array<{
+		[x: string]: any;
+        x: number;
+        y: number;
+        group?: string;
+    }>;
+    count: number;
+}
 
 export class Target {
-    private app!: ApplicationType<RendererType>;
+    public app!: ApplicationType<RendererType>;
     private targetContainer!: ContainerType;
     private targetSprite!: SpriteType;
     private shotPoaTool!: ShotPoaTool;
+    private referenceTool!: ReferenceTool;
+    private selectionTool!: SelectionTool;
     private store: TargetStoreInterface;
+    private editorStore: EditorStoreInterface;
     private scale: number;
     private staticAssets: string[];
     private chromeArea: { x: number, y: number };
+    private originalWidth!: number;
+    private originalHeight!: number;
+    private isDragging: boolean = false;
+    private dragStartPosition: { x: number; y: number } | null = null;
+    private dragStartMousePosition: { x: number; y: number } | null = null;
 
     constructor(chromeArea: { x: number, y: number }, staticAssets: string[]) {
         this.chromeArea = chromeArea;
         this.staticAssets = staticAssets;
         this.store = get(TargetStore);
+        this.editorStore = get(EditorStore);
         this.scale = 1;
     }
 
@@ -36,7 +86,7 @@ export class Target {
             backgroundColor: 0xcdcdcc,
             antialias: true,
             resolution: window.devicePixelRatio || 1,
-            hello: true
+            hello: true,
         });
 
         canvasContainer.appendChild(this.app.canvas);
@@ -51,6 +101,8 @@ export class Target {
         this.setupInteractivity();
 
         this.shotPoaTool = new ShotPoaTool(this.targetContainer);
+        this.referenceTool = new ReferenceTool(this.targetContainer);
+        this.selectionTool = new SelectionTool(this.targetContainer)
 
         setApplicationState('Done!');
     }
@@ -86,7 +138,8 @@ export class Target {
             : `/temp/${filename}`;
     }
 
-    private async createTarget(): Promise<void> {
+    private async createTarget(): Promise<void>
+    {
         const targetPath = this.getTargetPath();
         if (!targetPath) { console.error('No targetPath!?'); return; }
 
@@ -94,10 +147,16 @@ export class Target {
         if (!texture) { console.error('No texture!?'); return; }
 
         this.targetSprite = new Sprite(texture);
+        this.targetSprite.cursor = 'crosshair';
         this.targetSprite.label = 'targetSprite';
 
         this.targetContainer = new Container();
+        this.targetContainer.cursor = 'crosshair';
         this.targetContainer.label = 'targetContainer';
+
+        this.originalWidth = this.targetSprite.width;
+        this.originalHeight = this.targetSprite.height;
+
         this.app.stage.addChild(this.targetContainer);
         this.targetContainer.addChild(this.targetSprite);
 
@@ -105,18 +164,27 @@ export class Target {
         this.updateScale();
     }
 
-    private centerTarget(): void {
+    public centerTarget(): void
+    {
+        this.targetContainer.pivot.x = this.originalWidth / 2;
+        this.targetContainer.pivot.y = this.originalHeight / 2;
+
         this.targetContainer.x = this.app.screen.width / 2;
         this.targetContainer.y = this.app.screen.height / 2;
-        this.targetContainer.pivot.x = this.targetContainer.width / 2;
-        this.targetContainer.pivot.y = this.targetContainer.height / 2;
+
+        console.log(`app.screen w:h : ${this.app.screen.width}:${this.app.screen.height}`);
+        console.log(`Original w:h : ${this.originalWidth}:${this.originalHeight}`);
+        console.log(`TargetContainer scale: ${this.scale}`);
+        console.log(`TargetContainer x:y : ${this.targetContainer.x}:${this.targetContainer.y}`);
+        console.log(`TargetContainer pivot x:y : ${this.targetContainer.pivot.x}:${this.targetContainer.pivot.y}`);
     }
 
     private updateScale(): void {
         this.scale = Math.min(
-            (window.innerHeight - 100) / this.targetSprite.height,
-            (window.innerWidth - 100) / this.targetSprite.width
+            (this.app.screen.height - 100) / this.originalHeight,
+            (this.app.screen.width - 100) / this.originalWidth
         );
+
         this.targetContainer.scale.set(this.scale);
     }
 
@@ -128,9 +196,14 @@ export class Target {
 
         try {
             const analysis = await this.fetchAnalysis(userId);
-            if (analysis?.predictions?.length > 0) {
+
+            console.log('Fetched analysis:', analysis);
+
+            if (analysis && analysis?.predictions?.length > 0) {
                 await this.processAnalysisResults(analysis);
                 TargetStore.update(store => ({ ...store, analysisFetched: true }));
+            } else {
+                console.warn('No analysis to process... ');
             }
         } catch (error) {
             console.error('Failed to initialize analysis:', error);
@@ -143,6 +216,9 @@ export class Target {
             return;
         }
         const formData = new FormData();
+
+        console.log(`Appending userId: ${userId} & imagename: ${this.store.target.image.filename} to formData.`);
+
         formData.append('user_id', userId);
         formData.append('imagename', this.store.target.image.filename);
 
@@ -155,15 +231,21 @@ export class Target {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        return await response.json();
+        const result: {[key:string]: any} = deserialize(await response.text()) as ActionResponse;
+
+        if (result.type === 'success' && result.data[0]?.result) {
+            return JSON.parse(result.data[0].result) as AnalysisResult;
+        }
     }
 
-    private async processAnalysisResults(analysis: any) {
+    public async processAnalysisResults(analysis: any) {
         if (this.store.groups.length === 0) {
             const newGroup = await this.shotPoaTool.createGroup();
             if (!newGroup) {
                 throw new Error('Failed to create initial group');
             }
+        } else {
+            console.log(`this.store.groups.length is ${this.store.groups.length}`);
         }
 
         for (const prediction of analysis.predictions) {
@@ -171,7 +253,7 @@ export class Target {
                 x: prediction.xy[0],
                 y: prediction.xy[1]
             });
-            await this.shotPoaTool.addShot(coords.x, coords.y, '1', false);
+            await this.shotPoaTool.addShot(coords.x, coords.y, '1');
         }
     }
 
@@ -191,6 +273,7 @@ export class Target {
 
     public handleResize(): void
     {
+        console.log(`Handle resize. Chrome: ${this.chromeArea.x}:${this.chromeArea.y}`);
         this.app.renderer.resize(this.chromeArea.x, this.chromeArea.y);
         this.updateScale();
         this.centerTarget();
@@ -210,13 +293,107 @@ export class Target {
         }
     }
 
-    private setupInteractivity(): void {
+    private setupInteractivity(): void
+    {
         this.targetContainer.eventMode = 'dynamic';
-        this.targetContainer.cursor = 'pointer';
-        // Add any other interaction setup needed
+        this.targetContainer.cursor = 'default';
+
+        this.targetContainer.on('pointerdown', this.handleMouseDown.bind(this));
+        this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
+        this.targetContainer.on('pointerup', this.handleDragEnd.bind(this));
+        this.targetContainer.on('pointerupoutside', this.handleDragEnd.bind(this));
     }
 
-    // Getter methods
+    private handleMouseDown(e: FederatedPointerEvent): void
+    {
+        if (e.button === 1) {
+            this.handleDragStart(e);
+        } else {
+            if (this.editorStore.mode === 'shot')
+                this.shotPoaTool.addShot(e.clientX, e.clientY, '1');
+            if (this.editorStore.mode === 'poa')
+                this.shotPoaTool.addPoa(e.clientX, e.clientY, '1');
+            if (this.editorStore.mode === 'reference')
+                this.referenceTool.addReferencePoint(e.clientX, e.clientY);
+        }
+    }
+
+    private handleDragStart(e: FederatedPointerEvent): void
+    {
+        if (e.button !== 1) return;
+
+        this.targetContainer.cursor = 'grab';
+        this.isDragging = true;
+
+        this.dragStartPosition = {
+            x: this.targetContainer.x,
+            y: this.targetContainer.y
+        };
+
+        this.dragStartMousePosition = {
+            x: e.global.x,
+            y: e.global.y
+        };
+    }
+
+    private handleDragMove(e: FederatedPointerEvent): void
+    {
+        if (!this.isDragging || !this.dragStartPosition || !this.dragStartMousePosition) return;
+
+        const dx = e.global.x - this.dragStartMousePosition.x;
+        const dy = e.global.y - this.dragStartMousePosition.y;
+
+        this.targetContainer.x = this.dragStartPosition.x + dx;
+        this.targetContainer.y = this.dragStartPosition.y + dy;
+    }
+
+    private handleDragEnd(): void
+    {
+        this.targetContainer.cursor = 'crosshair';
+        this.isDragging = false;
+        this.dragStartPosition = null;
+        this.dragStartMousePosition = null;
+    }
+
+    // Toggla drag etc. via mode
+    // Kanske någon gång behövs. Låt stå.
+    public enableDragging(): void
+    {
+        this.targetContainer.eventMode = 'dynamic';
+        this.targetContainer.cursor = 'move';
+    }
+
+    public disableDragging(): void
+    {
+        this.targetContainer.eventMode = 'none';
+        this.targetContainer.cursor = 'default';
+    }
+
+    public setMode(mode: 'drag' | 'shots' | 'poa' | 'reference'): void
+    {
+        switch (mode) {
+            case 'drag':
+                this.enableDragging();
+                break;
+            case 'shots':
+                this.disableDragging();
+                break;
+            case 'poa':
+                this.disableDragging();
+                break;
+            case 'reference':
+                this.disableDragging();
+                break;
+        }
+    }
+
+    // set forwards
+    public setRefMeasurement(ref: string)
+    {
+        this.referenceTool.setRefMeasurement(ref);
+    }
+
+    // Getter, får och annat bös!
     public get getApp(): ApplicationType<RendererType> {
         return this.app;
     }
@@ -233,8 +410,9 @@ export class Target {
         return this.scale;
     }
 
-    // Clean up method
+    // Din morsa jobbar inte här!
     public destroy(): void {
         this.app.destroy(true, true);
+        this.targetContainer.removeAllListeners();
     }
 }
