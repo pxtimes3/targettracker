@@ -13,7 +13,10 @@ export type WarningInterface = z.infer<typeof WarningSchema>;
 
 const EditorStoreSchema = z.object({
     warnings: z.array(WarningSchema).optional(),
-    isRefDirty: z.boolean()
+    isRefDirty: z.boolean(),
+    isRefComplete: z.boolean(),
+    selected: z.array(z.any()),
+    mode: z.any()
 })
 
 export type EditorStoreInterface = z.infer<typeof EditorStoreSchema>;
@@ -29,5 +32,8 @@ const warnings: Writable<WarningInterface[]> = writable([]);
 
 export const EditorStore: Writable<EditorStoreInterface> = writable({
     warnings: [],
-    isRefDirty: true
+    isRefDirty: true,
+    isRefComplete: false,
+    selected: [],
+    mode: undefined
 });

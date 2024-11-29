@@ -3,6 +3,8 @@ import { calculateReferenceValues } from "@/utils/target";
 import { writable, type Writable } from "svelte/store";
 import { z } from 'zod';
 
+// TODO: Save to database periodsvis.
+
 const STORE_KEY = 'targetTrackerStore';
 
 /**
@@ -11,6 +13,7 @@ const STORE_KEY = 'targetTrackerStore';
 export const cameraImageDataStore: Writable<undefined|string> = writable();
 
 const ShotSchema = z.object({
+    id: z.string(),
     group: z.number(),
     x: z.number(),
     y: z.number(),
@@ -51,53 +54,6 @@ const GroupSchema = z.object({
 export type GroupInterface = z.infer<typeof GroupSchema>;
 
 
-export interface zTargetStoreInterface {
-    [key: string|number|symbol]: string|object|number|undefined;
-    target: {
-        scale: number|undefined;
-        rotation: number;               // degrees. * Math.PI / 180 => angle
-        type: string|undefined;
-        range: string|undefined;
-        rangeUnit: "metric"|"imperial";
-        name: string|undefined;
-        image: {
-            image?: HTMLImageElement;
-            filename: string|undefined;
-            originalsize: [number|undefined, number|undefined];
-            x: number|undefined;
-            y: number|undefined;
-            w: number|undefined;
-            h: number|undefined;
-        }
-    }
-    reference: {
-        a: number[]|undefined;            // [x,y]
-        aImage: HTMLImageElement|undefined;
-        x: number[]|undefined;
-        xImage: HTMLImageElement|undefined;
-        y?: number[]|undefined;
-        measurement: number|undefined;    // User supplied;
-        cm: number|undefined;             // 1 cm === % av tavlan
-        pct: number|undefined;            // det omvända
-    }
-    activeGroup: number;
-    groups: Array<GroupInterface>;
-    weather: {
-        // averages
-        latitude: number|undefined;
-        longitude: number|undefined;
-        altitude: number|undefined;
-        timestamp: string|undefined;
-        data: {
-            temperature: number|undefined;  // Celcius
-            humidity: number|undefined;
-            pressure: number|undefined,
-            windspeed: number|undefined,
-            winddirection: number|undefined,
-        }
-    }
-}
-
 const TargetStoreSchema = z.object({
     target: z.object({
         scale: z.number().optional(),
@@ -130,6 +86,7 @@ const TargetStoreSchema = z.object({
         cm: z.number().optional(),             // 1 cm === px
         px: z.number().optional()              // 100px == mm
     }),
+    analysisFetched: z.boolean().default(false),
     activeGroup: z.number().default(0),
     groups: z.array(GroupSchema),
     weather: z.object({
@@ -162,7 +119,7 @@ export const initialStore: TargetStoreInterface = {
         scale: undefined,
         rotation: 0,
         image: {
-            filename: undefined,
+            filename: "debugtarget.jpg",
             originalsize: [undefined, undefined],
             x: undefined,
             y: undefined,
@@ -179,6 +136,7 @@ export const initialStore: TargetStoreInterface = {
         cm: undefined,             // 1 cm === px
         px: undefined,             // 100px == mm
     },
+    analysisFetched: false,
     activeGroup: 0,
     groups: [
         /*{
@@ -221,7 +179,9 @@ export const initialStore: TargetStoreInterface = {
 function createTargetStore()
 {
     // har vi sparad data?
-    const storedData = browser ? JSON.parse(localStorage.getItem(STORE_KEY) || 'null') : null;
+    let storedData = browser ? JSON.parse(localStorage.getItem(STORE_KEY) || 'null') : null;
+    // TODO: Remove @ release
+    if (storedData) { storedData = null }
 
     // pluppa in data
     const store = writable<TargetStoreInterface>(storedData || initialStore);
@@ -247,6 +207,49 @@ function createTargetStore()
                 localStorage.removeItem(STORE_KEY);
             }
             store.set(initialStore);
+        },
+        setShot: (label: string, groupid: number, x: number, y: number, score: number = 0) => {
+            store.update(state => {
+                const group: number = state.groups.findIndex((g) => g.id === groupid);
+                if (group === -1) throw new Error(`Tried to add to group: ${groupid} but none were found!`);
+
+                const shot: ShotInterface = {id: label, x: x, y: y, group: groupid, score: score};
+
+                state.groups[group].shots?.push(shot);
+
+                // TODO: Räkna ut/uppdatera MR, ES etc...
+
+                return state;
+            })
+        },
+        /**
+         * Uppdaterar position och score för shot.
+         *
+         * @param label    Parsead från sprite.label till motsv. id i store.
+         * @param groupid  Används för att lokalisera vilket shot som ska uppdateras
+         * @param x        Position
+         * @param y
+         * @param score    Ev. score
+         * @param newgroup Används inte. Flyttande av shots sköts av ShotPoaTool.ts
+         */
+        updateShot: (label: string, groupid: number, x: number, y: number, score: number = 0, newgroup?: number) => {
+            store.update(state => {
+                const group: GroupInterface|undefined = state.groups.find((g) => g.id === groupid);
+                if (!group) throw new Error(`Tried to find group: ${groupid} but none were found!`);
+                if (!group.shots || group.shots.length === 0) throw new Error(`Tried to update shot id: ${label} in group: ${groupid} but group has no shots!`);
+
+                let shot: ShotInterface|undefined = group.shots.find((shot) => shot.id === label);
+                if (!shot) throw new Error(`Tried to find shot with id: ${label} but no shot was found!`);
+
+                shot = {
+                    ...shot,
+                    x: x,
+                    y: y,
+                    score: score
+                }
+
+                return state;
+            })
         },
         setReference: (key: keyof TargetStoreInterface['reference'], value: number[]|number) => {
             store.update(state => {

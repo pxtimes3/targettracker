@@ -10,17 +10,18 @@
 	 * TODO: Save.
 	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
 	 */
+	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
 	import { activePanel, EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
+	import { ShotPoaTool } from '@/utils/editor/placeshotpoatool';
 	import { ReferenceTool } from '@/utils/editor/referencetool';
 	import { SelectionTool } from '@/utils/editor/selectiontool';
-	import { fetchAnalysis, initialize } from '@/utils/target';
-	import type { UUID } from 'crypto';
+	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { ContainerChild, FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Point, Renderer } from 'pixi.js';
-	import { Application, Assets, Container, Graphics, Sprite } from 'pixi.js';
+	import type { ContainerChild, FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
+	import { Application, Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
 
@@ -46,15 +47,10 @@
 
 	let { data } : { data: PageServerData } = $props();
 
-	let canvasContainer: HTMLDivElement;
-	let loader: HTMLDivElement;
-	let applicationState: string = $state('Loading...');
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
 	let app: Application<Renderer>;
 	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
 	let mouseStart: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
-	let chromeArea: {[key: string]: number; x: number; y: number;} = $state({x:0, y:0});
-	let targetPath: string = $state('');
 	let targetSprite: Sprite;
 	let staticAssets: string[] = $state([
 		'/cursors/circle-a.svg',
@@ -68,7 +64,6 @@
 
 	let targetContainer: DraggableContainer;
 	let groupContainers: Container[] = $state([]);
-	let referenceContainer: Container;
 	let crosshairContainer: Container;
 	let scale: number = $state(0);
 	let isDragging: boolean = $state(false);
@@ -83,8 +78,6 @@
 	let aIsMoved: boolean = $state(true);
 	let xIsSet: boolean = $state(false);
 	let xIsMoved: boolean = $state(true);
-	let refLine: Graphics|undefined;
-	let refLineLength: number = $state(0);
 	let isDrawingReferenceLine: boolean = $state(false);
 	let refMeasurement: string = $state('0');
 	let refMeasurementDirty: boolean = $state(true);
@@ -93,9 +86,17 @@
 
 	let settingsForm: HTMLFormElement;
 
+	let shotPoaTool: ShotPoaTool;
 	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 	let selectionTool: SelectionTool;
+
+
+	let canvasContainer: HTMLDivElement;
+    let loader: HTMLDivElement;
+    let applicationState: string = $state('Loading...');
+    let target: Target;
+    let chromeArea: {x: number, y: number} = $state({x: 0, y: 0});
 
 	const zoomBoundaries = [0.25, 3.0];
 	const zoomStep = 0.1;
@@ -103,16 +104,16 @@
 	/**
 	 * Laddar med $TargetStore.target.image.filename osv...
 	 */
-	async function initializeApp() {
-		app = await initialize(
-			chromeArea,
-			canvasContainer,
-			(state) => applicationState = state,
-			(assets) => staticAssets = assets,
-			staticAssets,
-			$TargetStore
-		);
-	}
+	// async function initializeApp() {
+	// 	app = await initialize(
+	// 		chromeArea,
+	// 		canvasContainer,
+	// 		(state) => applicationState = state,
+	// 		(assets) => staticAssets = assets,
+	// 		staticAssets,
+	// 		$TargetStore
+	// 	);
+	// }
 
 	/**
 	 * PIXI verkar lösa det här, men uh...
@@ -150,182 +151,190 @@
 	/**
 	 * Laddar static assets. Cursors, etc.
 	 */
-	async function loadStaticAssets(): Promise<void>
-	{
-		applicationState = "Populating application with static assets... ";
-		await Assets.load(staticAssets);
+	// async function loadStaticAssets(): Promise<void>
+	// {
+	// 	applicationState = "Populating application with static assets... ";
+	// 	await Assets.load(staticAssets);
 
-		// const defaultCursor = 'url(\'/cursors/dot.svg\'), auto';
-		// app.renderer.events.cursorStyles.default = defaultCursor;
-	}
+	// 	// const defaultCursor = 'url(\'/cursors/dot.svg\'), auto';
+	// 	// app.renderer.events.cursorStyles.default = defaultCursor;
+	// }
 
 	/**
 	 * Ritar target i @param targetContainer, placerar center/center och skalar ned
 	 * att passa fönstret.
 	 */
-	async function drawTarget(e?: Event): Promise<void>
-	{
-		applicationState = "Drawing target... ";
+	// async function drawTarget(e?: Event): Promise<void>
+	// {
+	// 	applicationState = "Drawing target... ";
+	// 	// console.log(staticAssets, $TargetStore.target.image.filename);
 
-		const targetPath = `/temp/${$TargetStore.target.image.filename}`;
-		const texture = await Assets.load(targetPath);
-		texture.source.scaleMode = 'linear';
+	// 	const targetPath = staticAssets.find((asset) =>  {
+	// 		if (!$TargetStore.target.image.filename) return;
+	// 		if (asset.endsWith($TargetStore.target.image.filename)) {
+	// 			return asset;
+	// 		}
+	// 	});
 
-		targetSprite = new Sprite(texture);
-		targetSprite.label = 'targetSprite';
+	// 	if (!targetPath) return;
+	// 	const texture = await Assets.load(targetPath);
+	// 	texture.source.scaleMode = 'linear';
 
-		targetContainer = new Container({isRenderGroup: true});
-		app.stage.addChild(targetContainer);
+	// 	targetSprite = new Sprite(texture);
+	// 	targetSprite.label = 'targetSprite';
 
-		targetContainer.label = 'targetContainer';
-		targetContainer.eventMode = 'dynamic';
-		targetContainer.on('pointerdown', (e) => handleClick(e, targetContainer));
+	// 	targetContainer = new Container({isRenderGroup: true});
+	// 	app.stage.addChild(targetContainer);
 
-		targetContainer.addChild(targetSprite);
-		targetContainer.width = targetSprite.width;
-		targetContainer.height = targetSprite.height;
+	// 	targetContainer.label = 'targetContainer';
+	// 	targetContainer.eventMode = 'dynamic';
+	// 	targetContainer.on('pointerdown', (e) => handleClick(e, targetContainer));
 
-		// place targetContainer at center/center
-		targetContainer.x = app.screen.width / 2;
-		targetContainer.y = app.screen.height / 2;
-		// pivot är typ translate?
-		targetContainer.pivot.x = targetContainer.width / 2;
-		targetContainer.pivot.y = targetContainer.height / 2;
+	// 	targetContainer.addChild(targetSprite);
+	// 	targetContainer.width = targetSprite.width;
+	// 	targetContainer.height = targetSprite.height;
 
-		// skala ner så den ryms i screen
-		scale = Math.min(
-			(window.innerHeight - 100) / targetSprite.height,
-			(window.innerWidth - 100) / targetSprite.width
-		);
+	// 	// place targetContainer at center/center
+	// 	targetContainer.x = app.screen.width / 2;
+	// 	targetContainer.y = app.screen.height / 2;
+	// 	// pivot är typ translate?
+	// 	targetContainer.pivot.x = targetContainer.width / 2;
+	// 	targetContainer.pivot.y = targetContainer.height / 2;
 
-		targetContainer.scale = scale;
+	// 	// skala ner så den ryms i screen
+	// 	scale = Math.min(
+	// 		(window.innerHeight - 100) / targetSprite.height,
+	// 		(window.innerWidth - 100) / targetSprite.width
+	// 	);
 
-		// update targetStore if dimensions differ
-		$TargetStore.target.image.originalsize[0] != targetSprite.width  ? $TargetStore.target.image.originalsize[0] = targetSprite.width  : '';
-		$TargetStore.target.image.originalsize[1] != targetSprite.height ? $TargetStore.target.image.originalsize[1] = targetSprite.height : '';
-	}
+	// 	targetContainer.scale = scale;
+
+	// 	// update targetStore if dimensions differ
+	// 	$TargetStore.target.image.originalsize[0] != targetSprite.width  ? $TargetStore.target.image.originalsize[0] = targetSprite.width  : '';
+	// 	$TargetStore.target.image.originalsize[1] != targetSprite.height ? $TargetStore.target.image.originalsize[1] = targetSprite.height : '';
+	// }
 
 
 	/**
 	 * Skapar sprites för editor-crosshair.
 	 * TODO: Följer inte med vid drag.
 	 */
-	function setupCrosshairs()
-	{
-		crosshairContainer = new Container();
-		crosshairContainer.label = 'crosshairContainer';
+	// function setupCrosshairs()
+	// {
+	// 	crosshairContainer = new Container();
+	// 	crosshairContainer.label = 'crosshairContainer';
 
-		targetContainer.addChild(crosshairContainer);
+	// 	targetContainer.addChild(crosshairContainer);
 
-		const nLine = new Graphics();
-		nLine.label = 'N-Line';
-		crosshairContainer.addChild(nLine);
+	// 	const nLine = new Graphics();
+	// 	nLine.label = 'N-Line';
+	// 	crosshairContainer.addChild(nLine);
 
-		const sLine = new Graphics();
-		sLine.label = 'S-Line';
-		crosshairContainer.addChild(sLine);
+	// 	const sLine = new Graphics();
+	// 	sLine.label = 'S-Line';
+	// 	crosshairContainer.addChild(sLine);
 
-		const eLine = new Graphics();
-		eLine.label = 'E-Line';
-		crosshairContainer.addChild(eLine);
+	// 	const eLine = new Graphics();
+	// 	eLine.label = 'E-Line';
+	// 	crosshairContainer.addChild(eLine);
 
-		const wLine = new Graphics();
-		wLine.label = 'W-Line';
-		crosshairContainer.addChild(wLine);
+	// 	const wLine = new Graphics();
+	// 	wLine.label = 'W-Line';
+	// 	crosshairContainer.addChild(wLine);
 
-		app.ticker.add(() => {
-			if ($UserSettingsStore.editorcrosshair) {
-				nLine.clear();
-				nLine.beginPath();
-				nLine.setStrokeStyle({
-					width: 2 * (1/scale),
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
-				const nStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 5});
-				const nEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 3000});
-				nLine.moveTo(nStartPoint.x, nStartPoint.y)
-						.lineTo(nEndPos.x, nEndPos.y)
-						.stroke();
+	// 	app.ticker.add(() => {
+	// 		if ($UserSettingsStore.editorcrosshair) {
+	// 			nLine.clear();
+	// 			nLine.beginPath();
+	// 			nLine.setStrokeStyle({
+	// 				width: 2 * (1/scale),
+	// 				color: 0x000000,
+	// 				alpha: 0.3,
+	// 				cap: 'round',
+	// 				join: 'round'
+	// 			});
+	// 			const nStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 5});
+	// 			const nEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 3000});
+	// 			nLine.moveTo(nStartPoint.x, nStartPoint.y)
+	// 					.lineTo(nEndPos.x, nEndPos.y)
+	// 					.stroke();
 
-				sLine.clear();
-				sLine.beginPath();
-				sLine.setStrokeStyle({
-					width: 2 * (1/scale),
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
-				const sStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 5});
-				const sEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 3000});
-				sLine.moveTo(sStartPoint.x, sStartPoint.y)
-						.lineTo(sEndPos.x, sEndPos.y)
-						.stroke();
+	// 			sLine.clear();
+	// 			sLine.beginPath();
+	// 			sLine.setStrokeStyle({
+	// 				width: 2 * (1/scale),
+	// 				color: 0x000000,
+	// 				alpha: 0.3,
+	// 				cap: 'round',
+	// 				join: 'round'
+	// 			});
+	// 			const sStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 5});
+	// 			const sEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 3000});
+	// 			sLine.moveTo(sStartPoint.x, sStartPoint.y)
+	// 					.lineTo(sEndPos.x, sEndPos.y)
+	// 					.stroke();
 
-				wLine.clear();
-				wLine.beginPath();
-				wLine.setStrokeStyle({
-					width: 2 * (1/scale),
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
-				const wStartPoint = targetContainer.toLocal({x: mouse.x - 5, y: mouse.y + 0});
-				const wEndPos = targetContainer.toLocal({x: mouse.x - 3000, y: mouse.y + 0});
-				wLine.moveTo(wStartPoint.x, wStartPoint.y)
-						.lineTo(wEndPos.x, wEndPos.y)
-						.stroke();
+	// 			wLine.clear();
+	// 			wLine.beginPath();
+	// 			wLine.setStrokeStyle({
+	// 				width: 2 * (1/scale),
+	// 				color: 0x000000,
+	// 				alpha: 0.3,
+	// 				cap: 'round',
+	// 				join: 'round'
+	// 			});
+	// 			const wStartPoint = targetContainer.toLocal({x: mouse.x - 5, y: mouse.y + 0});
+	// 			const wEndPos = targetContainer.toLocal({x: mouse.x - 3000, y: mouse.y + 0});
+	// 			wLine.moveTo(wStartPoint.x, wStartPoint.y)
+	// 					.lineTo(wEndPos.x, wEndPos.y)
+	// 					.stroke();
 
-				eLine.clear();
-				eLine.beginPath();
-				eLine.setStrokeStyle({
-					width: 2 * (1/scale),
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
-				const eStartPoint = targetContainer.toLocal({x: mouse.x + 5, y: mouse.y + 0});
-				const eEndPos = targetContainer.toLocal({x: mouse.x + 3000, y: mouse.y + 0});
-				eLine.moveTo(eStartPoint.x, eStartPoint.y)
-						.lineTo(eEndPos.x, eEndPos.y)
-						.stroke();
-			}
-		});
-	}
+	// 			eLine.clear();
+	// 			eLine.beginPath();
+	// 			eLine.setStrokeStyle({
+	// 				width: 2 * (1/scale),
+	// 				color: 0x000000,
+	// 				alpha: 0.3,
+	// 				cap: 'round',
+	// 				join: 'round'
+	// 			});
+	// 			const eStartPoint = targetContainer.toLocal({x: mouse.x + 5, y: mouse.y + 0});
+	// 			const eEndPos = targetContainer.toLocal({x: mouse.x + 3000, y: mouse.y + 0});
+	// 			eLine.moveTo(eStartPoint.x, eStartPoint.y)
+	// 					.lineTo(eEndPos.x, eEndPos.y)
+	// 					.stroke();
+	// 		}
+	// 	});
+	// }
 
 
 
 	/**
 	 *	Adderar grupper som redan finns i storen.
 	 */
-    async function addGroups(): Promise<void>
-	{
-        if (!$TargetStore) {
-            applicationState = "Error: No TargetStore!";
-            throw new Error('No TargetStore.');
-        }
+    // async function addGroups(): Promise<void>
+	// {
+    //     if (!$TargetStore) {
+    //         applicationState = "Error: No TargetStore!";
+    //         throw new Error('No TargetStore.');
+    //     }
 
-        const { groups } = $TargetStore;
-        if (groups.length) {
-            applicationState = `Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`;
-			console.log(`Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`);
+    //     const { groups } = $TargetStore;
+    //     if (groups.length) {
+    //         applicationState = `Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`;
+	// 		console.log(`Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`);
 
-            groups.forEach((group) => {
-				if (!targetContainer.getChildrenByLabel(group.id.toString())) {
-					createGroup(group);
-				} else {
-					group.shots?.forEach((shot) => {
-						addShot(shot.x, shot.y, group.id.toString());
-					});
-				}
-			});
-        }
-    }
+    //         groups.forEach((group) => {
+	// 			if (!targetContainer.getChildrenByLabel(group.id.toString())) {
+	// 				createGroup(group);
+	// 			} else {
+	// 				group.shots?.forEach((shot) => {
+	// 					addShot(shot.x, shot.y, group.id.toString());
+	// 				});
+	// 			}
+	// 		});
+    //     }
+    // }
 
 	/**
 	 * Asynchronously creates a new group container and adds it to the target container.
@@ -334,25 +343,25 @@
 	 *
 	 * @param {GroupInterface} group - The group object containing an ID and optional shots.
 	 */
-    async function createGroup(group: GroupInterface): Promise<Container>
-	{
-		const groupContainer = new Container();
-        groupContainer.label = group.id.toString();
-        groupContainers.push(groupContainer);
+    // async function createGroup(group: GroupInterface): Promise<Container>
+	// {
+	// 	const groupContainer = new Container();
+    //     groupContainer.label = group.id.toString();
+    //     groupContainers.push(groupContainer);
 
-        applicationState = `Creating group: ${group.id + 1}`;
-		console.log(`Creating group: ${group.id} ${groupContainer.uid}`);
-        targetContainer.addChild(groupContainer);
+    //     applicationState = `Creating group: ${group.id + 1}`;
+	// 	console.log(`Creating group: ${group.id} ${groupContainer.uid}`);
+    //     targetContainer.addChild(groupContainer);
 
-        if (group.shots?.length) {
-            applicationState = `Found ${group.shots.length} ${group.shots.length > 1 ? 'shots' : 'shot'}...`;
-            group.shots.forEach(({ x, y }) => addShot(x, y, group.id.toString()));
-        } else {
-            applicationState = `No shots in group ${group.id + 1}.`;
-        }
+    //     if (group.shots?.length) {
+    //         applicationState = `Found ${group.shots.length} ${group.shots.length > 1 ? 'shots' : 'shot'}...`;
+    //         group.shots.forEach(({ x, y }) => addShot(x, y, group.id.toString()));
+    //     } else {
+    //         applicationState = `No shots in group ${group.id + 1}.`;
+    //     }
 
-		return groupContainer;
-    }
+	// 	return groupContainer;
+    // }
 
 	/**
 	 * Assigns selected shots to either a new or existing group container.
@@ -360,36 +369,36 @@
 	 * Updates shot labels to match their new group assignment.
 	 * @throws {Error} Logs error if target group is not found
 	 */
-	function assignSelectedShotsToGroup(): void
-	{
-		let newGroup: Container|null|undefined;
+	// function assignSelectedShotsToGroup(): void
+	// {
+	// 	let newGroup: Container|null|undefined;
 
-		if (!assignToGroupSelect || !assignToGroupSelect.value) return;
+	// 	if (!assignToGroupSelect || !assignToGroupSelect.value) return;
 
-		console.log(assignToGroupSelect.value);
+	// 	console.log(assignToGroupSelect.value);
 
-		if (assignToGroupSelect.value === "createNew") {
-			newGroup = new Container();
-			newGroup.label = (groupContainers.length + 1).toString();
-			targetContainer.addChild(newGroup);
-			groupContainers.push(newGroup);
-			console.log(`adding to newGroup: ${newGroup?.label}`);
-		} else {
-			newGroup = targetContainer.getChildByLabel(assignToGroupSelect.value);
-			console.log(`adding to existing: ${newGroup?.label}`);
-		}
+	// 	if (assignToGroupSelect.value === "createNew") {
+	// 		newGroup = new Container();
+	// 		newGroup.label = (groupContainers.length + 1).toString();
+	// 		targetContainer.addChild(newGroup);
+	// 		groupContainers.push(newGroup);
+	// 		console.log(`adding to newGroup: ${newGroup?.label}`);
+	// 	} else {
+	// 		newGroup = targetContainer.getChildByLabel(assignToGroupSelect.value);
+	// 		console.log(`adding to existing: ${newGroup?.label}`);
+	// 	}
 
 
-		if (!newGroup) {
-			console.error(`Was supposed to assign to group ${assignToGroupSelect.value} but no such group was found!`);
-			return;
-		}
+	// 	if (!newGroup) {
+	// 		console.error(`Was supposed to assign to group ${assignToGroupSelect.value} but no such group was found!`);
+	// 		return;
+	// 	}
 
-		selected.forEach((shot) => {
-			newGroup.addChild(shot);
-			shot.label = shot.label.replace(/\d+$/, `${newGroup.label}`);
-		});
-	}
+	// 	selected.forEach((shot) => {
+	// 		newGroup.addChild(shot);
+	// 		shot.label = shot.label.replace(/\d+$/, `${newGroup.label}`);
+	// 	});
+	// }
 
 
 	/**
@@ -407,63 +416,63 @@
 	 * within the specified group's local coordinates. The sprite is interactive and
 	 * responds to pointer events.
 	 */
-	async function addShot(x: number, y: number, group?: string): Promise<void>
-	{
-		console.log(`function addShot called to add shot at position ${x}:${y} in group ${group}`)
-		if (!group) {
-			if ($TargetStore.activeGroup) {
-				console.log(`TargetStore has active group ${$TargetStore.activeGroup}`);
-				group = $TargetStore.activeGroup.toString();
-			} else {
-				group = '1';
-				console.log(`TargetStore has no active group ${$TargetStore.activeGroup}`);
-				$TargetStore.activeGroup = parseInt(group);
-			}
-		}
+	// async function addShot(x: number, y: number, group?: string): Promise<void>
+	// {
+	// 	console.log(`function addShot called to add shot at position ${x}:${y} in group ${group}`)
+	// 	if (!group) {
+	// 		if ($TargetStore.activeGroup) {
+	// 			console.log(`TargetStore has active group ${$TargetStore.activeGroup}`);
+	// 			group = $TargetStore.activeGroup.toString();
+	// 		} else {
+	// 			group = '1';
+	// 			console.log(`TargetStore has no active group ${$TargetStore.activeGroup}`);
+	// 			$TargetStore.activeGroup = parseInt(group);
+	// 		}
+	// 	}
 
-		let groupContainer = targetContainer.getChildByLabel(group.toString().trim());
-		if (!groupContainer) {
-			console.log(`Wanted group with label: ${group} but none was found! Creating group with label: ${group}`);
-			showChildren(targetContainer);
-			groupContainer = await createGroup({id: parseInt(group)});
-		}
+	// 	let groupContainer = targetContainer.getChildByLabel(group.toString().trim());
+	// 	if (!groupContainer) {
+	// 		console.log(`Wanted group with label: ${group} but none was found! Creating group with label: ${group}`);
+	// 		showChildren(targetContainer);
+	// 		groupContainer = await createGroup({id: parseInt(group)});
+	// 	}
 
-		const texture = await Assets.load('/cursors/shot.svg');
-		const shot = new Sprite(texture) as DraggableSprite;
-		shot.label = `shot-${groupContainer.children.length}-${groupContainer.label}`;
-    	shot.eventMode = 'dynamic';
-    	shot.cursor = 'pointer';
-		shot.interactive = true;
-		shot.anchor.set(0.5);
-		// shot.scale = 1 * (1/scale);
-		if (!$TargetStore.target.caliberInMm) {
-			// console.log('caliber in px',TargetStore.mmToPx(4.5))
-			// sätt till 4.5mm
-			shot.width = TargetStore.mmToPx(4.5);
-			shot.height = shot.width;
-			// lägg in en varning i editorstore
-			if ($EditorStore.warnings && !$EditorStore.warnings?.find((w) => w.id === 'caliber')) {
-				const newWarning = [...$EditorStore.warnings, {
-					id: 'caliber',
-					message: 'Set caliber in the info-panel to have the cursors display at the correct size.'
-				}];
-				EditorStore.set({ warnings: newWarning });
-			}
-		} else {
-			console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
-			shot.width = TargetStore.mmToPx($TargetStore.target.caliberInMm) / 10;
-			shot.height = shot.width;
-		}
+	// 	const texture = await Assets.load('/cursors/shot.svg');
+	// 	const shot = new Sprite(texture) as DraggableSprite;
+	// 	shot.label = `shot-${groupContainer.children.length}-${groupContainer.label}`;
+    // 	shot.eventMode = 'dynamic';
+    // 	shot.cursor = 'pointer';
+	// 	shot.interactive = true;
+	// 	shot.anchor.set(0.5);
+	// 	// shot.scale = 1 * (1/scale);
+	// 	if (!$TargetStore.target.caliberInMm) {
+	// 		// console.log('caliber in px',TargetStore.mmToPx(4.5))
+	// 		// sätt till 4.5mm
+	// 		shot.width = TargetStore.mmToPx(4.5);
+	// 		shot.height = shot.width;
+	// 		// lägg in en varning i editorstore
+	// 		if ($EditorStore.warnings && !$EditorStore.warnings?.find((w) => w.id === 'caliber')) {
+	// 			const newWarning = [...$EditorStore.warnings, {
+	// 				id: 'caliber',
+	// 				message: 'Set caliber in the info-panel to have the cursors display at the correct size.'
+	// 			}];
+	// 			EditorStore.set({...$EditorStore, warnings: newWarning });
+	// 		}
+	// 	} else {
+	// 		console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
+	// 		shot.width = TargetStore.mmToPx($TargetStore.target.caliberInMm) / 10;
+	// 		shot.height = shot.width;
+	// 	}
 
-		const localPos = groupContainer.toLocal({ x, y }, app.stage);
-    	shot.x = localPos.x;
-    	shot.y = localPos.y;
+	// 	const localPos = groupContainer.toLocal({ x, y }, app.stage);
+    // 	shot.x = localPos.x;
+    // 	shot.y = localPos.y;
 
-		shot.on('pointerdown', (e) => handleClick(e, shot));
+	// 	shot.on('pointerdown', (e) => handleClick(e, shot));
 
-		groupContainer.addChild(shot);
-		console.log(`added shot ${shot.label} to group ${groupContainer.label}`);
-	}
+	// 	groupContainer.addChild(shot);
+	// 	console.log(`added shot ${shot.label} to group ${groupContainer.label}`);
+	// }
 
 	/**
 	 * Adds a Point of Attention (PoA) sprite to a specified group within the target container.
@@ -478,39 +487,39 @@
 	 * It loads a texture for the PoA sprite, sets its properties, and positions it within the group container.
 	 * The sprite is made interactive and listens for pointer down events to handle clicks.
 	 */
-    async function addPoa(x: number, y: number, group?: string): Promise<void> {
-        group = group || $TargetStore.activeGroup?.toString();
-        if (!group) {
-            throw new Error('No activeGroup and no group supplied. Exiting.');
-        }
+    // async function addPoa(x: number, y: number, group?: string): Promise<void> {
+    //     group = group || $TargetStore.activeGroup?.toString();
+    //     if (!group) {
+    //         throw new Error('No activeGroup and no group supplied. Exiting.');
+    //     }
 
-        const groupContainer = targetContainer.getChildByLabel(group);
-        if (!groupContainer) {
-            throw new Error(`Wanted group with label: ${group} but none was found!`);
-        }
+    //     const groupContainer = targetContainer.getChildByLabel(group);
+    //     if (!groupContainer) {
+    //         throw new Error(`Wanted group with label: ${group} but none was found!`);
+    //     }
 
-        if (groupContainer.getChildByLabel(`poa-${groupContainer.label}`)) {
-            console.warn('Group already has a PoA set.');
-            return;
-        }
+    //     if (groupContainer.getChildByLabel(`poa-${groupContainer.label}`)) {
+    //         console.warn('Group already has a PoA set.');
+    //         return;
+    //     }
 
-        const texture = await Assets.load('/cursors/poa.svg');
-        const sprite = new Sprite(texture) as DraggableSprite;
-        sprite.label = `poa-${groupContainer.label}`;
-        sprite.eventMode = 'dynamic';
-        sprite.cursor = 'pointer';
-        sprite.interactive = true;
-        sprite.anchor.set(0.5);
+    //     const texture = await Assets.load('/cursors/poa.svg');
+    //     const sprite = new Sprite(texture) as DraggableSprite;
+    //     sprite.label = `poa-${groupContainer.label}`;
+    //     sprite.eventMode = 'dynamic';
+    //     sprite.cursor = 'pointer';
+    //     sprite.interactive = true;
+    //     sprite.anchor.set(0.5);
 
-        const localPos = groupContainer.toLocal({ x, y }, app.stage);
-        sprite.x = localPos.x;
-        sprite.y = localPos.y;
+    //     const localPos = groupContainer.toLocal({ x, y }, app.stage);
+    //     sprite.x = localPos.x;
+    //     sprite.y = localPos.y;
 
-        sprite.on('pointerdown', (e) => handleClick(e, sprite));
+    //     sprite.on('pointerdown', (e) => handleClick(e, sprite));
 
-        groupContainer.addChild(sprite);
-        // console.log(`added ${sprite.label}:`, sprite);
-    }
+    //     groupContainer.addChild(sprite);
+    //     // console.log(`added ${sprite.label}:`, sprite);
+    // }
 
 	/**
 	 * Gör fancy stuff med skit.
@@ -529,24 +538,12 @@
 	 *
 	 * @param e - The wheel event containing the deltaY value for zooming.
 	 */
-    function handleWheel(e: WheelEvent): void {
-		if (!targetContainer) return;
+    function handleWheel(e: WheelEvent): void
+	{
+		if (!target) return;
 
-		// Prevent any default scrolling behavior
 		e.preventDefault();
-
-		// Get the current scale (considering the current transformation)
-		const currentScale = targetContainer.scale.x;  // or targetContainer.scale since x and y should be the same
-
-		// Calculate new scale
-		let newScale = currentScale;
-		newScale += e.deltaY > 0 ? -zoomStep : zoomStep;
-
-		// Check boundaries
-		if (newScale >= zoomBoundaries[0] && newScale <= zoomBoundaries[1]) {
-			scale = newScale;
-			targetContainer.scale.set(scale);
-		}
+		target.handleWheel(e);
 	}
 
 	/**
@@ -559,6 +556,7 @@
 		mouseStart = mouse;
 
 		if (e.button === 0) {
+			console.log(targetContainer.scale.x);
 			if (target.label.startsWith('shot-')) {
 				e.stopPropagation();
 
@@ -581,7 +579,7 @@
 			}
 			if (target.label.startsWith('target') && mode === "reference") {
 				e.stopPropagation();
-				referenceTool.addReferencePoint(e.globalX, e.globalY);
+				referenceTool?.addReferencePoint(e.globalX, e.globalY);
 				return;
 			}
 			if (target.label.startsWith('poa-')) {
@@ -596,13 +594,14 @@
 				return;
 			}
 
-			if (target.label === 'target') {
+			if (target.label === 'targetContainer') {
 				// töm selected
 				selected = [];
 
 				if (dragTarget) { dragTarget = undefined; }
 				if (mode === "shots") {
-					addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+					// addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
+					shotPoaTool.addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString())
 				} else if (mode === "poa") {
 					addPoa(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
 				}
@@ -631,15 +630,15 @@
 	}
 
 
-	function removeShot(target: DraggableSprite | Sprite | Container<ContainerChild>): void
-	{
-		try {
-			target.parent.removeChild(target) || new Error('Failed to remove shot!');
-		} catch (error) {
-			console.error('Failed to remove shot!', target, error);
-		}
+	// function removeShot(target: DraggableSprite | Sprite | Container<ContainerChild>): void
+	// {
+	// 	try {
+	// 		target.parent.removeChild(target) || new Error('Failed to remove shot!');
+	// 	} catch (error) {
+	// 		console.error('Failed to remove shot!', target, error);
+	// 	}
 
-	}
+	// }
 
 	/**
 	 * Initiates the drag operation for a draggable sprite.
@@ -651,37 +650,37 @@
 	 * Calculates the initial drag offsets and stores the starting position.
 	 * Attaches event listeners to the stage for handling drag movement and end.
 	 */
-	function onDragStart(target: DraggableSprite|DraggableContainer, e: FederatedPointerEvent): void
-	{
-		isDragging = true;
-		dragTarget = target;
-		// dragTarget.alpha = 0.5;
-		dragTarget.eventMode = 'dynamic';
+	// function onDragStart(target: DraggableSprite|DraggableContainer, e: FederatedPointerEvent): void
+	// {
+	// 	isDragging = true;
+	// 	dragTarget = target;
+	// 	// dragTarget.alpha = 0.5;
+	// 	dragTarget.eventMode = 'dynamic';
 
-		// global position => local position
-		const groupContainer = target.parent;
-		const localPos = groupContainer.toLocal(e.global);
+	// 	// global position => local position
+	// 	const groupContainer = target.parent;
+	// 	const localPos = groupContainer.toLocal(e.global);
 
-		dragTarget.drag = {
-			dragging: true,
-			data: localPos,
-			offsetX: 0,
-			offsetY: 0,
-			startPosition: { x: target.x, y: target.y }
-		};
+	// 	dragTarget.drag = {
+	// 		dragging: true,
+	// 		data: localPos,
+	// 		offsetX: 0,
+	// 		offsetY: 0,
+	// 		startPosition: { x: target.x, y: target.y }
+	// 	};
 
-		mouseStart = mouse;
+	// 	mouseStart = mouse;
 
-		if (dragTarget != targetContainer) {
-			dragTarget.drag.offsetX = target.x - localPos.x;
-			dragTarget.drag.offsetY = target.y - localPos.y;
-		}
+	// 	if (dragTarget != targetContainer) {
+	// 		dragTarget.drag.offsetX = target.x - localPos.x;
+	// 		dragTarget.drag.offsetY = target.y - localPos.y;
+	// 	}
 
-		app.stage.eventMode = 'dynamic';
-		app.stage.on('pointermove', onDragMove);
-		app.stage.on('pointerup', onDragEnd);
-		app.stage.on('pointerupoutside', onDragEnd);
-	}
+	// 	app.stage.eventMode = 'dynamic';
+	// 	app.stage.on('pointermove', onDragMove);
+	// 	app.stage.on('pointerup', onDragEnd);
+	// 	app.stage.on('pointerupoutside', onDragEnd);
+	// }
 
 
 	/**
@@ -690,22 +689,22 @@
 	 *
 	 * @param event - The pointer event containing the new global position.
 	 */
-	function onDragMove(e: FederatedPointerEvent): void
-	{
-		if (isDragging && dragTarget?.drag?.dragging) {
-			// Convert global position to local position within the group container
-			const groupContainer = dragTarget.parent;
-			const newPosition = groupContainer.toLocal(e.global);
-			if (dragTarget === targetContainer) {
-				dragTarget.x = dragTarget.drag.startPosition.x + (e.clientX - mouseStart.x);
-				dragTarget.y = dragTarget.drag.startPosition.y + (e.clientY - mouseStart.y);
-				return;
-			} else {
-				dragTarget.x = newPosition.x;
-				dragTarget.y = newPosition.y;
-			}
-		}
-	}
+	// function onDragMove(e: FederatedPointerEvent): void
+	// {
+	// 	if (isDragging && dragTarget?.drag?.dragging) {
+	// 		// Convert global position to local position within the group container
+	// 		const groupContainer = dragTarget.parent;
+	// 		const newPosition = groupContainer.toLocal(e.global);
+	// 		if (dragTarget === targetContainer) {
+	// 			dragTarget.x = dragTarget.drag.startPosition.x + (e.clientX - mouseStart.x);
+	// 			dragTarget.y = dragTarget.drag.startPosition.y + (e.clientY - mouseStart.y);
+	// 			return;
+	// 		} else {
+	// 			dragTarget.x = newPosition.x;
+	// 			dragTarget.y = newPosition.y;
+	// 		}
+	// 	}
+	// }
 
 	/**
 	 * Handles the end of a drag event for a draggable target.
@@ -716,20 +715,20 @@
 	 * removing event listeners for 'pointermove', 'pointerup', and 'pointerupoutside'
 	 * from the stage, and resetting the drag target's properties.
 	 */
-	function onDragEnd(event: FederatedPointerEvent): void
-	{
-		if (dragTarget && isDragging) {
-			isDragging = false;
+	// function onDragEnd(event: FederatedPointerEvent): void
+	// {
+	// 	if (dragTarget && isDragging) {
+	// 		isDragging = false;
 
-			app.stage.off('pointermove', onDragMove);
-			app.stage.off('pointerup', onDragEnd);
-			app.stage.off('pointerupoutside', onDragEnd);
+	// 		app.stage.off('pointermove', onDragMove);
+	// 		app.stage.off('pointerup', onDragEnd);
+	// 		app.stage.off('pointerupoutside', onDragEnd);
 
-			// dragTarget.alpha = 1;
-			dragTarget.drag = null;
-			dragTarget = undefined;
-		}
-	}
+	// 		// dragTarget.alpha = 1;
+	// 		dragTarget.drag = null;
+	// 		dragTarget = undefined;
+	// 	}
+	// }
 
 
 	/**
@@ -739,16 +738,16 @@
 	 * @param input - If true, sets the rotation directly to the given degrees; otherwise, adjusts based on previous rotation and slider value.
 	 * @throws Error if no container labeled 'target' is found.
 	 */
-    function rotateTarget(degrees: number, input = false) {
-        const targetContainer = app.stage.getChildByLabel('target');
-        if (!targetContainer) throw new Error('Tried rotation but found no container labelled "target"');
+    // function rotateTarget(degrees: number, input = false) {
+    //     const targetContainer = app.stage.getChildByLabel('target');
+    //     if (!targetContainer) throw new Error('Tried rotation but found no container labelled "target"');
 
-        let newRotation = input ? degrees % 360 : (previousRotation + slider + degrees) % 360;
-        previousRotation = newRotation - slider;
+    //     let newRotation = input ? degrees % 360 : (previousRotation + slider + degrees) % 360;
+    //     previousRotation = newRotation - slider;
 
-        targetContainer.rotation = newRotation * (Math.PI / 180);
-        $TargetStore.target.rotation = newRotation;
-    }
+    //     targetContainer.rotation = newRotation * (Math.PI / 180);
+    //     $TargetStore.target.rotation = newRotation;
+    // }
 
 
 	/**
@@ -758,8 +757,8 @@
 	 */
     function setMode(setmode?: string): void
 	{
-        if (mode !== setmode) {
-            mode = setmode;
+        if ($EditorStore.mode !== setmode) {
+            $EditorStore.mode = setmode;
         }
     }
 
@@ -770,7 +769,9 @@
      */
     function setRefMeasurement(): void
 	{
-        referenceTool.setRefMeasurement(refMeasurement);
+		console.log(refMeasurement);
+		// if (!target) console.error('No target!');
+        target.setRefMeasurement(refMeasurement);
     }
 
 
@@ -847,7 +848,7 @@
 
 	function handleResize(e?: Event): void
 	{
-		if (!app) return;
+		if (!target) return;
 
 		if (e?.target) {
 			const target = e.target as Window;
@@ -858,25 +859,19 @@
 			chromeArea.y = window.innerHeight;
 		}
 
-		app.renderer.resize(chromeArea.x, chromeArea.y);
-
-		if (targetContainer) {
-			scale = Math.min(
-				(window.innerHeight - 100) / targetSprite.height,
-				(window.innerWidth - 100) / targetSprite.width
-			);
-
-			targetContainer.scale.set(scale);
-
-			targetContainer.x = app.screen.width / 2;
-			targetContainer.y = app.screen.height / 2;
-		}
+		// target.handleResize(chromeArea.x, chromeArea.y);
+		target.handleResize();
 	}
 
-
-	function converTopLeftCoordinates(x:number, y:number): Point
+	function logDebug()
 	{
-		return targetContainer.toGlobal({x, y});
+		console.log('TargetStore:', $TargetStore);
+		console.log('UserSettingsStore:', $UserSettingsStore);
+		console.log('EditorStore:', $EditorStore);
+		console.log(`Mode: ${$EditorStore.mode}`);
+		console.log(`Chromarea: ${chromeArea.x}:${chromeArea.y}`)
+		console.log('---');
+		showChildren(target.app.stage);
 	}
 
 	function showChildren(parent: Container, indent = 0) {
@@ -895,73 +890,32 @@
 		}
 	}
 
-	function logDebug()
-	{
-		console.log('TargetStore:', $TargetStore);
-		console.log('UserSettingsStore:', $UserSettingsStore);
-		console.log('EditorStore:', $EditorStore);
-		console.log('---');
-		showChildren(app.stage);
-
-	}
-
 	onMount(async () => {
 		await getChromeArea();
-		await initializeApp();
+		target = new Target(chromeArea, staticAssets);
+        await target.initialize(canvasContainer, (state) => applicationState = state);
 
-		if (app) {
-			await loadStaticAssets();
-			await drawTarget();
-			try {
-				if (data.user?.id && $TargetStore.target.image.filename) {
-					const res = await fetchAnalysis(data.user.id as UUID, $TargetStore.target.image.filename);
-					if (res && res.predictions?.length > 0) {
-						console.log(res.count)
-						res.predictions.forEach((pred) => {
-							const coords = converTopLeftCoordinates(pred.xy[0], pred.xy[1]);
-							addShot(coords.x, coords.y, '1');
-						});
-					}
-				}
-			} catch (error) {
-				console.error('Failed to fetch analysis:', error);
-			}
-
-			// setupReferenceLine();
-			setupCrosshairs();
-			applicationState = "Adding groups ... "
-			await addGroups();
-
-			// selection check... -.-
-			app.ticker.add(() => {
-				if (selected) {
-					// console.log(tick++)
-					const shots = targetContainer.getChildrenByLabel(/shot-\d-\d/i, true);
-					shots.forEach((shot) => { selected.includes(shot) ? shot.alpha = 0.5 : shot.alpha = 1 })
-				}
-			});
-
-			applicationState = `Loading done.`
+		if (target) {
 			setTimeout(() => {
 				loadingDone();
 			}, 300);
-		};
+		}
 
-		if (app && targetContainer) {
-            selectionTool = new SelectionTool(targetContainer);
-			referenceTool = new ReferenceTool(targetContainer);
+        if (data.user?.id) {
+            await target.initializeAnalysis(data.user.id);
+        }
 
-            window.addEventListener('shotsSelected', ((event: CustomEvent) => {
-                const selectedShots = event.detail.shots;
-                selected = selectedShots;
-            }) as EventListener);
+		window.addEventListener('shotsSelected', ((event: CustomEvent) => {
+			const selectedShots = event.detail.shots;
+			selected = selectedShots;
+		}) as EventListener);
 
 
-			window.addEventListener('referenceMeasurementSet', () => {
-				if (referenceTool) {
-					refMeasurementDirty = referenceTool.isDirty;
-				}
-			});
+		window.addEventListener('referenceMeasurementSet', () => {
+			if (referenceTool) {
+				refMeasurementDirty = referenceTool.isDirty;
+			}
+		});
 
 
         }
@@ -970,7 +924,7 @@
 		// 		 If groups.length > 0?
 		// mode = "reference";
 		// showPanel(new Event('load'), "reference");
-	});
+	);
 
 	onDestroy(async () => {
 		if (app) {
@@ -981,12 +935,15 @@
 		if (selectionTool) {
             selectionTool.destroy();
         }
-        window.removeEventListener('shotsSelected', () => {});
 
 		if (referenceTool) {
 			referenceTool.destroy();
 		}
-		window.removeEventListener('referenceMeasurementSet', () => {});
+
+		if (browser) {
+			window.removeEventListener('shotsSelected', () => {});
+			window.removeEventListener('referenceMeasurementSet', () => {});
+		}
 	});
 
 	$effect(() => {
@@ -1024,8 +981,10 @@
 			}
 		}
 
-		if ($EditorStore) {
-			// console.log(`EditorStore updated.`, $EditorStore)
+		if (applicationState) {
+			if (applicationState === 'Done') {
+
+			}
 		}
 	});
 </script>
@@ -1064,7 +1023,7 @@
 		<button
 			title="Set reference"
 			id="reference-button"
-			onclick={ (e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); $activePanel="reference-panel" }}
+			onclick={ (e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); $activePanel="reference-panel"; console.log($EditorStore) }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
@@ -1072,11 +1031,11 @@
 				class="pointer-events-none"
 			/>
 		</button>
-
+		<!--disabled={ refMeasurementDirty ? true : false }-->
 		<button
 			title={ refMeasurementDirty ? 'Set reference points first' : 'Set point of aim' }
 			id="poa-button"
-			disabled={ refMeasurementDirty ? true : false }
+
 			onclick={() => {mode === "poa" ? setMode(undefined) : setMode("poa"); }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
@@ -1085,11 +1044,11 @@
 				class="pointer-events-none"
 			/>
 		</button>
-
+		<!--disabled={ refMeasurementDirty ? true : false }-->
 		<button
 			id="shots-button"
 			title={ refMeasurementDirty ? 'Set reference points first' : 'Place shots' }
-			disabled={ refMeasurementDirty ? true : false }
+
 			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
