@@ -54,7 +54,7 @@ export class Target {
     private referenceTool!: ReferenceTool;
     private selectionTool!: SelectionTool;
     private store: TargetStoreInterface;
-    private editorStore: EditorStoreInterface;
+    private editorStore!: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
     private scale: number;
     private staticAssets: string[];
@@ -69,7 +69,9 @@ export class Target {
         this.chromeArea = chromeArea;
         this.staticAssets = staticAssets;
         this.store = get(TargetStore);
-        this.editorStore = get(EditorStore);
+        EditorStore.subscribe(value => {
+            this.editorStore = value;
+        });
         this.targetStore = get(TargetStore);
         this.scale = 1;
     }
@@ -314,7 +316,7 @@ export class Target {
         if (e.button === 1) {
             this.handleDragStart(e);
         } else {
-            if (this.editorStore.mode === 'shot')
+            if (['shots', 'none'].includes(this.editorStore.mode))
                 this.shotPoaTool.addShot(e.clientX, e.clientY, '1');
             if (this.editorStore.mode === 'poa')
                 this.shotPoaTool.addPoa(e.clientX, e.clientY, '1');

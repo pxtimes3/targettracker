@@ -20,30 +20,10 @@
 	import { SelectionTool } from '@/utils/editor/selectiontool';
 	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { ContainerChild, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
+	import type { ContainerChild, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
-
-    interface DraggableSprite extends PixiSprite {
-		drag?: {
-			dragging: boolean;
-			data: any;
-			offsetX: number;
-			offsetY: number;
-			startPosition: { x: number; y: number };
-		} | null;
-	}
-
-	interface DraggableContainer extends PixiContainer {
-		drag?: {
-			dragging: boolean;
-			data: any;
-			offsetX: number;
-			offsetY: number;
-			startPosition: { x: number; y: number };
-		} | null;
-	}
 
 	let { data } : { data: PageServerData } = $props();
 
@@ -74,7 +54,7 @@
 
 	let settingsForm: HTMLFormElement;
 
-	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
+	let selected: Array<Sprite | Container<ContainerChild>> = $state([]);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 	let selectionTool: SelectionTool;
 
@@ -131,8 +111,6 @@
         // console.log($UserSettingsStore);
     }
 
-
-	// TODO: Store för active button => css-klass active eller något.
     function showPanel(e: Event, name: string): void
 	{
 		if (e.type != 'load' && !e.target) return;
@@ -170,7 +148,6 @@
 			});
 		}
 	}
-
 
 	function handleResize(e?: Event): void
 	{
@@ -237,17 +214,9 @@
 	});
 
 	onDestroy(async () => {
-		if (app) {
+		if (target) {
 			await Assets.unload(staticAssets)
 			app.destroy(true, true);
-		}
-
-		if (selectionTool) {
-            selectionTool.destroy();
-        }
-
-		if (referenceTool) {
-			referenceTool.destroy();
 		}
 
 		if (browser) {
@@ -314,7 +283,7 @@
 		<button
 			title="Set reference"
 			id="reference-button"
-			onclick={(e) => { $EditorStore.mode = "reference"; showPanel(e, "reference"); $activePanel = "reference-panel"; }}
+			onclick={(e) => { $EditorStore.mode === 'reference' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'reference'; showPanel(e, "reference"); $activePanel = "reference-panel"; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
@@ -326,7 +295,7 @@
 		<button
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Set point of aim' }
 			id="poa-button"
-			onclick={() => { $EditorStore.mode = "poa"; }}
+			onclick={() => { $EditorStore.mode === 'poa' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'poa'; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocateFixed
@@ -339,7 +308,7 @@
 			id="shots-button"
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Place shots' }
 
-			onclick={() => { $EditorStore.mode = "shots" }}
+			onclick={() => { $EditorStore.mode === 'shots' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'shots'; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocate

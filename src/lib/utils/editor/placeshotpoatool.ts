@@ -60,7 +60,8 @@ export class ShotPoaTool {
 
         shot.on('pointerdown', (e) => {
             e.stopPropagation();
-            this.handleSpriteDrag(e);
+            if (e.button === 1) { this.removeShot(e) }
+            if (e.button === 0) { this.handleSpriteDrag(e); }
         });
     }
 
@@ -250,8 +251,13 @@ export class ShotPoaTool {
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
     }
 
-    public assignSelectedShotsToGroup()
+    public assignSelectedShotsToGroup(): void
     {
-        
+
+    }
+
+    public removeShot(e: FederatedPointerEvent): void
+    {
+
     }
 }
