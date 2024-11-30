@@ -116,13 +116,6 @@
 		loader.classList.add('hidden');
 	}
 
-    function setMode(setmode?: string): void
-	{
-        if ($EditorStore.mode !== setmode) {
-            $EditorStore.mode = setmode;
-        }
-    }
-
     function changeUserSettings(e: Event): void
 	{
         const target = e.target as HTMLInputElement;
@@ -309,7 +302,7 @@
 		<button
 			title="Target information"
 			id="targetinfo-button"
-			onclick={ (e) => {$activePanel = "info-panel";}  }
+			onclick={ (e) => {$activePanel = "info-panel"; showPanel(e, "info");}  }
 			class="w-16 h-12 mt-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideTarget
@@ -321,7 +314,7 @@
 		<button
 			title="Set reference"
 			id="reference-button"
-			onclick={() => { $EditorStore.mode = "reference"; $activePanel = "reference-panel"; }}
+			onclick={(e) => { $EditorStore.mode = "reference"; showPanel(e, "reference"); $activePanel = "reference-panel"; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
@@ -361,7 +354,7 @@
 			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Rotate target"
 			id="rotate-button"
-			onclick={ (e) => { showPanel(e, "rotate"); $EditorStore.mode = "rotate"; $activePanel="rotate-panel"; }}
+			onclick={ (e) => { showPanel(e, "rotate"); $activePanel="rotate-panel"; }}
 		>
 			<LucideRefreshCcw
 				size="20"
@@ -376,7 +369,7 @@
 			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Settings"
 			id="settings-button"
-			onclick={ (e) => { showPanel(e, "settings"); $EditorStore.mode = "settings"; $activePanel='settings-panel' }}
+			onclick={ (e) => { showPanel(e, "settings"); $activePanel='settings-panel' }}
 		>
 			<SlidersHorizontal
 				size="20"
