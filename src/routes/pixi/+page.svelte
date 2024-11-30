@@ -69,7 +69,6 @@
 	let rotation: number = $state(0);
 	let slider: number = $state(0);
 
-	let refMeasurement: string = $state('0');
 	let atoxInput: HTMLInputElement|undefined = $state();
 	let referenceTool: ReferenceTool|undefined = $state();
 
@@ -322,7 +321,7 @@
 		<button
 			title="Set reference"
 			id="reference-button"
-			onclick={ (e) => {mode === "reference" ? setMode(undefined) : setMode("reference"); $activePanel="reference-panel"; console.log($EditorStore) }}
+			onclick={() => { $EditorStore.mode = "reference"; $activePanel = "reference-panel"; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
@@ -334,8 +333,7 @@
 		<button
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Set point of aim' }
 			id="poa-button"
-
-			onclick={() => {mode === "poa" ? setMode(undefined) : setMode("poa"); }}
+			onclick={() => { $EditorStore.mode = "poa"; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocateFixed
@@ -348,7 +346,7 @@
 			id="shots-button"
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Place shots' }
 
-			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
+			onclick={() => { $EditorStore.mode = "shots" }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocate
@@ -363,7 +361,7 @@
 			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Rotate target"
 			id="rotate-button"
-			onclick={ (e) => { showPanel(e, "rotate"); setMode("rotate"); $activePanel="rotate-panel"; }}
+			onclick={ (e) => { showPanel(e, "rotate"); $EditorStore.mode = "rotate"; $activePanel="rotate-panel"; }}
 		>
 			<LucideRefreshCcw
 				size="20"
@@ -378,7 +376,7 @@
 			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 			title="Settings"
 			id="settings-button"
-			onclick={ (e) => { showPanel(e, "settings"); setMode("settings"); $activePanel='settings-panel' }}
+			onclick={ (e) => { showPanel(e, "settings"); $EditorStore.mode = "settings"; $activePanel='settings-panel' }}
 		>
 			<SlidersHorizontal
 				size="20"
@@ -403,11 +401,11 @@
 </aside>
 
 <!-- panels -->
-<div id="rotate-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
+<div id="rotate-panel" class="absolute z-50 {$activePanel === 'rotate-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={ (e) => showPanel(e, "rotate") } />
+            <LucideX size="14" class="cursor-pointer" onclick={ (e) => $activePanel = '' } />
         </p>
     </div>
     <div class="pt-4">
@@ -468,11 +466,11 @@
 	</div>
 </div>
 
-<div id="settings-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
+<div id="settings-panel" class="absolute z-50 {$activePanel === 'settings-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Settings</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "settings")} />
+            <LucideX size="14" class="cursor-pointer" onclick={(e) => $activePanel = '' } />
         </p>
     </div>
 	<form id="settingsForm" bind:this={settingsForm}>
@@ -505,7 +503,7 @@
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Target information</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={(e) => showPanel(e, "settings")} />
+            <LucideX size="14" class="cursor-pointer" onclick={(e) => $activePanel = ''} />
         </p>
     </div>
 	<div class="p-4 mb-8 grid grid-flow-row gap-y-2">
