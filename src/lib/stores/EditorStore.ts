@@ -1,4 +1,5 @@
 /**
+ * src/lib/stores/EditorStore.ts
  * Pubsub-ish för target editorn.
  */
 import { type Writable, writable } from "svelte/store";
@@ -13,6 +14,11 @@ export type WarningInterface = z.infer<typeof WarningSchema>;
 
 const EditorStoreSchema = z.object({
     warnings: z.array(WarningSchema).optional(),
+    aIsMoved: z.boolean(),
+    aIsSet: z.boolean(),
+    xIsMoved: z.boolean(),
+    xIsSet: z.boolean(),
+    refMeasurement: z.string(),
     isRefDirty: z.boolean(),
     isRefComplete: z.boolean(),
     selected: z.array(z.any()),
@@ -32,6 +38,11 @@ const warnings: Writable<WarningInterface[]> = writable([]);
 
 export const EditorStore: Writable<EditorStoreInterface> = writable({
     warnings: [],
+    aIsMoved: true,
+    aIsSet: false,
+    xIsMoved: true,
+    xIsSet: false,
+    refMeasurement: '0',
     isRefDirty: true,
     isRefComplete: false,
     selected: [],

@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
-	 * TODO: Lyft ut addShot till egen klass (shottool.ts?)
-	 * TODO: Lyft ut grupphanteringen till en egen klass.
-	 * TODO: Lyft ut crosshairs och
+	 * TODO: Cleanup!
+	 * TODO: Lyft ut crosshairs
+	 * TODO: GroupContainers finns inte längre, gör om @ line 658.
 	 * TODO: Scoring.
 	 * TODO: Add firearm.
 	 * TODO: Add ammunition.
@@ -12,15 +12,15 @@
 	 */
 	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
-	import { activePanel, EditorStore } from '@/stores/EditorStore';
-	import { TargetStore, type GroupInterface } from '@/stores/TargetImageStore';
+	import { EditorStore, activePanel } from '@/stores/EditorStore';
+	import { TargetStore } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
-	import { ShotPoaTool } from '@/utils/editor/placeshotpoatool';
+
 	import { ReferenceTool } from '@/utils/editor/referencetool';
 	import { SelectionTool } from '@/utils/editor/selectiontool';
 	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { ContainerChild, FederatedPointerEvent, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
+	import type { ContainerChild, Container as PixiContainer, Sprite as PixiSprite, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
@@ -50,8 +50,7 @@
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
 	let app: Application<Renderer>;
 	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
-	let mouseStart: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
-	let targetSprite: Sprite;
+
 	let staticAssets: string[] = $state([
 		'/cursors/circle-a.svg',
 		'/cursors/circle-x.svg',
@@ -62,35 +61,23 @@
 		'/cursors/shot.svg'
 	]);
 
-	let targetContainer: DraggableContainer;
+
 	let groupContainers: Container[] = $state([]);
 	let crosshairContainer: Container;
-	let scale: number = $state(0);
-	let isDragging: boolean = $state(false);
-	let dragTarget: DraggableSprite|undefined|DraggableContainer = undefined;
 	let showMainMenu: boolean = $state(false);
 
 	let rotation: number = $state(0);
-	let previousRotation: number = $state(0);
 	let slider: number = $state(0);
 
-	let aIsSet: boolean = $state(false);
-	let aIsMoved: boolean = $state(true);
-	let xIsSet: boolean = $state(false);
-	let xIsMoved: boolean = $state(true);
-	let isDrawingReferenceLine: boolean = $state(false);
 	let refMeasurement: string = $state('0');
-	let refMeasurementDirty: boolean = $state(true);
 	let atoxInput: HTMLInputElement|undefined = $state();
 	let referenceTool: ReferenceTool|undefined = $state();
 
 	let settingsForm: HTMLFormElement;
 
-	let shotPoaTool: ShotPoaTool;
 	let selected: Array<DraggableSprite | Sprite | Container<ContainerChild>> = $state([]);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 	let selectionTool: SelectionTool;
-
 
 	let canvasContainer: HTMLDivElement;
     let loader: HTMLDivElement;
@@ -98,26 +85,6 @@
     let target: Target;
     let chromeArea: {x: number, y: number} = $state({x: 0, y: 0});
 
-	const zoomBoundaries = [0.25, 3.0];
-	const zoomStep = 0.1;
-
-	/**
-	 * Laddar med $TargetStore.target.image.filename osv...
-	 */
-	// async function initializeApp() {
-	// 	app = await initialize(
-	// 		chromeArea,
-	// 		canvasContainer,
-	// 		(state) => applicationState = state,
-	// 		(assets) => staticAssets = assets,
-	// 		staticAssets,
-	// 		$TargetStore
-	// 	);
-	// }
-
-	/**
-	 * PIXI verkar lösa det här, men uh...
-	 */
 	function mousePosition(e: MouseEvent): void
     {
         mouse = {
@@ -126,10 +93,6 @@
         };
     }
 
-	/**
-	 * Sparar innerheight. Kollar om det kommer från @param e.
-	 * @param e: Event. Resize etc.
-	 */
     async function getChromeArea(e?: Event): Promise<void>
     {
 		applicationState = "Looking out the window... ";
@@ -148,613 +111,12 @@
 		}
     }
 
-	/**
-	 * Laddar static assets. Cursors, etc.
-	 */
-	// async function loadStaticAssets(): Promise<void>
-	// {
-	// 	applicationState = "Populating application with static assets... ";
-	// 	await Assets.load(staticAssets);
-
-	// 	// const defaultCursor = 'url(\'/cursors/dot.svg\'), auto';
-	// 	// app.renderer.events.cursorStyles.default = defaultCursor;
-	// }
-
-	/**
-	 * Ritar target i @param targetContainer, placerar center/center och skalar ned
-	 * att passa fönstret.
-	 */
-	// async function drawTarget(e?: Event): Promise<void>
-	// {
-	// 	applicationState = "Drawing target... ";
-	// 	// console.log(staticAssets, $TargetStore.target.image.filename);
-
-	// 	const targetPath = staticAssets.find((asset) =>  {
-	// 		if (!$TargetStore.target.image.filename) return;
-	// 		if (asset.endsWith($TargetStore.target.image.filename)) {
-	// 			return asset;
-	// 		}
-	// 	});
-
-	// 	if (!targetPath) return;
-	// 	const texture = await Assets.load(targetPath);
-	// 	texture.source.scaleMode = 'linear';
-
-	// 	targetSprite = new Sprite(texture);
-	// 	targetSprite.label = 'targetSprite';
-
-	// 	targetContainer = new Container({isRenderGroup: true});
-	// 	app.stage.addChild(targetContainer);
-
-	// 	targetContainer.label = 'targetContainer';
-	// 	targetContainer.eventMode = 'dynamic';
-	// 	targetContainer.on('pointerdown', (e) => handleClick(e, targetContainer));
-
-	// 	targetContainer.addChild(targetSprite);
-	// 	targetContainer.width = targetSprite.width;
-	// 	targetContainer.height = targetSprite.height;
-
-	// 	// place targetContainer at center/center
-	// 	targetContainer.x = app.screen.width / 2;
-	// 	targetContainer.y = app.screen.height / 2;
-	// 	// pivot är typ translate?
-	// 	targetContainer.pivot.x = targetContainer.width / 2;
-	// 	targetContainer.pivot.y = targetContainer.height / 2;
-
-	// 	// skala ner så den ryms i screen
-	// 	scale = Math.min(
-	// 		(window.innerHeight - 100) / targetSprite.height,
-	// 		(window.innerWidth - 100) / targetSprite.width
-	// 	);
-
-	// 	targetContainer.scale = scale;
-
-	// 	// update targetStore if dimensions differ
-	// 	$TargetStore.target.image.originalsize[0] != targetSprite.width  ? $TargetStore.target.image.originalsize[0] = targetSprite.width  : '';
-	// 	$TargetStore.target.image.originalsize[1] != targetSprite.height ? $TargetStore.target.image.originalsize[1] = targetSprite.height : '';
-	// }
-
-
-	/**
-	 * Skapar sprites för editor-crosshair.
-	 * TODO: Följer inte med vid drag.
-	 */
-	// function setupCrosshairs()
-	// {
-	// 	crosshairContainer = new Container();
-	// 	crosshairContainer.label = 'crosshairContainer';
-
-	// 	targetContainer.addChild(crosshairContainer);
-
-	// 	const nLine = new Graphics();
-	// 	nLine.label = 'N-Line';
-	// 	crosshairContainer.addChild(nLine);
-
-	// 	const sLine = new Graphics();
-	// 	sLine.label = 'S-Line';
-	// 	crosshairContainer.addChild(sLine);
-
-	// 	const eLine = new Graphics();
-	// 	eLine.label = 'E-Line';
-	// 	crosshairContainer.addChild(eLine);
-
-	// 	const wLine = new Graphics();
-	// 	wLine.label = 'W-Line';
-	// 	crosshairContainer.addChild(wLine);
-
-	// 	app.ticker.add(() => {
-	// 		if ($UserSettingsStore.editorcrosshair) {
-	// 			nLine.clear();
-	// 			nLine.beginPath();
-	// 			nLine.setStrokeStyle({
-	// 				width: 2 * (1/scale),
-	// 				color: 0x000000,
-	// 				alpha: 0.3,
-	// 				cap: 'round',
-	// 				join: 'round'
-	// 			});
-	// 			const nStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 5});
-	// 			const nEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y - 3000});
-	// 			nLine.moveTo(nStartPoint.x, nStartPoint.y)
-	// 					.lineTo(nEndPos.x, nEndPos.y)
-	// 					.stroke();
-
-	// 			sLine.clear();
-	// 			sLine.beginPath();
-	// 			sLine.setStrokeStyle({
-	// 				width: 2 * (1/scale),
-	// 				color: 0x000000,
-	// 				alpha: 0.3,
-	// 				cap: 'round',
-	// 				join: 'round'
-	// 			});
-	// 			const sStartPoint = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 5});
-	// 			const sEndPos = targetContainer.toLocal({x: mouse.x + 0, y: mouse.y + 3000});
-	// 			sLine.moveTo(sStartPoint.x, sStartPoint.y)
-	// 					.lineTo(sEndPos.x, sEndPos.y)
-	// 					.stroke();
-
-	// 			wLine.clear();
-	// 			wLine.beginPath();
-	// 			wLine.setStrokeStyle({
-	// 				width: 2 * (1/scale),
-	// 				color: 0x000000,
-	// 				alpha: 0.3,
-	// 				cap: 'round',
-	// 				join: 'round'
-	// 			});
-	// 			const wStartPoint = targetContainer.toLocal({x: mouse.x - 5, y: mouse.y + 0});
-	// 			const wEndPos = targetContainer.toLocal({x: mouse.x - 3000, y: mouse.y + 0});
-	// 			wLine.moveTo(wStartPoint.x, wStartPoint.y)
-	// 					.lineTo(wEndPos.x, wEndPos.y)
-	// 					.stroke();
-
-	// 			eLine.clear();
-	// 			eLine.beginPath();
-	// 			eLine.setStrokeStyle({
-	// 				width: 2 * (1/scale),
-	// 				color: 0x000000,
-	// 				alpha: 0.3,
-	// 				cap: 'round',
-	// 				join: 'round'
-	// 			});
-	// 			const eStartPoint = targetContainer.toLocal({x: mouse.x + 5, y: mouse.y + 0});
-	// 			const eEndPos = targetContainer.toLocal({x: mouse.x + 3000, y: mouse.y + 0});
-	// 			eLine.moveTo(eStartPoint.x, eStartPoint.y)
-	// 					.lineTo(eEndPos.x, eEndPos.y)
-	// 					.stroke();
-	// 		}
-	// 	});
-	// }
-
-
-
-	/**
-	 *	Adderar grupper som redan finns i storen.
-	 */
-    // async function addGroups(): Promise<void>
-	// {
-    //     if (!$TargetStore) {
-    //         applicationState = "Error: No TargetStore!";
-    //         throw new Error('No TargetStore.');
-    //     }
-
-    //     const { groups } = $TargetStore;
-    //     if (groups.length) {
-    //         applicationState = `Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`;
-	// 		console.log(`Found ${groups.length} ${groups.length > 1 ? 'groups' : 'group'} in targetStore...`);
-
-    //         groups.forEach((group) => {
-	// 			if (!targetContainer.getChildrenByLabel(group.id.toString())) {
-	// 				createGroup(group);
-	// 			} else {
-	// 				group.shots?.forEach((shot) => {
-	// 					addShot(shot.x, shot.y, group.id.toString());
-	// 				});
-	// 			}
-	// 		});
-    //     }
-    // }
-
-	/**
-	 * Asynchronously creates a new group container and adds it to the target container.
-	 * Updates the application state with the group addition process.
-	 * If the group contains shots, each shot is added to the container.
-	 *
-	 * @param {GroupInterface} group - The group object containing an ID and optional shots.
-	 */
-    // async function createGroup(group: GroupInterface): Promise<Container>
-	// {
-	// 	const groupContainer = new Container();
-    //     groupContainer.label = group.id.toString();
-    //     groupContainers.push(groupContainer);
-
-    //     applicationState = `Creating group: ${group.id + 1}`;
-	// 	console.log(`Creating group: ${group.id} ${groupContainer.uid}`);
-    //     targetContainer.addChild(groupContainer);
-
-    //     if (group.shots?.length) {
-    //         applicationState = `Found ${group.shots.length} ${group.shots.length > 1 ? 'shots' : 'shot'}...`;
-    //         group.shots.forEach(({ x, y }) => addShot(x, y, group.id.toString()));
-    //     } else {
-    //         applicationState = `No shots in group ${group.id + 1}.`;
-    //     }
-
-	// 	return groupContainer;
-    // }
-
-	/**
-	 * Assigns selected shots to either a new or existing group container.
-	 * Creates a new group if "createNew" is selected, otherwise adds shots to specified group.
-	 * Updates shot labels to match their new group assignment.
-	 * @throws {Error} Logs error if target group is not found
-	 */
-	// function assignSelectedShotsToGroup(): void
-	// {
-	// 	let newGroup: Container|null|undefined;
-
-	// 	if (!assignToGroupSelect || !assignToGroupSelect.value) return;
-
-	// 	console.log(assignToGroupSelect.value);
-
-	// 	if (assignToGroupSelect.value === "createNew") {
-	// 		newGroup = new Container();
-	// 		newGroup.label = (groupContainers.length + 1).toString();
-	// 		targetContainer.addChild(newGroup);
-	// 		groupContainers.push(newGroup);
-	// 		console.log(`adding to newGroup: ${newGroup?.label}`);
-	// 	} else {
-	// 		newGroup = targetContainer.getChildByLabel(assignToGroupSelect.value);
-	// 		console.log(`adding to existing: ${newGroup?.label}`);
-	// 	}
-
-
-	// 	if (!newGroup) {
-	// 		console.error(`Was supposed to assign to group ${assignToGroupSelect.value} but no such group was found!`);
-	// 		return;
-	// 	}
-
-	// 	selected.forEach((shot) => {
-	// 		newGroup.addChild(shot);
-	// 		shot.label = shot.label.replace(/\d+$/, `${newGroup.label}`);
-	// 	});
-	// }
-
-
-	/**
-	 * Adds a shot sprite to a specified group within the target container.
-	 *
-	 * @param x - The x-coordinate for the shot's position.
-	 * @param y - The y-coordinate for the shot's position.
-	 * @param group - Optional. The label of the group to which the shot should be added.
-	 *                If not provided, the active group from $TargetStore is used.
-	 *
-	 * @throws Error if no group is supplied and no active group is available in $TargetStore.
-	 * @throws Error if the specified group does not exist in the target container.
-	 *
-	 * The function loads a shot texture, creates a draggable sprite, and positions it
-	 * within the specified group's local coordinates. The sprite is interactive and
-	 * responds to pointer events.
-	 */
-	// async function addShot(x: number, y: number, group?: string): Promise<void>
-	// {
-	// 	console.log(`function addShot called to add shot at position ${x}:${y} in group ${group}`)
-	// 	if (!group) {
-	// 		if ($TargetStore.activeGroup) {
-	// 			console.log(`TargetStore has active group ${$TargetStore.activeGroup}`);
-	// 			group = $TargetStore.activeGroup.toString();
-	// 		} else {
-	// 			group = '1';
-	// 			console.log(`TargetStore has no active group ${$TargetStore.activeGroup}`);
-	// 			$TargetStore.activeGroup = parseInt(group);
-	// 		}
-	// 	}
-
-	// 	let groupContainer = targetContainer.getChildByLabel(group.toString().trim());
-	// 	if (!groupContainer) {
-	// 		console.log(`Wanted group with label: ${group} but none was found! Creating group with label: ${group}`);
-	// 		showChildren(targetContainer);
-	// 		groupContainer = await createGroup({id: parseInt(group)});
-	// 	}
-
-	// 	const texture = await Assets.load('/cursors/shot.svg');
-	// 	const shot = new Sprite(texture) as DraggableSprite;
-	// 	shot.label = `shot-${groupContainer.children.length}-${groupContainer.label}`;
-    // 	shot.eventMode = 'dynamic';
-    // 	shot.cursor = 'pointer';
-	// 	shot.interactive = true;
-	// 	shot.anchor.set(0.5);
-	// 	// shot.scale = 1 * (1/scale);
-	// 	if (!$TargetStore.target.caliberInMm) {
-	// 		// console.log('caliber in px',TargetStore.mmToPx(4.5))
-	// 		// sätt till 4.5mm
-	// 		shot.width = TargetStore.mmToPx(4.5);
-	// 		shot.height = shot.width;
-	// 		// lägg in en varning i editorstore
-	// 		if ($EditorStore.warnings && !$EditorStore.warnings?.find((w) => w.id === 'caliber')) {
-	// 			const newWarning = [...$EditorStore.warnings, {
-	// 				id: 'caliber',
-	// 				message: 'Set caliber in the info-panel to have the cursors display at the correct size.'
-	// 			}];
-	// 			EditorStore.set({...$EditorStore, warnings: newWarning });
-	// 		}
-	// 	} else {
-	// 		console.log(`set! ${$TargetStore.target.caliberInMm} in px`,TargetStore.mmToPx($TargetStore.target.caliberInMm))
-	// 		shot.width = TargetStore.mmToPx($TargetStore.target.caliberInMm) / 10;
-	// 		shot.height = shot.width;
-	// 	}
-
-	// 	const localPos = groupContainer.toLocal({ x, y }, app.stage);
-    // 	shot.x = localPos.x;
-    // 	shot.y = localPos.y;
-
-	// 	shot.on('pointerdown', (e) => handleClick(e, shot));
-
-	// 	groupContainer.addChild(shot);
-	// 	console.log(`added shot ${shot.label} to group ${groupContainer.label}`);
-	// }
-
-	/**
-	 * Adds a Point of Attention (PoA) sprite to a specified group within the target container.
-	 *
-	 * @param x - The x-coordinate for the PoA sprite's position.
-	 * @param y - The y-coordinate for the PoA sprite's position.
-	 * @param group - Optional. The label of the group to which the PoA should be added. Defaults to the active group in the TargetStore.
-	 * @throws Will throw an error if no active group is found or if the specified group does not exist.
-	 * @returns A promise that resolves when the PoA sprite is successfully added.
-	 *
-	 * The function checks if the group already contains a PoA sprite and logs a warning if so.
-	 * It loads a texture for the PoA sprite, sets its properties, and positions it within the group container.
-	 * The sprite is made interactive and listens for pointer down events to handle clicks.
-	 */
-    // async function addPoa(x: number, y: number, group?: string): Promise<void> {
-    //     group = group || $TargetStore.activeGroup?.toString();
-    //     if (!group) {
-    //         throw new Error('No activeGroup and no group supplied. Exiting.');
-    //     }
-
-    //     const groupContainer = targetContainer.getChildByLabel(group);
-    //     if (!groupContainer) {
-    //         throw new Error(`Wanted group with label: ${group} but none was found!`);
-    //     }
-
-    //     if (groupContainer.getChildByLabel(`poa-${groupContainer.label}`)) {
-    //         console.warn('Group already has a PoA set.');
-    //         return;
-    //     }
-
-    //     const texture = await Assets.load('/cursors/poa.svg');
-    //     const sprite = new Sprite(texture) as DraggableSprite;
-    //     sprite.label = `poa-${groupContainer.label}`;
-    //     sprite.eventMode = 'dynamic';
-    //     sprite.cursor = 'pointer';
-    //     sprite.interactive = true;
-    //     sprite.anchor.set(0.5);
-
-    //     const localPos = groupContainer.toLocal({ x, y }, app.stage);
-    //     sprite.x = localPos.x;
-    //     sprite.y = localPos.y;
-
-    //     sprite.on('pointerdown', (e) => handleClick(e, sprite));
-
-    //     groupContainer.addChild(sprite);
-    //     // console.log(`added ${sprite.label}:`, sprite);
-    // }
-
-	/**
-	 * Gör fancy stuff med skit.
-	 */
 	function loadingDone(): void
 	{
 		canvasContainer.classList.remove('opacity-35');
 		loader.classList.add('hidden');
 	}
 
-	/**
-	 * Handles the wheel event to zoom in or out on the target container.
-	 *
-	 * Adjusts the scale of the target container based on the wheel event's deltaY value,
-	 * ensuring the new scale remains within defined zoom boundaries.
-	 *
-	 * @param e - The wheel event containing the deltaY value for zooming.
-	 */
-    function handleWheel(e: WheelEvent): void
-	{
-		if (!target) return;
-
-		e.preventDefault();
-		target.handleWheel(e);
-	}
-
-	/**
-	 * Musklick.
-	 * @param e: FederatedPointerEvent
-	 */
-	function handleClick(e: FederatedPointerEvent, target: Sprite | DraggableSprite | Container): void
-	{
-		console.log(`click!`, e.button, e.buttons, $state.snapshot(mouse), e, target);
-		mouseStart = mouse;
-
-		if (e.button === 0) {
-			console.log(targetContainer.scale.x);
-			if (target.label.startsWith('shot-')) {
-				e.stopPropagation();
-
-				if (selected.includes(target) && e.shiftKey) {
-					const idx = selected.findIndex((sp) => sp === target);
-					selected.splice(idx, 1);
-				} else if (!selected.includes(target) && !e.shiftKey) {
-					// töm selected
-					selected = [];
-					selected.push(target);
-				} else if (!selected.includes(target) && e.shiftKey) {
-					selected.push(target);
-				} else if (selected.includes(target) && !e.shiftKey) {
-					selected = [];
-					selected.push(target);
-				}
-
-				onDragStart(target as DraggableSprite, e);
-				return;
-			}
-			if (target.label.startsWith('target') && mode === "reference") {
-				e.stopPropagation();
-				referenceTool?.addReferencePoint(e.globalX, e.globalY);
-				return;
-			}
-			if (target.label.startsWith('poa-')) {
-				e.stopPropagation();
-				onDragStart(target as DraggableSprite, e);
-				return;
-			}
-			if (target.label.startsWith('ref-')) {
-				console.log(`click on ref-point`);
-				e.stopPropagation();
-				onDragStart(target as DraggableSprite, e);
-				return;
-			}
-
-			if (target.label === 'targetContainer') {
-				// töm selected
-				selected = [];
-
-				if (dragTarget) { dragTarget = undefined; }
-				if (mode === "shots") {
-					// addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
-					shotPoaTool.addShot(e.globalX, e.globalY, $TargetStore.activeGroup.toString())
-				} else if (mode === "poa") {
-					addPoa(e.globalX, e.globalY, $TargetStore.activeGroup.toString());
-				}
-				return;
-			}
-		}
-
-		// middleclick
-		if (e.button === 1) {
-			e.stopPropagation();
-			e.preventDefault();
-
-			if (target.label === 'target') {
-				dragTarget = targetContainer;
-				onDragStart(targetContainer as DraggableContainer, e);
-				return;
-			}
-
-			if (target.label.startsWith('shot-')) {
-				e.preventDefault();
-				e.stopPropagation();
-
-				removeShot(target);
-			}
-		}
-	}
-
-
-	// function removeShot(target: DraggableSprite | Sprite | Container<ContainerChild>): void
-	// {
-	// 	try {
-	// 		target.parent.removeChild(target) || new Error('Failed to remove shot!');
-	// 	} catch (error) {
-	// 		console.error('Failed to remove shot!', target, error);
-	// 	}
-
-	// }
-
-	/**
-	 * Initiates the drag operation for a draggable sprite.
-	 *
-	 * @param {DraggableSprite} target - The sprite being dragged.
-	 * @param {FederatedPointerEvent} event - The pointer event triggering the drag.
-	 *
-	 * Sets the sprite's transparency and event mode to indicate it is being dragged.
-	 * Calculates the initial drag offsets and stores the starting position.
-	 * Attaches event listeners to the stage for handling drag movement and end.
-	 */
-	// function onDragStart(target: DraggableSprite|DraggableContainer, e: FederatedPointerEvent): void
-	// {
-	// 	isDragging = true;
-	// 	dragTarget = target;
-	// 	// dragTarget.alpha = 0.5;
-	// 	dragTarget.eventMode = 'dynamic';
-
-	// 	// global position => local position
-	// 	const groupContainer = target.parent;
-	// 	const localPos = groupContainer.toLocal(e.global);
-
-	// 	dragTarget.drag = {
-	// 		dragging: true,
-	// 		data: localPos,
-	// 		offsetX: 0,
-	// 		offsetY: 0,
-	// 		startPosition: { x: target.x, y: target.y }
-	// 	};
-
-	// 	mouseStart = mouse;
-
-	// 	if (dragTarget != targetContainer) {
-	// 		dragTarget.drag.offsetX = target.x - localPos.x;
-	// 		dragTarget.drag.offsetY = target.y - localPos.y;
-	// 	}
-
-	// 	app.stage.eventMode = 'dynamic';
-	// 	app.stage.on('pointermove', onDragMove);
-	// 	app.stage.on('pointerup', onDragEnd);
-	// 	app.stage.on('pointerupoutside', onDragEnd);
-	// }
-
-
-	/**
-	 * Handles the drag movement event for a draggable target.
-	 * Updates the target's position based on the global position of the pointer event.
-	 *
-	 * @param event - The pointer event containing the new global position.
-	 */
-	// function onDragMove(e: FederatedPointerEvent): void
-	// {
-	// 	if (isDragging && dragTarget?.drag?.dragging) {
-	// 		// Convert global position to local position within the group container
-	// 		const groupContainer = dragTarget.parent;
-	// 		const newPosition = groupContainer.toLocal(e.global);
-	// 		if (dragTarget === targetContainer) {
-	// 			dragTarget.x = dragTarget.drag.startPosition.x + (e.clientX - mouseStart.x);
-	// 			dragTarget.y = dragTarget.drag.startPosition.y + (e.clientY - mouseStart.y);
-	// 			return;
-	// 		} else {
-	// 			dragTarget.x = newPosition.x;
-	// 			dragTarget.y = newPosition.y;
-	// 		}
-	// 	}
-	// }
-
-	/**
-	 * Handles the end of a drag event for a draggable target.
-	 *
-	 * @param event - The FederatedPointerEvent triggered when the drag ends.
-	 *
-	 * This function stops the dragging process by setting the isDragging flag to false,
-	 * removing event listeners for 'pointermove', 'pointerup', and 'pointerupoutside'
-	 * from the stage, and resetting the drag target's properties.
-	 */
-	// function onDragEnd(event: FederatedPointerEvent): void
-	// {
-	// 	if (dragTarget && isDragging) {
-	// 		isDragging = false;
-
-	// 		app.stage.off('pointermove', onDragMove);
-	// 		app.stage.off('pointerup', onDragEnd);
-	// 		app.stage.off('pointerupoutside', onDragEnd);
-
-	// 		// dragTarget.alpha = 1;
-	// 		dragTarget.drag = null;
-	// 		dragTarget = undefined;
-	// 	}
-	// }
-
-
-	/**
-	 * Rotates the 'target' container by a specified number of degrees.
-	 *
-	 * @param degrees - The number of degrees to rotate the target.
-	 * @param input - If true, sets the rotation directly to the given degrees; otherwise, adjusts based on previous rotation and slider value.
-	 * @throws Error if no container labeled 'target' is found.
-	 */
-    // function rotateTarget(degrees: number, input = false) {
-    //     const targetContainer = app.stage.getChildByLabel('target');
-    //     if (!targetContainer) throw new Error('Tried rotation but found no container labelled "target"');
-
-    //     let newRotation = input ? degrees % 360 : (previousRotation + slider + degrees) % 360;
-    //     previousRotation = newRotation - slider;
-
-    //     targetContainer.rotation = newRotation * (Math.PI / 180);
-    //     $TargetStore.target.rotation = newRotation;
-    // }
-
-
-	/**
-	 * Sets the mode to the specified value if it differs from the current mode.
-	 *
-	 * @param setmode - The new mode to be set. If not provided, the mode remains unchanged.
-	 */
     function setMode(setmode?: string): void
 	{
         if ($EditorStore.mode !== setmode) {
@@ -762,23 +124,6 @@
         }
     }
 
-
-    /**
-     * Sets reference measurement values in the target store if validation passes.
-     * Converts decimal separators and updates measurement and line length references.
-     */
-    function setRefMeasurement(): void
-	{
-		console.log(refMeasurement);
-		// if (!target) console.error('No target!');
-        target.setRefMeasurement(refMeasurement);
-    }
-
-
-    /**
-     * Updates user settings based on form input changes
-     * @param {Event} e - The change event from the form input
-     */
     function changeUserSettings(e: Event): void
 	{
         const target = e.target as HTMLInputElement;
@@ -795,17 +140,6 @@
     }
 
 
-	/**
-	 * Toggles the visibility of a panel associated with a button.
-	 *
-	 * @param e - The event triggered by user interaction.
-	 * @param name - The identifier for the panel and button elements.
-	 *
-	 * The function checks if the event target is a button or retrieves the button
-	 * by its ID. It then finds the corresponding panel by its ID and toggles its
-	 * visibility. The panel's position is adjusted relative to the button's position.
-	 * Logs an error if the panel cannot be found.
-	 */
 	// TODO: Store för active button => css-klass active eller något.
     function showPanel(e: Event, name: string): void
 	{
@@ -859,7 +193,6 @@
 			chromeArea.y = window.innerHeight;
 		}
 
-		// target.handleResize(chromeArea.x, chromeArea.y);
 		target.handleResize();
 	}
 
@@ -909,22 +242,7 @@
 			const selectedShots = event.detail.shots;
 			selected = selectedShots;
 		}) as EventListener);
-
-
-		window.addEventListener('referenceMeasurementSet', () => {
-			if (referenceTool) {
-				refMeasurementDirty = referenceTool.isDirty;
-			}
-		});
-
-
-        }
-
-		// TODO: Check om det redan är en påbörjad tavla.
-		// 		 If groups.length > 0?
-		// mode = "reference";
-		// showPanel(new Event('load'), "reference");
-	);
+	});
 
 	onDestroy(async () => {
 		if (app) {
@@ -953,24 +271,11 @@
 		}
 
 		if (rotation) {
-			rotateTarget(rotation);
+			target.rotateTarget(rotation);
 		}
 
 		if (slider) {
-			rotateTarget(rotation);
-		}
-
-		isDrawingReferenceLine = (mode === "reference" && (
-			(aIsSet && !xIsSet) ||
-			(aIsSet && xIsSet && isDragging)
-		));
-
-		if (aIsMoved || xIsMoved) {
-			refMeasurementDirty = true;
-		}
-
-		if (mode) {
-			referenceTool?.setVisible(mode === "reference");
+			target.rotateTarget(rotation);
 		}
 
 		if ($UserSettingsStore) {
@@ -978,12 +283,6 @@
 				crosshairContainer.visible = true;
 			} else if (crosshairContainer) {
 				crosshairContainer.visible = false;
-			}
-		}
-
-		if (applicationState) {
-			if (applicationState === 'Done') {
-
 			}
 		}
 	});
@@ -1033,7 +332,7 @@
 		</button>
 		<!--disabled={ refMeasurementDirty ? true : false }-->
 		<button
-			title={ refMeasurementDirty ? 'Set reference points first' : 'Set point of aim' }
+			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Set point of aim' }
 			id="poa-button"
 
 			onclick={() => {mode === "poa" ? setMode(undefined) : setMode("poa"); }}
@@ -1047,7 +346,7 @@
 		<!--disabled={ refMeasurementDirty ? true : false }-->
 		<button
 			id="shots-button"
-			title={ refMeasurementDirty ? 'Set reference points first' : 'Place shots' }
+			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Place shots' }
 
 			onclick={() => {mode === "shots" ? setMode(undefined) : setMode("shots"); }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
@@ -1112,7 +411,7 @@
         </p>
     </div>
     <div class="pt-4">
-        <button id="rotate-left" class="btn ml-4 preset-filled align-middle" onclick={() => rotateTarget(-90)}>
+        <button id="rotate-left" class="btn ml-4 preset-filled align-middle" onclick={() => target.rotateTarget(-90)}>
             <LucideRotateCcwSquare color="#000" />
         </button>
 
@@ -1125,13 +424,13 @@
 			onkeyup={
 				(e) => {
 					setTimeout(() => {
-						let target = e.target as HTMLInputElement; rotateTarget(parseFloat(target.value), true)
+						let t = e.target as HTMLInputElement; target.rotateTarget(parseFloat(t.value), true)
 					}, 500)
 				}
 			}
         />
 
-        <button id="rotate-left" class="btn preset-filled align-middle mr-4" onclick={() => rotateTarget(90)}>
+        <button id="rotate-left" class="btn preset-filled align-middle mr-4" onclick={() => target.rotateTarget(90)}>
             <LucideRotateCwSquare color="#000" />
         </button>
     </div>
@@ -1152,19 +451,16 @@
 		<div class="grid grid-cols[1fr_1fr] grid-flow-col">
 			<div class="input-group text-xs divide-primary-200-800 grid-cols-[auto_1fr_auto] divide-x text-body-color-dark bg-white">
 				<div class="input-group-cell preset-tonal-primary">A &rArr; X</div>
-				<input type="text" id="atoxInput" bind:this={atoxInput} class="bg-white text-xs" bind:value={refMeasurement} pattern={`^(?!^0$)-?\d+[.,]?\d*$`}>
+				<input type="text" id="atoxInput" bind:this={atoxInput} class="bg-white text-xs" bind:value={$EditorStore.refMeasurement} pattern={`^(?!^0$)-?\d+[.,]?\d*$`}>
 				<div class="input-group-cell preset-tonal-primary">{#if $UserSettingsStore.isometrics}cm{:else}in{/if}</div>
 			</div>
-
-			{#if !refMeasurementDirty}
+			{#if !$EditorStore.isRefDirty}
 				<div class="z-30 absolute right-[7.75rem] mt-2 text-green-700"><LucideCheck size=20/></div>
 			{/if}
 				<button
 					class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase"
-
-					onclick={setRefMeasurement}
+					onclick={() => target.setRefMeasurement()}
 				>Set</button>
-
 		</div>
 		<div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
 			Tip: You can change measurement units in <a href="##" class="anchor underline">the settings panel</a>.
@@ -1237,11 +533,11 @@
 <!-- followcursor -->
 {#if mode === "reference" && $UserSettingsStore.cursortips}
 	<div class="absolute p-2 bg-black/70 max-w-40 text-xs font-white z-40 pointer-events-none" style="top: {mouse.y + 20}px; left: {mouse.x + 20}px">
-		{#if !aIsSet}
+		{#if !$EditorStore.aIsSet}
 			Set start point.
-		{:else if !xIsSet}
+		{:else if !$EditorStore.xIsSet}
 			Set end point.
-		{:else if refMeasurementDirty}
+		{:else if $EditorStore.isRefDirty}
 			Adjust points if necessary then enter the length and press Set.
 		{:else}
 			All set! Now add point of aim (required for scoring) or start placing shots on the target.
@@ -1278,7 +574,7 @@
 						<option value="createNew">Add to new group</option>
 					</select>
 					<button
-						onclick={ (e) => assignSelectedShotsToGroup() }
+						onclick={ (e) => target.assignSelectedShotsToGroup() }
 					>
 						Go
 					</button>
@@ -1294,7 +590,6 @@
 	aria-roledescription="The funny thing is that if you can't see properly, why would you use this service? Anyways, compliance is bliss!"
 	bind:this={canvasContainer}
 	onmousemove={mousePosition}
-	onwheel={handleWheel}
 	class="relative grid justify-items-center align-middle place-content-center opacity-35 w-[100vw] h-[100vh]"
 ></div>
 <div bind:this={loader} class="z-50 transition-all top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-center absolute py-6 px-8 w-72 max-w-screen-sm rounded border-2 border-surface-500 bg-surface-300 text-surface-100 shadow-lg">{applicationState}</div>
