@@ -55,6 +55,7 @@ export class Target {
     private selectionTool!: SelectionTool;
     private store: TargetStoreInterface;
     private editorStore: EditorStoreInterface;
+    private targetStore: TargetStoreInterface;
     private scale: number;
     private staticAssets: string[];
     private chromeArea: { x: number, y: number };
@@ -69,6 +70,7 @@ export class Target {
         this.staticAssets = staticAssets;
         this.store = get(TargetStore);
         this.editorStore = get(EditorStore);
+        this.targetStore = get(TargetStore);
         this.scale = 1;
     }
 
@@ -162,6 +164,8 @@ export class Target {
 
         this.centerTarget();
         this.updateScale();
+
+        this.targetStore.target.image.originalsize = [this.originalWidth, this.originalHeight];
     }
 
     public centerTarget(): void
@@ -302,6 +306,7 @@ export class Target {
         this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.on('pointerup', this.handleDragEnd.bind(this));
         this.targetContainer.on('pointerupoutside', this.handleDragEnd.bind(this));
+        this.targetContainer.on('wheel', this.handleWheel.bind(this));
     }
 
     private handleMouseDown(e: FederatedPointerEvent): void
@@ -387,10 +392,21 @@ export class Target {
         }
     }
 
-    // set forwards
-    public setRefMeasurement(ref: string)
+    // rotation
+    public rotateTarget(degrees: number, reset: boolean = false)
     {
-        this.referenceTool.setRefMeasurement(ref);
+
+    }
+
+    // set forwards
+    public setRefMeasurement()
+    {
+        this.referenceTool.setRefMeasurement();
+    }
+
+    public assignSelectedShotsToGroup()
+    {
+        this.shotPoaTool.assignSelectedShotsToGroup();
     }
 
     // Getter, får och annat bös!

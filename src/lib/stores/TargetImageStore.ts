@@ -132,8 +132,8 @@ export const initialStore: TargetStoreInterface = {
         a: undefined,
         y: undefined,
         linelength: undefined,
-        measurement: undefined,    // User supplied,
-        cm: undefined,             // 1 cm === px
+        measurement: undefined,    // User supplied, converted to mm
+        cm: undefined,             // 10 mm === px
         px: undefined,             // 100px == mm
     },
     analysisFetched: false,

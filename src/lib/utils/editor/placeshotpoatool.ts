@@ -1,5 +1,6 @@
 // TODO: PlaceShotPoaTool.ts - Unit testing.
 // TODO: PlaceShotPoaTool.ts - Integrationstester.
+// TODO: AssignSelectedShotsToGroup
 // TODO: Skalan beter sig.
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type GroupInterface, type TargetStoreInterface } from '@/stores/TargetImageStore';
@@ -247,5 +248,10 @@ export class ShotPoaTool {
         this.targetContainer.off('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.off('pointerup', this.handleDragEnd.bind(this));
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
+    }
+
+    public assignSelectedShotsToGroup()
+    {
+        
     }
 }
