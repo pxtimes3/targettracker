@@ -51,13 +51,13 @@
 
 	let settingsForm: HTMLFormElement;
 
-	let selected: Array<Sprite | Container<ContainerChild>> = $state([]);
+	let selected: Array<Sprite | Container<ContainerChild>> = $state($EditorStore.selected);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 
 	let canvasContainer: HTMLDivElement;
     let loader: HTMLDivElement;
     let applicationState: string = $state('Loading...');
-    let target: Target;
+    let target: Target|undefined = $state();
     let chromeArea: {x: number, y: number} = $state({x: 0, y: 0});
 
 	function mousePosition(e: MouseEvent): void
@@ -169,10 +169,12 @@
 		console.log(`Mode: ${$EditorStore.mode}`);
 		console.log(`Chromarea: ${chromeArea.x}:${chromeArea.y}`)
 		console.log('---');
-		showChildren(target.app.stage);
+		showChildren(target?.app.stage);
 	}
 
-	function showChildren(parent: Container, indent = 0) {
+	function showChildren(parent: Container|undefined, indent = 0) {
+		if(!parent) return; 
+
 		if (indent === 0) {
 			console.log(`${'-'.repeat(indent)}label: ${parent.label}, uid: ${parent.uid}, parent: ${parent.parent?.label || parent.parent?.uid || '-'}`);
 		}
@@ -359,7 +361,7 @@
         </p>
     </div>
     <div class="pt-4">
-        <button id="rotate-left" class="btn ml-4 preset-filled align-middle" onclick={() => target.rotateTarget(-90)}>
+        <button id="rotate-left" class="btn ml-4 preset-filled align-middle" onclick={() => target?.rotateTarget(-90)}>
             <LucideRotateCcwSquare color="#000" />
         </button>
 
@@ -372,18 +374,18 @@
 			onkeyup={
 				(e) => {
 					setTimeout(() => {
-						let t = e.target as HTMLInputElement; target.rotateTarget(parseFloat(t.value), {absolute: true})
+						let t = e.target as HTMLInputElement; target?.rotateTarget(parseFloat(t.value), {absolute: true})
 					}, 500)
 				}
 			}
         />
 
-        <button id="rotate-left" class="btn preset-filled align-middle mr-4" onclick={() => target.rotateTarget(90)}>
+        <button id="rotate-left" class="btn preset-filled align-middle mr-4" onclick={() => target?.rotateTarget(90)}>
             <LucideRotateCwSquare color="#000" />
         </button>
     </div>
     <div class="pt-2 w-full mt-2 px-4 pb-2 place-self-start">
-        <input type="range" step="1" min="-45" max="45" bind:value={slider} oninput={() => target.rotateTarget(0, {slider: slider})} class="slider w-full" id="rotationslider">
+        <input type="range" step="1" min="-45" max="45" bind:value={slider} oninput={() => target?.rotateTarget(0, {slider: slider})} class="slider w-full" id="rotationslider">
     </div>
 </div>
 
@@ -407,7 +409,7 @@
 			{/if}
 				<button
 					class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase"
-					onclick={() => target.setRefMeasurement()}
+					onclick={() => target?.setRefMeasurement()}
 				>Set</button>
 		</div>
 		<div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
@@ -506,30 +508,43 @@
 	<div
 		class="grid grid-cols-1 grid-flow-row"
 	>
-		{#if selected.length > 0}
+		{#if $EditorStore.selected && $EditorStore.selected.length > 0}
 			<div class="col-span-2">
-				{selected.length === 1 ? `${selected.length} shot` : `${selected.length} shots`} selected.
+				{$EditorStore.selected.length === 1 ? `${$EditorStore.selected.length} shot` : `${$EditorStore.selected.length} shots`} selected.
 			</div>
 
-
-			{#if groupContainers && groupContainers.length > 0}
-				<div class="grid grid-cols-2">
-					<select name="assignToGroupSelect" id="assignToGroupSelect" bind:this={assignToGroupSelect}>
-						<option value={null} selected>Assign selected to group:</option>
-						{#each groupContainers as group}
-							<option value={group.label}>Group {group.label} {group.uid}</option>
-						{/each}
-						<option value="createNew">Add to new group</option>
-					</select>
-					<button
-						onclick={ (e) => target.assignSelectedShotsToGroup() }
-					>
-						Go
-					</button>
-				</div>
-			{/if}
+			<div class="grid grid-cols-2">
+				<select name="assignToGroupSelect" id="assignToGroupSelect" bind:this={assignToGroupSelect}>
+					<option value={null} selected>Assign selected to group:</option>
+					{#each $TargetStore.groups as group}
+						<option value={group.id}>Group {group.id}</option>
+					{/each}
+					<option value="createNew">Add to new group</option>
+				</select>
+				<button
+					onclick={ () => { assignToGroupSelect?.value ? target?.assignSelectedShotsToGroup(assignToGroupSelect?.value) : '';}}
+				>
+					Go
+				</button>
+			</div>
+			
 		{/if}
 	</div>
+</div>
+
+
+<div id="debugpanel" style="position: absolute; z-index: 99; right: 5rem; bottom: 5rem; background: #ccc; color: #000">
+	{#each $TargetStore.groups as group}
+		<div>
+		Group: {group.id}
+		Container: {target?.app.stage.getChildByLabel(group.id.toString())}
+		{#if group.shots}
+			{#each group?.shots as shot}
+				<div>ID: {shot.id} Pos: {shot.x.toFixed(0)}:{shot.y.toFixed(0)}</div>
+			{/each}
+		{/if}
+		</div>
+	{/each}	
 </div>
 
 <!-- canvas -->
