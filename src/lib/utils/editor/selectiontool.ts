@@ -1,109 +1,164 @@
-import type { FederatedPointerEvent } from 'pixi.js';
+import type { Application, FederatedPointerEvent } from 'pixi.js';
 import { Container, Graphics, Sprite } from 'pixi.js';
 
 export class SelectionTool {
-    private selectionRect: Graphics;
-    private isSelecting: boolean = false;
-    private startPos: { x: number; y: number } = { x: 0, y: 0 };
-    private targetContainer: Container;
+    public selectionRect: Graphics;
+    public isSelecting: boolean = false;
+    public startPos: { x: number; y: number } = { x: 0, y: 0 };
+    public targetContainer: Container;
+    public app: Application;
 
-    constructor(targetContainer: Container) {
+    constructor(targetContainer: Container, app: Application) 
+    {
         this.targetContainer = targetContainer;
         this.selectionRect = new Graphics();
-        this.targetContainer.addChild(this.selectionRect);
+        this.selectionRect.label = 'selectionRect'
+        // this.targetContainer.addChild(this.selectionRect);
+        this.app = app;
+        this.app.stage.addChild(this.selectionRect);
+
+        // Debug
+        this.selectionRect.setStrokeStyle({
+            width: 2,
+            color: 0xff0000,
+            alpha: 0.7,
+            alignment: 1
+        });
+        this.selectionRect.fill({
+            color: 0xff0000,
+            alpha: 0.2
+        });
+        this.selectionRect.rect(0, 0, 100, 100);
 
         // Initialize event listeners
-        this.initializeEvents();
+        // this.initializeEvents();
     }
 
-    private initializeEvents(): void {
-        this.targetContainer.eventMode = 'static';
-        this.targetContainer.on('pointerdown', this.onSelectionStart.bind(this));
-        this.targetContainer.on('pointermove', this.onSelectionMove.bind(this));
-        this.targetContainer.on('pointerup', this.onSelectionEnd.bind(this));
-        this.targetContainer.on('pointerupoutside', this.onSelectionEnd.bind(this));
-    }
+    // public initializeEvents(): void {
+    //     this.targetContainer.eventMode = 'static';
+    //     this.targetContainer.on('pointerdown', this.onSelectionStart.bind(this));
+    //     this.targetContainer.on('pointermove', this.onSelectionMove.bind(this));
+    //     this.targetContainer.on('pointerup', this.onSelectionEnd.bind(this));
+    //     this.targetContainer.on('pointerupoutside', this.onSelectionEnd.bind(this));
+    // }
 
-    private onSelectionStart(event: FederatedPointerEvent): void {
-        const localPos = this.targetContainer.toLocal(event.global);
-        this.startPos = { x: localPos.x, y: localPos.y };
+    public onSelectionStart(e: FederatedPointerEvent): void 
+    {
+        const pos = e.global;
+        this.startPos = { x: pos.x, y: pos.y };
         this.isSelecting = true;
     }
 
-    private onSelectionMove(event: FederatedPointerEvent): void {
+    /**
+     * TODO: Ta reda på varför selectionRect inte funkar med v8-syntax.
+     * @param e 
+     * @returns void
+     */
+    public onSelectionMove(e: FederatedPointerEvent): void 
+    {
         if (!this.isSelecting) return;
-
-        const localPos = this.targetContainer.toLocal(event.global);
-
-        // Clear previous rectangle
+        
         this.selectionRect.clear();
 
-        // Draw new rectangle
-        this.selectionRect.setStrokeStyle({width: 2, color: 0xff0000, alpha: 0.7, alignment: 1});
-        this.selectionRect.fill({color: 0xff0000, alpha: 0.2});
+        // this.selectionRect.setStrokeStyle({
+        //     width: 2, 
+        //     color: 0xff0000, 
+        //     alpha: 0.7, 
+        //     alignment: 1
+        // });
+        // this.selectionRect.fill({
+        //     color: 0xff0000, 
+        //     alpha: 0.2
+        // });
 
-        const width = localPos.x - this.startPos.x;
-        const height = localPos.y - this.startPos.y;
+        console.log('Drawing selection rectangle:', {
+            start: this.startPos,
+            current: e.global,
+            isSelecting: this.isSelecting
+        });
 
-        this.selectionRect.rect(
+        this.selectionRect.lineStyle(1, 0xff0000, 0.7);
+        this.selectionRect.beginFill(0xff0000, 0.2);
+
+        const width = e.global.x - this.startPos.x;
+        const height = e.global.y - this.startPos.y;
+
+        this.selectionRect.drawRect(
             this.startPos.x,
             this.startPos.y,
             width,
             height
         );
+
+        // this.selectionRect.rect(
+        //     this.startPos.x,
+        //     this.startPos.y,
+        //     width,
+        //     height
+        // )
+        this.selectionRect.endFill();
     }
 
-    private onSelectionEnd(event: FederatedPointerEvent): void {
+    public onSelectionEnd(e: FederatedPointerEvent): void 
+    {
         if (!this.isSelecting) return;
 
-        const localPos = this.targetContainer.toLocal(event.global);
+        // const localPos = this.targetContainer.toLocal(e.global);
+        const localPos = e.global;
         this.isSelecting = false;
 
-        // Find shots within selection rectangle
+        // Find shots
         const selectedShots = this.findShotsInSelection(
             this.startPos,
-            { x: localPos.x, y: localPos.y }
+            { x: e.x, y: localPos.y }
         );
 
-        // Clear selection rectangle
         this.selectionRect.clear();
 
-        // Emit custom event with selected shots
         const selectionEvent = new CustomEvent('shotsSelected', {
             detail: { shots: selectedShots }
         });
         window.dispatchEvent(selectionEvent);
     }
 
-    private findShotsInSelection(start: { x: number; y: number }, end: { x: number; y: number }): Sprite[] {
+    public findShotsInSelection(start: { x: number; y: number }, end: { x: number; y: number }): Sprite[] 
+    {
         const selectedShots: Sprite[] = [];
         const left = Math.min(start.x, end.x);
         const right = Math.max(start.x, end.x);
         const top = Math.min(start.y, end.y);
         const bottom = Math.max(start.y, end.y);
 
-        // Recursively search through all children
+        // console.log('Selection lrtb:', { left, right, top, bottom });
+
         this.targetContainer.children.forEach(child => {
             if (child instanceof Container) {
                 child.children.forEach(subChild => {
                     if (subChild instanceof Sprite && subChild.label?.startsWith('shot-')) {
+                        // sprite pos => to global
+                        const globalPos = subChild.getGlobalPosition();
+                        // console.log(`Shot ${subChild.label} global:`, globalPos);
+
                         if (
-                            subChild.x >= left &&
-                            subChild.x <= right &&
-                            subChild.y >= top &&
-                            subChild.y <= bottom
+                            globalPos.x >= left &&
+                            globalPos.x <= right &&
+                            globalPos.y >= top &&
+                            globalPos.y <= bottom
                         ) {
                             selectedShots.push(subChild);
+                            console.log(`Selected shot: ${subChild.label}`);
                         }
                     }
                 });
             }
         });
-
+        
+        // console.log('Selected shots:', selectedShots);
         return selectedShots;
     }
 
-    public destroy(): void {
+    public destroy(): void 
+    {
         this.targetContainer.off('pointerdown', this.onSelectionStart);
         this.targetContainer.off('pointermove', this.onSelectionMove);
         this.targetContainer.off('pointerup', this.onSelectionEnd);
