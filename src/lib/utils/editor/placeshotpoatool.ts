@@ -60,7 +60,8 @@ export class ShotPoaTool {
 
         shot.on('pointerdown', (e) => {
             e.stopPropagation();
-            this.handleSpriteDrag(e);
+            if (e.button === 1) { this.removeShot(e) }
+            if (e.button === 0) { this.handleSpriteDrag(e); }
         });
     }
 
@@ -72,11 +73,18 @@ export class ShotPoaTool {
         const position = this.targetContainer.toLocal({x,y});
 
         poa.position.set(position.x, position.y)
-        poa.scale.set(48 * this.setScale());
-        // poa.width = 48;
+        poa.scale.set(this.setScale());
+        poa.width = 48;
+        poa.height = poa.width;
 
         groupContainer?.addChild(poa);
 
+        // add to group
+        const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
+        if (!storeGroup) { console.error(`Tried to add poa to group ${group} in targetStore but no such group was found!`); return; }
+
+        storeGroup.poa = {x: position.x, y: position.y};
+        
         poa.on('pointerdown', (e) => {
             e.stopPropagation();
             this.handleSpriteDrag(e);
@@ -193,7 +201,7 @@ export class ShotPoaTool {
         sprite.cursor = 'pointer';
         sprite.interactive = true;
         sprite.anchor.set(0.5);
-        sprite.scale.set(1 / this.targetContainer.scale.x);
+        // sprite.scale.set(1 / this.targetContainer.scale.x);
 
         return sprite;
     }
@@ -236,10 +244,17 @@ export class ShotPoaTool {
     {
         if (!this.isDragging || !this.dragTarget) return;
 
-        const id = this.dragTarget.label.match(/^shot-(\d+)-\d+$/i)?.[1];
-        if (!id) { console.error(`dragTarget label => id failed!`); return; }
-
-        TargetStore.updateShot(id, parseInt(this.dragTarget.parent.label), this.dragTarget.x, this.dragTarget.y);
+        let id;
+        if (this.dragTarget.label.startsWith('shot')) {
+            id = this.dragTarget.label.match(/^shot-(\d+)-\d+$/i)?.[1];
+            if (!id) { console.error(`dragTarget label => id failed!`); return; }
+            TargetStore.updateShot(id, parseInt(this.dragTarget.parent.label), this.dragTarget.x, this.dragTarget.y);
+        } else if (this.dragTarget.label.startsWith('poa')) {
+            id = this.dragTarget.label.match(/^poa-(\d+)$/i)?.[1];
+            console.log(`poagroup: ${id}`)
+            if (!id) { console.error(`dragTarget label => id failed!`); return; }
+            TargetStore.updatePoa(parseInt(id), this.dragTarget.x, this.dragTarget.y)
+        }
 
         this.isDragging = false;
         this.dragTarget = null;
@@ -250,8 +265,13 @@ export class ShotPoaTool {
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
     }
 
-    public assignSelectedShotsToGroup()
+    public assignSelectedShotsToGroup(): void
     {
-        
+
+    }
+
+    public removeShot(e: FederatedPointerEvent): void
+    {
+
     }
 }

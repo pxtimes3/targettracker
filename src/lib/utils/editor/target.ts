@@ -11,6 +11,7 @@ import { Application, Assets, Container, Sprite } from 'pixi.js';
 import { get } from 'svelte/store';
 import { ReferenceTool } from './referencetool';
 import { SelectionTool } from './selectiontool';
+import { EditorCrosshair } from './crosshairs';
 
 interface ActionSuccess {
     type: 'success';
@@ -53,10 +54,12 @@ export class Target {
     private shotPoaTool!: ShotPoaTool;
     private referenceTool!: ReferenceTool;
     private selectionTool!: SelectionTool;
+    public  crosshairs!: EditorCrosshair;
     private store: TargetStoreInterface;
-    private editorStore: EditorStoreInterface;
+    private editorStore!: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
     private scale: number;
+    public  selecting: boolean = false;
     private staticAssets: string[];
     private chromeArea: { x: number, y: number };
     private originalWidth!: number;
@@ -69,7 +72,9 @@ export class Target {
         this.chromeArea = chromeArea;
         this.staticAssets = staticAssets;
         this.store = get(TargetStore);
-        this.editorStore = get(EditorStore);
+        EditorStore.subscribe(value => {
+            this.editorStore = value;
+        });
         this.targetStore = get(TargetStore);
         this.scale = 1;
     }
@@ -104,7 +109,7 @@ export class Target {
 
         this.shotPoaTool = new ShotPoaTool(this.targetContainer);
         this.referenceTool = new ReferenceTool(this.targetContainer);
-        this.selectionTool = new SelectionTool(this.targetContainer)
+        this.crosshairs = new EditorCrosshair(this.targetContainer, this.app)
 
         setApplicationState('Done!');
     }
@@ -302,6 +307,8 @@ export class Target {
         this.targetContainer.eventMode = 'dynamic';
         this.targetContainer.cursor = 'default';
 
+        this.selectionTool = new SelectionTool(this.targetContainer, this.app);
+
         this.targetContainer.on('pointerdown', this.handleMouseDown.bind(this));
         this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.on('pointerup', this.handleDragEnd.bind(this));
@@ -313,8 +320,13 @@ export class Target {
     {
         if (e.button === 1) {
             this.handleDragStart(e);
+        } else if (e.shiftKey) {
+            this.selectionTool.isSelecting = true;
+            this.selecting = true;
+            this.selectionTool.onSelectionStart(e);
+            return
         } else {
-            if (this.editorStore.mode === 'shot')
+            if (['shots', 'none'].includes(this.editorStore.mode))
                 this.shotPoaTool.addShot(e.clientX, e.clientY, '1');
             if (this.editorStore.mode === 'poa')
                 this.shotPoaTool.addPoa(e.clientX, e.clientY, '1');
@@ -343,6 +355,13 @@ export class Target {
 
     private handleDragMove(e: FederatedPointerEvent): void
     {
+        if (this.selecting) {
+            this.selectionTool.onSelectionMove(e);
+            return;
+        }
+
+        this.crosshairs.position = {x: e.globalX, y: e.globalY}
+
         if (!this.isDragging || !this.dragStartPosition || !this.dragStartMousePosition) return;
 
         const dx = e.global.x - this.dragStartMousePosition.x;
@@ -352,8 +371,13 @@ export class Target {
         this.targetContainer.y = this.dragStartPosition.y + dy;
     }
 
-    private handleDragEnd(): void
+    private handleDragEnd(e: FederatedPointerEvent): void
     {
+        if (this.selecting) {
+            this.selectionTool.onSelectionEnd(e);
+            this.selecting = false;
+        }
+
         this.targetContainer.cursor = 'crosshair';
         this.isDragging = false;
         this.dragStartPosition = null;
