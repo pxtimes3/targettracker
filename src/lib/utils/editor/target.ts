@@ -60,6 +60,8 @@ export class Target {
     private targetStore: TargetStoreInterface;
     private scale: number;
     public  selecting: boolean = false;
+    public  currentAngle: number = 0;
+    public  sliderAngle: number = 0;
     private staticAssets: string[];
     private chromeArea: { x: number, y: number };
     private originalWidth!: number;
@@ -93,7 +95,7 @@ export class Target {
             backgroundColor: 0xcdcdcc,
             antialias: true,
             resolution: window.devicePixelRatio || 1,
-            hello: true,
+            // hello: true,
         });
 
         canvasContainer.appendChild(this.app.canvas);
@@ -109,7 +111,9 @@ export class Target {
 
         this.shotPoaTool = new ShotPoaTool(this.targetContainer);
         this.referenceTool = new ReferenceTool(this.targetContainer);
-        this.crosshairs = new EditorCrosshair(this.targetContainer, this.app)
+        this.crosshairs = new EditorCrosshair(this.targetContainer, this.app);
+
+        this.targetContainer.angle = this.targetStore.target.rotation || 0;
 
         setApplicationState('Done!');
     }
@@ -417,9 +421,46 @@ export class Target {
     }
 
     // rotation
-    public rotateTarget(degrees: number, reset: boolean = false)
-    {
+    public rotateTarget(degrees: number = 0, options: { 
+        reset?: boolean, 
+        slider?: number, 
+        absolute?: boolean 
+    } = {}) {
+        const { reset, slider, absolute } = options;
 
+        if (reset) {
+            this.currentAngle = 0;
+            this.sliderAngle = 0;
+            this.targetContainer.angle = 0;
+        } else if (slider !== undefined) {
+            const previousSliderAngle = this.sliderAngle;
+            this.sliderAngle = slider;
+            
+            this.currentAngle = this.currentAngle - previousSliderAngle + this.sliderAngle;
+        } else if (absolute) {
+            // textinput 
+            this.currentAngle = degrees;
+            this.sliderAngle = 0;
+        } else {
+            this.currentAngle = (this.currentAngle + degrees) % 360;
+            this.sliderAngle = 0;
+        }
+
+        this.targetContainer.angle = this.currentAngle % 360;
+
+        // Update store
+        TargetStore.update(s => {
+            s.target.rotation = this.targetContainer.angle;
+            return s;
+        });
+
+        // Debug
+        // console.log({
+        //     currentAngle: this.currentAngle,
+        //     sliderAngle: this.sliderAngle,
+        //     containerAngle: this.targetContainer.angle,
+        //     storeRotation: this.targetStore.target.rotation
+        // });
     }
 
     // set forwards
