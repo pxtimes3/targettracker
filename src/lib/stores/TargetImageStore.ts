@@ -234,21 +234,54 @@ function createTargetStore()
          */
         updateShot: (label: string, groupid: number, x: number, y: number, score: number = 0, newgroup?: number) => {
             store.update(state => {
-                const group: GroupInterface|undefined = state.groups.find((g) => g.id === groupid);
-                if (!group) throw new Error(`Tried to find group: ${groupid} but none were found!`);
-                if (!group.shots || group.shots.length === 0) throw new Error(`Tried to update shot id: ${label} in group: ${groupid} but group has no shots!`);
+                // le deep state
+                const newState = structuredClone(state);
+                
+                // Find
+                const group = newState.groups.find(g => g.id === groupid);
+                if (!group || !group.shots) 
+                    throw new Error(`Group ${groupid} not found or has no shots`);
+                    
+                const shot = group.shots.find(s => s.id === label);
+                if (!shot) 
+                    throw new Error(`Shot ${label} not found`);
 
-                let shot: ShotInterface|undefined = group.shots.find((shot) => shot.id === label);
-                if (!shot) throw new Error(`Tried to find shot with id: ${label} but no shot was found!`);
+                // Update
+                shot.x = x;
+                shot.y = y;
+                shot.score = score;
+                
+                return newState;
+            });
+        },
+        removeShot: (groupid: number|string, shotid: string) => {
+            store.update(state => {
+                const newState = structuredClone(state);
 
-                shot = {
-                    ...shot,
-                    x: x,
-                    y: y,
-                    score: score
+                // console.log('state:', {
+                //     groupid,
+                //     shotid,
+                //     groups: newState.groups.map(g => ({ id: g.id, shots: g.shots }))
+                // });
+                
+                const group = newState.groups.find(g => g.id === Number(groupid));
+                // console.log('Found group:', group);
+
+                if (!group) {
+                    throw new Error(`Tried to delete shot ${shotid} from group: ${groupid} but no such group were found!`);
+                }
+                if (!group.shots) {
+                    throw new Error(`Tried to delete shot ${shotid} from group: ${groupid} but shots array was empty!`);
                 }
 
-                return state;
+                const shotIndex = group.shots.findIndex(shot => shot.id === shotid);
+                if (shotIndex === -1) {
+                    throw new Error(`Tried to find shot with id: ${shotid} but no shot was found!`);
+                }
+                
+                group.shots.splice(shotIndex, 1);
+                
+                return newState;
             })
         },
         updatePoa: (groupid: number, x: number, y:number) => {
@@ -275,7 +308,6 @@ function createTargetStore()
                 if (newState.reference.a && newState.reference.x && newState.reference.measurement) {
                     const calculatedValues = calculateReferenceValues(newState.reference, newState.target);
 
-                    // Include calculated values in the final state
                     return {
                         ...newState,
                         reference: {
@@ -287,6 +319,24 @@ function createTargetStore()
 
                 return newState;
             });
+        },
+        createNewGroup: (id: number = currentState.groups.length + 1) => {
+            const newGroup = {
+                id: id,
+                shots: [],
+                score: 0,
+                poa: {x:0, y: 0},
+                metrics: {
+                    meanradius: 0,
+                    size: 0,
+                    diagonal:0
+                }
+            }
+            store.update(state => {
+                currentState.groups.push(newGroup);
+                return state;
+            });
+            return currentState.groups.find((g) => g.id === id)
         },
         mmToPx: (mm: number) => {
             if (!currentState.reference.cm) {

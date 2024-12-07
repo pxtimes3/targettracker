@@ -1,18 +1,24 @@
+import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import type { Application, FederatedPointerEvent } from 'pixi.js';
 import { Container, Graphics, Sprite } from 'pixi.js';
+import { get } from 'svelte/store';
 
 export class SelectionTool {
-    public selectionRect: Graphics;
-    public isSelecting: boolean = false;
-    public startPos: { x: number; y: number } = { x: 0, y: 0 };
-    public targetContainer: Container;
-    public app: Application;
+    public  selectionRect: Graphics;
+    public  isSelecting: boolean = false;
+    private editorStore: EditorStoreInterface;
+    public  selectedShots: Sprite[];
+    public  startPos: { x: number; y: number } = { x: 0, y: 0 };
+    public  targetContainer: Container;
+    public  app: Application;
 
     constructor(targetContainer: Container, app: Application) 
     {
         this.targetContainer = targetContainer;
         this.selectionRect = new Graphics();
         this.selectionRect.label = 'selectionRect'
+        this.selectedShots = [];
+        this.editorStore = get(EditorStore);
         // this.targetContainer.addChild(this.selectionRect);
         this.app = app;
         this.app.stage.addChild(this.selectionRect);
@@ -59,6 +65,7 @@ export class SelectionTool {
         if (!this.isSelecting) return;
         
         this.selectionRect.clear();
+        this.selectedShots = [];
 
         // this.selectionRect.setStrokeStyle({
         //     width: 2, 
@@ -121,9 +128,8 @@ export class SelectionTool {
         window.dispatchEvent(selectionEvent);
     }
 
-    public findShotsInSelection(start: { x: number; y: number }, end: { x: number; y: number }): Sprite[] 
+    public findShotsInSelection(start: { x: number; y: number }, end: { x: number; y: number }): void 
     {
-        const selectedShots: Sprite[] = [];
         const left = Math.min(start.x, end.x);
         const right = Math.max(start.x, end.x);
         const top = Math.min(start.y, end.y);
@@ -145,8 +151,11 @@ export class SelectionTool {
                             globalPos.y >= top &&
                             globalPos.y <= bottom
                         ) {
-                            selectedShots.push(subChild);
-                            console.log(`Selected shot: ${subChild.label}`);
+                            EditorStore.update(s => {
+                                s.selected.push(subChild);
+                                return s;
+                            })
+                            console.log(`Selected shot: ${subChild.label}`, get(EditorStore));
                         }
                     }
                 });
@@ -154,7 +163,7 @@ export class SelectionTool {
         });
         
         // console.log('Selected shots:', selectedShots);
-        return selectedShots;
+        // return selectedShots;
     }
 
     public destroy(): void 
