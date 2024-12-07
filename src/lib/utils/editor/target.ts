@@ -11,6 +11,7 @@ import { Application, Assets, Container, Sprite } from 'pixi.js';
 import { get } from 'svelte/store';
 import { ReferenceTool } from './referencetool';
 import { SelectionTool } from './selectiontool';
+import { EditorCrosshair } from './crosshairs';
 
 interface ActionSuccess {
     type: 'success';
@@ -53,6 +54,7 @@ export class Target {
     private shotPoaTool!: ShotPoaTool;
     private referenceTool!: ReferenceTool;
     private selectionTool!: SelectionTool;
+    public  crosshairs!: EditorCrosshair;
     private store: TargetStoreInterface;
     private editorStore!: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
@@ -107,6 +109,7 @@ export class Target {
 
         this.shotPoaTool = new ShotPoaTool(this.targetContainer);
         this.referenceTool = new ReferenceTool(this.targetContainer);
+        this.crosshairs = new EditorCrosshair(this.targetContainer, this.app)
 
         setApplicationState('Done!');
     }
@@ -356,6 +359,8 @@ export class Target {
             this.selectionTool.onSelectionMove(e);
             return;
         }
+
+        this.crosshairs.position = {x: e.globalX, y: e.globalY}
 
         if (!this.isDragging || !this.dragStartPosition || !this.dragStartMousePosition) return;
 
