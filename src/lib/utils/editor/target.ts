@@ -320,8 +320,9 @@ export class Target {
         this.targetContainer.on('wheel', this.handleWheel.bind(this));
     }
 
-    private handleMouseDown(e: FederatedPointerEvent): void
+    public handleMouseDown(e: FederatedPointerEvent): void
     {
+        console.log('mousedown',e)
         if (e.button === 1) {
             this.handleDragStart(e);
         } else if (e.shiftKey) {
@@ -469,9 +470,9 @@ export class Target {
         this.referenceTool.setRefMeasurement();
     }
 
-    public assignSelectedShotsToGroup()
+    public assignSelectedShotsToGroup(value: string)
     {
-        this.shotPoaTool.assignSelectedShotsToGroup();
+        this.shotPoaTool.assignSelectedShotsToGroup(value);
     }
 
     // Getter, får och annat bös!

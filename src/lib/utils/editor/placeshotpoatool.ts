@@ -248,6 +248,7 @@ export class ShotPoaTool {
         if (this.dragTarget.label.startsWith('shot')) {
             id = this.dragTarget.label.match(/^shot-(\d+)-\d+$/i)?.[1];
             if (!id) { console.error(`dragTarget label => id failed!`); return; }
+            console.log(get(TargetStore))
             TargetStore.updateShot(id, parseInt(this.dragTarget.parent.label), this.dragTarget.x, this.dragTarget.y);
         } else if (this.dragTarget.label.startsWith('poa')) {
             id = this.dragTarget.label.match(/^poa-(\d+)$/i)?.[1];
@@ -265,13 +266,73 @@ export class ShotPoaTool {
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
     }
 
-    public assignSelectedShotsToGroup(): void
+    public assignSelectedShotsToGroup(value: string): void
     {
+        const shots = this.editorStore.selected;
+        let group: GroupInterface|undefined;
+        let container: Container|null;
 
+        if (value === 'createNew') {
+            const res = this.createGroup();
+            if (res && res.group && res.container) {
+                group = res.group;
+                container = res.container;
+            } else {
+                throw new Error(`this.createGroup() caused an error!`)
+            }
+        } else {
+            group = this.targetStore.groups.find((g) => g.id === parseInt(value));
+            container = this.targetContainer.getChildByLabel(value);
+
+            if (!group) {
+                throw new Error(`No group found with id: ${value}`);
+            }
+            if (!container) {
+                throw new Error(`No container found with the label ${value}`);
+            }
+        }
+            
+        shots.forEach((shot) => {
+            // update targetStore
+            const ids = shot.label.match(/shot-(\d+)-(\d+)/i);
+            if (!ids[1]) { console.error(`Found no shotID in label ${shot.label}!`); return; }
+            if (!ids[2]) { console.error(`Found no groupID in label ${shot.label}!`); return; }
+            TargetStore.setShot(ids[1], group.id, shot.x, shot.y, 0);
+            TargetStore.removeShot(ids[2], ids[1]);
+            
+            // update label
+            shot.label = `shot-${group.shots?.length}-${group.id}`;
+            // add to new container
+            container.addChild(shot);
+            // remove from old container
+            const oldContainer = this.targetContainer.getChildByLabel(ids[2]);
+            if (!oldContainer) { console.error(`No container labelled ${ids[2]}!`); return; }
+            oldContainer.removeChild(shot);
+        });
     }
 
     public removeShot(e: FederatedPointerEvent): void
     {
+        const ids = [...e.target.label.matchAll(/^shot-(\d+)-(\d+)$/g)];
+        if (ids) {
+            console.log(e.target.label, ids)
+            let shotid = ids[0][1];
+            let groupid = parseInt(ids[0][2]);
+            const res = TargetStore.removeShot(groupid, shotid);
 
+            const groupContainer = this.targetContainer.getChildByLabel(ids[0][2]);
+            
+            if (groupContainer) {
+                const sprite = groupContainer.getChildByLabel(e.target.label);
+                console.log(sprite);
+                if (sprite) {
+                    groupContainer.removeChild(sprite);
+                } else {
+                    throw new Error(`No such sprite (${e.target.label})`);
+                }
+            } else {
+                throw new Error(`No such groupcontainer (${ids[0][2]})`);
+            }
+        }
     }
 }
