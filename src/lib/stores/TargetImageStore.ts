@@ -251,6 +251,17 @@ function createTargetStore()
                 return state;
             })
         },
+        updatePoa: (groupid: number, x: number, y:number) => {
+            store.update(state => {
+                const group: GroupInterface|undefined = state.groups.find((g) => g.id === groupid);
+                if (!group) throw new Error(`Tried to find group: ${groupid} to update PoA, but none were found!`);
+                group.poa = {
+                    x: x,
+                    y: y
+                }
+                return state;
+            })
+        },
         setReference: (key: keyof TargetStoreInterface['reference'], value: number[]|number) => {
             store.update(state => {
                 const newState = {
