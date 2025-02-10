@@ -3,7 +3,7 @@
 // TODO: AssignSelectedShotsToGroup
 // TODO: Skalan beter sig.
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
-import { TargetStore, type GroupInterface, type TargetStoreInterface } from '@/stores/TargetImageStore';
+import { TargetStore, type GroupInterface, type ShotInterface, type TargetStoreInterface } from '@/stores/TargetImageStore';
 import type { FederatedPointerEvent } from 'pixi.js';
 import { Assets, Container, Sprite } from 'pixi.js';
 import { get } from 'svelte/store';
@@ -33,13 +33,26 @@ export class ShotPoaTool {
         const shot = await this.createSprite(label);
         const position = this.targetContainer.toLocal({x,y});
 
-        const groupContainer = await this.getGroupContainer(group);
-        if (!groupContainer) { throw new Error(`No groupContainer with label ${group} found!`); }
+        let groupContainer: Container|null;
+        let storeGroup: GroupInterface|undefined;
+        let shots; // ShotInterface
 
-        const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
-        if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
+        groupContainer = await this.getGroupContainer(group);
+        if (!groupContainer) { 
+            const newGroup = this.createGroup();
 
-        const shots = storeGroup.shots;
+            if (!newGroup) {
+                throw new Error(`Failed creating new group! group: ${group}`);
+            }
+
+            storeGroup = newGroup.group;
+            groupContainer = newGroup.container;
+        } else {
+            storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
+            if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
+        }
+
+        shots = storeGroup.shots
         if (!shots) { console.error(`No shots array found in store-group ${group}!`, storeGroup); return; }
 
         shot.position.set(position.x, position.y);
