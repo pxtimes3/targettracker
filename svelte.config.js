@@ -16,6 +16,7 @@ const config = {
 			"@/*": "./src/lib",
 			"$src": "./src",
 			"$routes": "./src/routes",
+			"$types": "./src/routes/types"
 		}
 	}
 };

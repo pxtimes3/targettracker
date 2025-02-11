@@ -1,34 +1,20 @@
-import { skeleton } from '@skeletonlabs/skeleton/plugin';
-import * as themes from '@skeletonlabs/skeleton/themes';
-import forms from '@tailwindcss/forms';
-import { join } from 'path';
-import ducks from './duckstheme';
+import type { Config } from 'tailwindcss';
 
+// import { skeleton, contentPath } from '@skeletonlabs/skeleton/plugin';
+// import * as themes from '@skeletonlabs/skeleton/themes';
 
-/** @type {import('tailwindcss').Config} \*/
 export default {
     content: [
         './src/**/*.{html,js,svelte,ts}',
-        join(require.resolve('@skeletonlabs/skeleton-svelte'), '../**/*.{html,js,svelte,ts}')
+        // contentPath(import.meta.url, 'svelte')
     ],
     theme: {
-        extend: {
-            gridTemplateRows: {
-                'layout' : 'auto min-content auto',
-            },
-            cursor: {
-                'poa'  : 'url(cursors/poa.svg), default',
-                'shot' : 'url(cursors/shot.svg), default',
-                'move' : 'url(cursors/move.svg), default',
-                'dot'  : 'url(cursors/dot.svg), default'
-            }
-        },
+        extend: {},
     },
     plugins: [
-        forms,
-        skeleton({
-            // NOTE: each theme included will be added to your CSS bundle
-            themes: [ ducks, themes.rose ]
-        })
+        // skeleton({
+            // NOTE: each theme included will increase the size of your CSS bundle
+            // themes: [ themes.cerberus, themes.wintry ]
+        // })
     ]
-}
+} satisfies Config
