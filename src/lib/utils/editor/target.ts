@@ -12,6 +12,8 @@ import { get } from 'svelte/store';
 import { ReferenceTool } from './referencetool';
 import { SelectionTool } from './selectiontool';
 import { EditorCrosshair } from './crosshairs';
+import { DropShadowFilter } from 'pixi-filters';
+
 
 interface ActionSuccess {
     type: 'success';
@@ -98,6 +100,8 @@ export class Target {
             // hello: true,
         });
 
+        
+
         canvasContainer.appendChild(this.app.canvas);
 
         // Verify and set up target image
@@ -165,6 +169,9 @@ export class Target {
         this.targetContainer.cursor = 'crosshair';
         this.targetContainer.label = 'targetContainer';
 
+        // dropshadow
+        this.targetContainer.filters = [ new DropShadowFilter({alpha: 0.25, offsetX: 8, offsetY: 8}) ];
+        
         this.originalWidth = this.targetSprite.width;
         this.originalHeight = this.targetSprite.height;
 
@@ -330,7 +337,7 @@ export class Target {
             this.selecting = true;
             this.selectionTool.onSelectionStart(e);
             return
-        } else {
+        } else if (e.button === 0) {
             if (['shots', 'none'].includes(this.editorStore.mode))
                 this.shotPoaTool.addShot(e.clientX, e.clientY, '1');
             if (this.editorStore.mode === 'poa')

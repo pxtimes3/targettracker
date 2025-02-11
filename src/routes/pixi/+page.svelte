@@ -11,12 +11,11 @@
 	 */
 	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
-	import { EditorStore, activePanel } from '@/stores/EditorStore';
+	import { EditorStore, activePanel, activeButton } from '@/stores/EditorStore';
 	import { TargetStore } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
-
-	import { ReferenceTool } from '@/utils/editor/referencetool';
-	import { SelectionTool } from '@/utils/editor/selectiontool';
+	
+	import InfoPanel from '@/components/target/editor/panels/InfoPanel.svelte';
 	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
@@ -145,6 +144,7 @@
 		}
 	}
 
+
 	function handleResize(e?: Event): void
 	{
 		if (!target) return;
@@ -188,6 +188,14 @@
 				}
 			});
 		}
+	}
+
+	function togglePanels(name: string)
+	{
+		if (!name) return;
+
+		$activePanel === name ? $activePanel = undefined : $activePanel = name;
+		$activeButton === name ? $activeButton = undefined : $activeButton = name;
 	}
 
 	onMount(async () => {
@@ -236,6 +244,14 @@
 				crosshairContainer.visible = false;
 			}
 		}
+
+		if ($activeButton) {
+			console.log($activeButton);
+		}
+
+		if ($activePanel) {
+			console.log($activePanel);
+		}
 	});
 </script>
 
@@ -260,9 +276,9 @@
 		<hr class="max-w-[70%] ml-[15%] opacity-40"/>
 		<button
 			title="Target information"
-			id="targetinfo-button"
-			onclick={ (e) => {$activePanel = "info-panel"; showPanel(e, "info");}  }
-			class="w-16 h-12 mt-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			id="info-button"
+			onclick={ () => togglePanels('info-panel') }
+			class="w-12 h-12 mt-2 ml-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center {$activePanel === 'info-panel' ? 'active' : ''}"
 		>
 			<LucideTarget
 				color="#000"
@@ -451,7 +467,7 @@
 	</form>
 </div>
 
-<div id="info-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' } grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
+<!-- <div id="info-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' } grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Target information</p>
         <p class="justify-self-end">
@@ -460,7 +476,8 @@
     </div>
 	<div class="p-4 mb-8 grid grid-flow-row gap-y-2">
 		<div class="text-sm text-primary-950">
-			Name
+			<label for="target_name">Name</label>
+			<input type="text" class="appearance-none block w-full bg-gray-200 text-gray-700 border border-red-500 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white" id="target_name" name="target_name" />
 		</div>
 		<div class="text-sm text-primary-950">
 			Type
@@ -475,10 +492,12 @@
 			Ammunition
 		</div>
 		<div class="text-sm text-primary-950">
-			Weather data:
+			Weather data
 		</div>
 	</div>
-</div>
+</div> -->
+
+<InfoPanel />
 
 <!-- followcursor -->
 {#if mode === "reference" && $UserSettingsStore.cursortips}
