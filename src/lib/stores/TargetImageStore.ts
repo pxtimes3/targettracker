@@ -68,6 +68,7 @@ const TargetStoreSchema = z.object({
             humidity: z.number(),
         }),
         note: z.string(),
+        public: z.boolean(),
     }),
     target: z.object({
         scale: z.number().optional(),
@@ -135,6 +136,7 @@ export const initialStore: TargetStoreInterface = {
             humidity: 0,
         },
         note: '',
+        public: false,
     },
     target: {
         type: undefined,

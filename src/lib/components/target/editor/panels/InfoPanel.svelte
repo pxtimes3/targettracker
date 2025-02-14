@@ -1,19 +1,47 @@
 <script lang="ts">
 	import type { PageServerData } from './$types'
-	import { z } from 'zod';
-	import { Button } from 'flowbite-svelte'
+	import { Button } from 'svelte-ux';
 	import { slide } from 'svelte/transition'
 	import { quadInOut } from 'svelte/easing';
 	import { DateTime } from "luxon";
 	import { EditorStore, activePanel } from '@/stores/EditorStore';
 	import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
-	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
+	import { LucideChevronUp, LucideChevronDown, type Icon as IconType } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
+	type Chevron = {
+		name: string;
+		icon: typeof IconType;
+	}
+
+	const chevronIcon = {
+		'up': {
+			name: 'up',
+			icon: LucideChevronUp
+		},
+		'dn': {
+			name: 'dn',
+			icon: LucideChevronDown
+		}
+	}
+
 	let { data, active } : { data: PageServerData, active: boolean } = $props();
+
 	let infoform : HTMLFormElement|undefined = $state();
 	let saved: Boolean = $state(false);
 	let saveTime: string|undefined = $state();
+
+	function toggleSection(e: Event, id: string): void
+	{
+		const section = document.getElementById(id);
+		if (!section) {
+			console.error(`No section with id ${id}.`);
+			return;
+		}
+
+		// chevron
+
+	}
 
 	function compareFormWithStore() {
 		if (!infoform) { return; }
@@ -63,18 +91,14 @@
 {#if $activePanel === 'info-panel'}
 	<div 
 		id="info-panel" 
-		class="absolute justify-items-end z-50 left-16 grid grid-rows-[auto_1fr_auto_auto] grid-flow-row pb-0 px-2 py-4 space-y-0 bg-slate-400 w-128 max-w-128 h-full"
+		class="absolute justify-items-end z-50 left-16 grid grid-flow-row pb-0 px-2 py-4 space-y-0 bg-slate-400 dark:bg-slate-800 w-[36rem] h-full overflow-y-auto overflow-x-hidden"
 		transition:slide={{axis: 'x', duration: 150, easing: quadInOut }}
 	>
-		<form id="infoform" bind:this={infoform}>
-			<div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
-				<p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Target information</p>
-				<p class="justify-self-end">
-					<LucideX size="14" class="cursor-pointer" onclick={(e) => $activePanel = ''} />
-				</p>
-			</div>
+		<form id="infoform" bind:this={infoform} class="w-full">
 			<div class="p-4 mb-8 grid grid-flow-row gap-y-2 justify-self-start place-self-start self-start w-full">
-				<div class="text-sm text-primary-950">
+				<div class="my-2">Target Information</div>
+				<hr/>
+				<div class="text-sm text-primary-950 mt-2">
 					<label for="name">Name</label>
 					<input 
 						type="text" 
@@ -115,10 +139,18 @@
 						<option>Create new</option>
 					</select>
 				</div>
-				<div class="relative mt-8">
-					<div>Weather Data</div>
+				<div class="mt-4">
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div 
+						class="my-2 w-full"
+						onclick={(e) => toggleSection(e, 'weatherdata')}
+					>
+						<span>Weather Data</span>
+						<div>{chevronIcon.up.icon}</div>
+					</div>
 					<hr/>
-					<div class="text-sm text-primary-950 grid grid-cols-6 grid-rows-[auto_auto] gap-x-4 mt-4">
+					<div id="weatherdata" class="text-sm text-primary-950 grid grid-cols-6 grid-rows-[auto_auto] gap-x-4 mt-4 hidden">
 						<div class="grid grid-rows-[auto_1fr] grid-cols-1 row-start-1 col-span-3">
 							<label for="windspeed">Windspeed</label>
 							<input 
@@ -166,7 +198,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="mt-8">Notes</div>
+				<div class="mt-4">Notes</div>
 				<hr/>
 				<div class="text-sm text-primary-950 mt-4">
 					<textarea 
@@ -176,6 +208,15 @@
 						onchange={ () => {saved = false} }
 					></textarea>
 				</div>
+				<div class="mt-4">Visibility</div>
+				<hr/>
+				<div>
+					<label class="inline-flex items-center cursor-pointer">
+						<input type="checkbox" value="" class="sr-only peer">
+						<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+						<span class="ms-3 text-sm font-medium">Public</span>
+					</label>
+				</div>
 			</div>
 		</form>		
 		<div class="w-full px-4 py-4 pb-8 grid grid-cols-[auto_auto] justify-between place-content-center max-h-8">
@@ -184,13 +225,13 @@
 					<span>Last saved: {saveTime}</span>
 				{/if}
 			</div>
-			<button 
-				type="button" 
-				class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+			<Button 
+				variant="fill" 
+				color="success"
 				onclick={() => compareFormWithStore()}
 			>
 				{saved ? 'Saved' : 'Save'}
-			</button>
+			</Button>
 		</div>
 	</div>
 {/if}

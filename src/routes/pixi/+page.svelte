@@ -4,7 +4,6 @@
 	import { EditorStore, activePanel, activeButton } from '@/stores/EditorStore';
 	import { TargetStore } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
-	
 	import InfoPanel from '@/components/target/editor/panels/InfoPanel.svelte';
 	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
@@ -12,6 +11,7 @@
 	import { Application, Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
+	import { ThemeSwitch } from 'svelte-ux';
 
 	let { data } : { data: PageServerData } = $props();
 
@@ -249,7 +249,7 @@
 	onresize={handleResize}
 />
 <aside
-	class="absolute grid grid-flow-row place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
+	class="absolute grid grid-flow-row grid-rows-[auto_auto_auto_1fr] place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
 >
 	<button
 		id="targetTrackerMenu"
@@ -262,7 +262,7 @@
 		/>
 	</button>
 	<div id="tools" class="grid grid-flow-row">
-		<hr class="max-w-[70%] ml-[15%] opacity-40"/>
+		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 		<button
 			title="Target information"
 			id="info-button"
@@ -270,7 +270,7 @@
 			class="w-12 h-12 mt-2 ml-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center {$activePanel === 'info-panel' ? 'active' : ''}"
 		>
 			<LucideTarget
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
@@ -282,7 +282,7 @@
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideRuler
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
@@ -294,7 +294,7 @@
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocateFixed
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
@@ -307,12 +307,12 @@
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
 		>
 			<LucideLocate
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
 
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3"/>
+		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 
 		<button
 			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
@@ -322,12 +322,12 @@
 		>
 			<LucideRefreshCcw
 				size="20"
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
 
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3"/>
+		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 
 		<button
 			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
@@ -337,7 +337,7 @@
 		>
 			<SlidersHorizontal
 				size="20"
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
@@ -350,7 +350,7 @@
 		>
 			<LucideSave
 				size="20"
-				color="#000"
+
 				class="pointer-events-none"
 			/>
 		</button>
@@ -364,10 +364,17 @@
 	>
 		<LucideBug
 			size="20"
-			color="#000"
+
 			class="pointer-events-none"
 		/>
 	</button>
+	<div class="grid place-self-end justify-self-start max-w-16 w-16 justify-items-center pb-4">
+		<ThemeSwitch classes={{
+			icon: "text-current",
+			switch: "",
+			toggle: "",
+		}} />
+	</div>
 </aside>
 
 <!-- panels -->
