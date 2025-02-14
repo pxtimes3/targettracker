@@ -1,14 +1,4 @@
 <script lang="ts">
-	/**
-	 * TODO: Cleanup!
-	 * TODO: GroupContainers finns inte längre, gör om @ line 658.
-	 * TODO: Scoring.
-	 * TODO: Add firearm.
-	 * TODO: Add ammunition.
-	 * TODO: Add weather data.
-	 * TODO: Save.
-	 * TODO: Unit Tests @ src/routes/pixi/page.svelte
-	 */
 	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
 	import { EditorStore, activePanel, activeButton } from '@/stores/EditorStore';
@@ -17,7 +7,7 @@
 	
 	import InfoPanel from '@/components/target/editor/panels/InfoPanel.svelte';
 	import { Target } from '@/utils/editor/target';
-	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
+	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
 	import { Application, Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
@@ -222,7 +212,6 @@
 	onDestroy(async () => {
 		if (target) {
 			await Assets.unload(staticAssets)
-			app.destroy(true, true);
 		}
 
 		if (browser) {
@@ -237,13 +226,13 @@
 			canvasContainer.style.height = `${chromeArea.y}px`;
 		}
 
-		if ($UserSettingsStore) {
-			if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
-				crosshairContainer.visible = true;
-			} else if (crosshairContainer) {
-				crosshairContainer.visible = false;
-			}
-		}
+		// if ($UserSettingsStore) {
+		// 	if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
+		// 		crosshairContainer.visible = true;
+		// 	} else if (crosshairContainer) {
+		// 		crosshairContainer.visible = false;
+		// 	}
+		// }
 
 		if ($activeButton) {
 			console.log($activeButton);
@@ -347,6 +336,19 @@
 			onclick={ (e) => { showPanel(e, "settings"); $activePanel='settings-panel' }}
 		>
 			<SlidersHorizontal
+				size="20"
+				color="#000"
+				class="pointer-events-none"
+			/>
+		</button>
+
+		<button
+			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			title="Save"
+			id="save-button"
+			onclick={ (e) => { showPanel(e, "save"); $activePanel='save-panel' }}
+		>
+			<LucideSave
 				size="20"
 				color="#000"
 				class="pointer-events-none"

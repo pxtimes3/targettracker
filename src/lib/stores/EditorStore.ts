@@ -30,8 +30,8 @@ const EditorStoreSchema = z.object({
 
 export type EditorStoreInterface = z.infer<typeof EditorStoreSchema>;
 
-export const activeButton:      Writable<string> = writable();
-export const activePanel:       Writable<string> = writable();
+export const activeButton:      Writable<string|undefined> = writable();
+export const activePanel:       Writable<string|undefined> = writable();
 
 export const showAddFirearm:    Writable<boolean> = writable(false);
 export const showAddAmmunition: Writable<boolean> = writable(false);

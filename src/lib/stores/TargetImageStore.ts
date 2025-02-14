@@ -55,6 +55,20 @@ export type GroupInterface = z.infer<typeof GroupSchema>;
 
 
 const TargetStoreSchema = z.object({
+    info: z.object({
+        name: z.string(),
+        type: z.string(),
+        firearm: z.string(),
+        ammunition: z.string(),
+        weather: z.object({
+            windspeed: z.number(),
+            wind_direction: z.string(),
+            altitude: z.number(),
+            temperature: z.number(),
+            humidity: z.number(),
+        }),
+        note: z.string(),
+    }),
     target: z.object({
         scale: z.number().optional(),
         rotation: z.number().optional(),               // degrees. * Math.PI / 180 => angle
@@ -108,6 +122,20 @@ const TargetStoreSchema = z.object({
 export type TargetStoreInterface = z.infer<typeof TargetStoreSchema>;
 
 export const initialStore: TargetStoreInterface = {
+    info: {
+        name: '',
+        type: '',
+        firearm: '',
+        ammunition: '',
+        weather: {
+            windspeed: 0,
+            wind_direction: '',
+            altitude: 0,
+            temperature: 0,
+            humidity: 0,
+        },
+        note: '',
+    },
     target: {
         type: undefined,
         range: undefined,
