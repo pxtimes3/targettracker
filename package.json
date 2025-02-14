@@ -22,11 +22,6 @@
 		"@sveltejs/adapter-auto": "^4.0.0",
 		"@sveltejs/kit": "^2.17.1",
 		"@sveltejs/vite-plugin-svelte": "^5.0.3",
-		"@tailwindcss/aspect-ratio": "^0.4.2",
-		"@tailwindcss/container-queries": "^0.1.1",
-		"@tailwindcss/forms": "^0.5.10",
-		"@tailwindcss/postcss": "^4.0.6",
-		"@tailwindcss/typography": "^0.5.16",
 		"@tailwindcss/vite": "^4.0.6",
 		"@testing-library/jest-dom": "^6.6.3",
 		"@types/eslint": "^9.6.1",
@@ -43,15 +38,15 @@
 		"jsdom": "^26.0.0",
 		"nodemailer": "^6.10.0",
 		"pixi-filters": "^6.1.0",
+		"postcss": "^8.5.2",
 		"prettier": "^3.5.0",
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"svelte": "^5.19.9",
 		"svelte-check": "^4.1.4",
 		"svelte-radix": "^2.0.1",
-		"tailwind-merge": "^3.0.1",
-		"tailwind-variants": "^0.3.1",
-		"tailwindcss": "^4.0.6",
+		"svelte-turnstile": "^0.10.0",
+		"tailwindcss": "3",
 		"typescript": "^5.7.3",
 		"typescript-eslint": "^8.23.0",
 		"uuid": "^11.0.5",
@@ -60,10 +55,10 @@
 		"zod": "^3.24.1"
 	},
 	"dependencies": {
+		"@layerstack/tailwind": "^0.0.12",
 		"@node-rs/argon2": "^2.0.2",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
-		"@popperjs/core": "^2.11.8",
 		"@sentry/sveltekit": "^9.0.0",
 		"@types/nodemailer": "^6.4.17",
 		"@zxcvbn-ts/core": "^3.0.4",
@@ -72,14 +67,13 @@
 		"@zxcvbn-ts/matcher-pwned": "^3.0.4",
 		"drizzle-orm": "^0.39.2",
 		"exifreader": "^4.26.1",
-		"flowbite": "^3.1.2",
-		"flowbite-svelte": "^0.47.4",
 		"lucide-svelte": "^0.475.0",
 		"luxon": "^3.5.0",
 		"pixi.js": "^8.7.3",
 		"postgres": "^3.4.5",
 		"svelte-captcha-enhance": "^1.2.1",
 		"svelte-sonner": "^0.3.28",
+		"svelte-ux": "^0.90.2",
 		"ts-luxon": "5.0.7-beta.0"
 	},
 	"pnpm": {
@@ -89,7 +83,9 @@
 		],
 		"onlyBuiltDependencies": [
 			"exifreader",
-			"@sentry/cli"
+			"@sentry/cli",
+			"esbuild",
+			"svelte-preprocess"
 		]
 	}
 }
