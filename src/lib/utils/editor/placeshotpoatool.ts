@@ -2,10 +2,12 @@
 // TODO: PlaceShotPoaTool.ts - Integrationstester.
 // TODO: AssignSelectedShotsToGroup
 // TODO: Skalan beter sig.
+
+// src/lib/utils/editor/placeshotpoatool.ts
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type GroupInterface, type ShotInterface, type TargetStoreInterface } from '@/stores/TargetImageStore';
 import type { FederatedPointerEvent } from 'pixi.js';
-import { Assets, Container, Sprite } from 'pixi.js';
+import { Assets, Container, Sprite, Graphics, Circle, Text } from 'pixi.js';
 import { get } from 'svelte/store';
 
 export class ShotPoaTool {
@@ -23,6 +25,8 @@ export class ShotPoaTool {
         this.editorStore = get(EditorStore);
         this.targetStore = get(TargetStore);
         this.texturePath = '/cursors/shot.svg';
+
+        type Point = {x: number, y: number};
     }
 
     public async addShot(x: number, y: number, group: string): Promise<void>
@@ -63,13 +67,17 @@ export class ShotPoaTool {
 
         groupContainer?.addChild(shot);
 
-        shots.push({
+        const newShot = {
             id: this.getShotsTotal.toString(),
             group: parseInt(group),
             x: position.x,
             y: position.y,
             score: 0,
-        });
+        };
+
+        TargetStore.addShot(newShot, parseInt(group));
+
+        this.drawAllMetrics(parseInt(group))
 
         shot.on('pointerdown', (e) => {
             e.stopPropagation();
@@ -77,6 +85,166 @@ export class ShotPoaTool {
             if (e.button === 0) { this.handleSpriteDrag(e); }
         });
     }
+
+    private drawMeanRadius(groupId: number): void 
+    {
+        const group = TargetStore.getGroup(groupId);
+        if (!group || !group.shots || group.shots.length < 2) return;
+        
+        const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
+        const meanCenter = {
+            x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+            y: points.reduce((sum, p) => sum + p.y, 0) / points.length
+        };
+
+        // Calculate AVERAGE distance instead of MAX distance
+        const meanRadius = points.reduce((sum, p) => 
+            sum + Math.sqrt(
+                Math.pow(p.x - meanCenter.x, 2) + 
+                Math.pow(p.y - meanCenter.y, 2)
+            ), 0) / points.length;
+        
+        const graphics = new Graphics();
+        graphics.clear();
+        
+        graphics.circle(meanCenter.x, meanCenter.y, meanRadius);
+        graphics.stroke({width: 4, color: '0xff0000', alpha: 0.5});
+
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (groupContainer) {
+            const oldCircle = groupContainer.getChildByLabel(`mr-${groupId}`);
+            if (oldCircle) groupContainer.removeChild(oldCircle);
+            graphics.label = `mr-${groupId}`;
+            groupContainer.addChild(graphics);
+
+            console.log(`MR. center: ${meanCenter.x},${meanCenter.y} radii: ${meanRadius}`);
+        }
+    }
+    
+    private drawCoveringRadius(groupId: number): void 
+    {
+        const group = TargetStore.getGroup(groupId);
+        if (!group || !group.shots || group.shots.length < 2) return;
+        
+        const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
+        const {center, radius} = this.findMinCircle(points);
+        
+        const graphics = new Graphics();
+        graphics.clear();
+        graphics.circle(center.x, center.y, radius);
+        // graphics.fill({color: 0x0000ff, alpha: 0.1})
+        graphics.stroke({width: 4, color: 0x0000ff, alpha: 0.5});
+        
+
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (groupContainer) {
+            const oldCircle = groupContainer.getChildByLabel(`ccr-${groupId}`);
+            if (oldCircle) groupContainer.removeChild(oldCircle);
+            graphics.label = `ccr-${groupId}`;
+            groupContainer.addChild(graphics);
+
+            console.log(`CCR. center: ${center.x},${center.y} radii: ${radius}`);
+        }
+    }
+    
+    private drawMPI(groupId: number): void 
+    {
+        const group = TargetStore.getGroup(groupId);
+        if (!group || !group.shots || group.shots.length < 2) return;
+        
+        const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
+        const mpi = {
+            x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+            y: points.reduce((sum, p) => sum + p.y, 0) / points.length
+        };
+    
+        const graphics = new Graphics();
+        graphics.clear();
+        
+        const sz  = 10;
+        const w   = 2;
+        const off = (sz / 2) - (w / 2);
+
+        graphics.scale.set(this.setScale());
+        graphics
+            .rect(0 - off, 0, sz, w).fill({color: 'black'})
+            .rect(0, 0 - off, w, sz).fill({color: 'black'});
+        graphics.position.set(mpi.x, mpi.y);
+
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (groupContainer) {
+            const oldMPI = groupContainer.getChildByLabel(`mpi-${groupId}`);
+            if (oldMPI) groupContainer.removeChild(oldMPI);
+            graphics.label = `mpi-${groupId}`;
+            groupContainer.addChild(graphics);
+        }
+    }
+    
+    private drawDiagonal(groupId: number): void {
+        const group = TargetStore.getGroup(groupId);
+        if (!group || !group.shots || group.shots.length < 2) return;
+        
+        const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
+        
+        const minX = Math.min(...points.map(p => p.x));
+        const maxX = Math.max(...points.map(p => p.x));
+        const minY = Math.min(...points.map(p => p.y));
+        const maxY = Math.max(...points.map(p => p.y));
+        
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const diagonal = Math.sqrt(width * width + height * height);
+        
+        const graphics = new Graphics();
+        graphics.clear();
+        
+        // Scale the graphics inversely to maintain constant line width
+        const strokeWidth = 2 * 1/this.targetContainer.scale.x;  // Adjust stroke width based on scale
+    
+    graphics.rect(minX, minY, width, height);
+    graphics.stroke({width: strokeWidth, color: 0x00FF00});
+    
+    graphics.moveTo(minX, minY);
+    graphics.lineTo(maxX, maxY);
+    graphics.stroke({width: strokeWidth, color: 0x00FF00});
+        
+        
+        
+        graphics.label = `diagonal-${groupId}`;
+        
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (groupContainer) {
+            const oldDiagonal = groupContainer.getChildByLabel(`diagonal-${groupId}`);
+            if (oldDiagonal) groupContainer.removeChild(oldDiagonal);
+            groupContainer.addChild(graphics);
+            
+            const tscale = this.targetContainer.scale.x;
+            console.log(`Drawing diagonal:`, {
+                minX, maxX, minY, maxY,
+                width, height, diagonal,
+                tscale
+            });
+        }
+    }
+    
+    public drawAllMetrics(group?: number): void 
+    {
+        if (!group) {
+            this.targetStore.groups.forEach((group) => {
+                const groupId = group.id;
+                this.drawMeanRadius(groupId);
+                this.drawCoveringRadius(groupId);
+                this.drawMPI(groupId);
+                this.drawDiagonal(groupId);
+            })
+        } else {
+            this.drawMeanRadius(group);
+            this.drawCoveringRadius(group);
+            this.drawMPI(group);
+            this.drawDiagonal(group);
+        }
+    }
+
 
     public async addPoa(x: number, y: number, group: string): Promise<void>
     {
@@ -115,14 +283,14 @@ export class ShotPoaTool {
         if (!newGroup) {
             console.error('Newgroup was null!');
             return null;
-        } else {
-            console.log('newGroup:', newGroup);
-        }
-
+        } 
+        
+        // console.log('newGroup:', newGroup);
+        
         const groupContainer = this.createNewGroupContainer(newGroup.id)
         if (groupContainer === null) { console.error(`Failed to createNewGroupContainer`); return null; };
 
-        console.log('created group:', newGroup, groupContainer);
+        // console.log('created group:', newGroup, groupContainer);
         return {group: newGroup, container: groupContainer};
     }
 
@@ -139,7 +307,7 @@ export class ShotPoaTool {
         try {
             this.targetStore.groups.push(newGroup);
             const createdGroup = this.targetStore.groups[this.targetStore.groups.length - 1];
-            console.log(`Created new group:`, createdGroup);
+            // console.log(`Created new group:`, createdGroup);
             return createdGroup;
         } catch (e) {
             // TODO: Logging.
@@ -153,7 +321,7 @@ export class ShotPoaTool {
             let groupContainer = new Container();
             groupContainer.label = id.toString();
 
-            console.log(`Creating group: ${groupContainer.label} ${groupContainer.uid}`);
+            // console.log(`Creating group: ${groupContainer.label} ${groupContainer.uid}`);
             this.targetContainer.addChild(groupContainer);
 
             return groupContainer
@@ -348,4 +516,75 @@ export class ShotPoaTool {
             }
         }
     }
+
+
+    private makeCircleFromTwoPoints(p1: {x: number, y: number}, 
+                                    p2: {x: number, y: number}): {center: {x: number, y: number}, radius: number} 
+    {
+        const center = {
+            x: (p1.x + p2.x) / 2,
+            y: (p1.y + p2.y) / 2
+        };
+        
+        const radius = Math.sqrt(
+            Math.pow(p1.x - center.x, 2) + 
+            Math.pow(p1.y - center.y, 2)
+        );
+
+        return {center, radius};
+    }
+
+    private addLabel(x: number, y: number, text: string, color: number): Text 
+    {
+        const label = new Text({
+            text: `${text}`,
+            style: {
+                fontSize: 24,
+                fill: color,
+                stroke: 0xffffff,
+                fontFamily: 'Arial'
+            }
+        });
+        label.anchor.set(0, 0.5);
+        label.position.set(x + 5, y);
+        return label;
+    }
+    
+    private findMinCircle(points: Array<{x: number, y: number}>): {center: {x: number, y: number}, radius: number} {
+        if (points.length === 0) return { center: {x: 0, y: 0}, radius: 0 };
+        if (points.length === 1) return { center: points[0], radius: 0 };
+        if (points.length === 2) return this.makeCircleFromTwoPoints(points[0], points[1]);
+    
+        // Find the two points furthest from each other
+        let maxDist = 0;
+        let point1 = points[0];
+        let point2 = points[0];
+    
+        for (let i = 0; i < points.length; i++) {
+            for (let j = i + 1; j < points.length; j++) {
+                const dist = Math.sqrt(
+                    Math.pow(points[i].x - points[j].x, 2) + 
+                    Math.pow(points[i].y - points[j].y, 2)
+                );
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    point1 = points[i];
+                    point2 = points[j];
+                }
+            }
+        }
+    
+        // Center is halfway between furthest points
+        const center = {
+            x: (point1.x + point2.x) / 2,
+            y: (point1.y + point2.y) / 2
+        };
+    
+        // Radius is half the distance between furthest points
+        const radius = maxDist / 2;
+    
+        return { center, radius };
+    }
+    
+    
 }

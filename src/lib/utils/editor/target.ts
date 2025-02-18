@@ -60,7 +60,7 @@ export class Target {
     private store: TargetStoreInterface;
     private editorStore!: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
-    private scale: number;
+    public scale: number;
     public  selecting: boolean = false;
     public  currentAngle: number = 0;
     public  sliderAngle: number = 0;
@@ -91,16 +91,15 @@ export class Target {
 
         // Initialize PIXI Application
         this.app = new Application();
+        
         await this.app.init({
             width: this.chromeArea.x,
             height: this.chromeArea.y,
             backgroundColor: 0xcdcdcc,
             antialias: true,
             resolution: window.devicePixelRatio || 1,
-            // hello: true,
+            hello: true,
         });
-
-        
 
         canvasContainer.appendChild(this.app.canvas);
 
@@ -206,6 +205,7 @@ export class Target {
         );
 
         this.targetContainer.scale.set(this.scale);
+        console.log(`Scale set to: ${this.scale}`);
     }
 
     public async initializeAnalysis(userId: string): Promise<void> {
@@ -310,6 +310,8 @@ export class Target {
         if (newScale >= zoomBoundaries[0] && newScale <= zoomBoundaries[1]) {
             this.scale = newScale;
             this.targetContainer.scale.set(this.scale);
+            // console.log(`Scale is now: ${this.scale}`);
+            this.shotPoaTool.drawAllMetrics();
         }
     }
 
@@ -329,7 +331,7 @@ export class Target {
 
     public handleMouseDown(e: FederatedPointerEvent): void
     {
-        console.log('mousedown',e)
+        // console.log('mousedown',e)
         if (e.button === 1) {
             this.handleDragStart(e);
         } else if (e.shiftKey) {

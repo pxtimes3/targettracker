@@ -267,7 +267,7 @@
 			title="Target information"
 			id="info-button"
 			onclick={ () => togglePanels('info-panel') }
-			class="w-12 h-12 mt-2 ml-2 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center {$activePanel === 'info-panel' ? 'active' : ''}"
+			class="w-16 h-12 mt-2 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center {$activePanel === 'info-panel' ? 'active' : ''} place-items-center"
 		>
 			<LucideTarget
 
@@ -279,7 +279,7 @@
 			title="Set reference"
 			id="reference-button"
 			onclick={(e) => { $EditorStore.mode === 'reference' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'reference'; showPanel(e, "reference"); $activePanel = "reference-panel"; }}
-			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 grid justify-items-center place-items-center items-center"
 		>
 			<LucideRuler
 
@@ -291,7 +291,7 @@
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Set point of aim' }
 			id="poa-button"
 			onclick={() => { $EditorStore.mode === 'poa' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'poa'; }}
-			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 		>
 			<LucideLocateFixed
 
@@ -304,7 +304,7 @@
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Place shots' }
 
 			onclick={() => { $EditorStore.mode === 'shots' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'shots'; }}
-			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 		>
 			<LucideLocate
 
@@ -315,7 +315,7 @@
 		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 
 		<button
-			class="w-16 h-12 cursor-pointer mt-3 hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 			title="Rotate target"
 			id="rotate-button"
 			onclick={ (e) => { showPanel(e, "rotate"); $activePanel="rotate-panel"; }}
@@ -330,7 +330,7 @@
 		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 
 		<button
-			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 			title="Settings"
 			id="settings-button"
 			onclick={ (e) => { showPanel(e, "settings"); $activePanel='settings-panel' }}
@@ -343,7 +343,7 @@
 		</button>
 
 		<button
-			class="w-16 h-12 mt-3 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 			title="Save"
 			id="save-button"
 			onclick={ (e) => { showPanel(e, "save"); $activePanel='save-panel' }}
@@ -357,7 +357,7 @@
 	</div>
 
 	<button
-		class="w-16 h-12 mt-12 cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center"
+		class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 		title="Debug"
 		id="debug-button"
 		onclick={(e) => { /*showPanel(e, "settings")*/ logDebug() }}

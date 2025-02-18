@@ -238,6 +238,17 @@ function createTargetStore()
             }
             store.set(initialStore);
         },
+        addShot(shot: ShotInterface, groupId: number) {
+            this.update(store => {
+                const group = store.groups.find(g => g.id === groupId);
+                if (!group || !group.shots) {
+                    throw new Error('Fail!');
+                } else {
+                    group.shots.push(shot);
+                }
+                return store;
+            });
+        },
         setShot: (label: string, groupid: number, x: number, y: number, score: number = 0) => {
             store.update(state => {
                 const group: number = state.groups.findIndex((g) => g.id === groupid);
@@ -366,6 +377,9 @@ function createTargetStore()
                 currentState.groups.push(newGroup);
                 return state;
             });
+            return currentState.groups.find((g) => g.id === id)
+        },
+        getGroup: (id: number = currentState.groups.length) => {
             return currentState.groups.find((g) => g.id === id)
         },
         mmToPx: (mm: number) => {
