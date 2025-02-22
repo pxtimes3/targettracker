@@ -359,6 +359,10 @@ export class ReferenceTool {
         const imageDimensions = target.image.originalsize;
         const userSettings = get(UserSettingsStore);
 
+        if (!ref.x || !ref.x[0] || !ref.a || !ref.a[0] || !ref.measurement) {
+            throw new Error('Refs not set!');
+        }
+
         const pixeldistance = ref.x[0] - ref.a[0];
 
         // convert length to mm
