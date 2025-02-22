@@ -538,6 +538,12 @@
 	{/each}	
 </div>
 
+{#if !$TargetStore.reference.linelength}
+    <div class="warning-banner absolute right-2 top-2 z-40 p-4 bg-slate-700 text-white dark:text-black dark:bg-slate-300">
+        ⚠️ Set reference points and measurement to start placing shots!
+    </div>
+{/if}
+
 <!-- canvas -->
 <div
 	role="application"
