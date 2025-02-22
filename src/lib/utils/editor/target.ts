@@ -13,7 +13,7 @@ import { ReferenceTool } from './referencetool';
 import { SelectionTool } from './selectiontool';
 import { EditorCrosshair } from './crosshairs';
 import { DropShadowFilter } from 'pixi-filters';
-
+import { getSettings } from 'svelte-ux';
 
 interface ActionSuccess {
     type: 'success';
@@ -71,6 +71,7 @@ export class Target {
     private isDragging: boolean = false;
     private dragStartPosition: { x: number; y: number } | null = null;
     private dragStartMousePosition: { x: number; y: number } | null = null;
+    private dark: boolean = false;
 
     constructor(chromeArea: { x: number, y: number }, staticAssets: string[]) {
         this.chromeArea = chromeArea;
@@ -81,6 +82,19 @@ export class Target {
         });
         this.targetStore = get(TargetStore);
         this.scale = 1;
+
+        const { currentTheme } = getSettings();
+        
+        currentTheme.subscribe(settings => {
+            settings.dark ? this.dark = true : this.dark = false;
+            this.updateBackground();
+        });
+    }
+
+    private updateBackground(): void {
+        if (this.app) {
+            this.app.renderer.background.color = this.dark ? 0x1e293b : 0xcdcdcc;
+        }
     }
 
     public async initialize(
@@ -95,7 +109,7 @@ export class Target {
         await this.app.init({
             width: this.chromeArea.x,
             height: this.chromeArea.y,
-            backgroundColor: 0xcdcdcc,
+            backgroundColor: this.dark ? 0x1e293b : 0xcdcdcc,
             antialias: true,
             resolution: window.devicePixelRatio || 1,
             hello: true,
@@ -169,7 +183,13 @@ export class Target {
         this.targetContainer.label = 'targetContainer';
 
         // dropshadow
-        this.targetContainer.filters = [ new DropShadowFilter({alpha: 0.25, offsetX: 8, offsetY: 8}) ];
+        this.targetContainer.filters = [ 
+            new DropShadowFilter({
+                alpha: this.dark ? 0.5 : 0.25,
+                color: this.dark ? 0x000000 : 0x666666,
+                offset: {x: 8, y: 8}
+            }) 
+        ];
         
         this.originalWidth = this.targetSprite.width;
         this.originalHeight = this.targetSprite.height;
