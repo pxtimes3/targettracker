@@ -1,9 +1,8 @@
+// src/lib/stores/TargetImageStore.ts
 import { browser } from "$app/environment";
 import { calculateReferenceValues } from "@/utils/target";
 import { writable, type Writable } from "svelte/store";
 import { z } from 'zod';
-
-// TODO: Save to database periodsvis.
 
 const STORE_KEY = 'targetTrackerStore';
 
@@ -45,9 +44,28 @@ const GroupSchema = z.object({
     score: z.number().optional(),
     poa: PoaSchema.optional(),
     metrics: z.object({
-        meanradius: z.number().optional(),
-        size: z.number().optional(),
-        diagonal: z.number().optional()
+        meanradius: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional(),
+        coveringradius: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional(),
+        extremespread: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional(),
+        diagonal: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional(),
+            width: z.number().optional(),  // X^ (extreme width)
+            height: z.number().optional(), // Y^ (extreme height)
+        }).optional(),
+        fom: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional()
     }).optional()
 }).passthrough();
 
@@ -368,9 +386,11 @@ function createTargetStore()
                 score: 0,
                 poa: {x:0, y: 0},
                 metrics: {
-                    meanradius: 0,
-                    size: 0,
-                    diagonal:0
+                    meanradius: { px: 0, mm: 0 },
+                    coveringradius: { px: 0, mm: 0 },
+                    extremespread: { px: 0, mm: 0 },
+                    diagonal: { px: 0, mm: 0, width: 0, height: 0 },
+                    fom: { px: 0, mm: 0 }
                 }
             }
             store.update(state => {

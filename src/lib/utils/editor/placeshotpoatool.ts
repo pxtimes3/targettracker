@@ -105,7 +105,7 @@ export class ShotPoaTool {
     private drawMeanRadius(groupId: number): void 
     {
         const group = TargetStore.getGroup(groupId);
-        if (!group || !group.shots || group.shots.length < 2) return;
+        if (!group || !group.shots || group.shots.length < 2 || !this.targetStore.reference.measurement || !this.targetStore.reference.linelength) return;
         
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         const meanCenter = {
@@ -120,6 +120,26 @@ export class ShotPoaTool {
                 Math.pow(p.y - meanCenter.y, 2)
             ), 0) / points.length;
         
+        const meanRadiusInPixels = points.reduce((sum, p) => 
+            sum + Math.sqrt(
+                Math.pow(p.x - meanCenter.x, 2) + 
+                Math.pow(p.y - meanCenter.y, 2)
+            ), 0) / points.length;
+        
+        // => targetstore
+        TargetStore.update(store => {
+            const group = store.groups.find(g => g.id === groupId);
+            if (group) {
+                group.metrics = group.metrics || {};
+                group.metrics.meanradius = {
+                    px: meanRadiusInPixels,
+                    mm: TargetStore.pxToMm(meanRadiusInPixels)
+                };
+            }
+            return store;
+        });
+
+        // draw graphics
         const graphics = new Graphics();
         graphics.clear();
         graphics.scale.set(this.setScale());
@@ -149,6 +169,25 @@ export class ShotPoaTool {
         
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         const {center, radius} = this.findMinCircle(points);
+
+        const ccrRadiusInPixels = points.reduce((sum, p) => 
+            sum + Math.sqrt(
+                Math.pow(p.x - center.x, 2) + 
+                Math.pow(p.y - center.y, 2)
+            ), 0) / points.length;
+        
+        // => targetstore
+        TargetStore.update(store => {
+            const group = store.groups.find(g => g.id === groupId);
+            if (group) {
+                group.metrics = group.metrics || {};
+                group.metrics.meanradius = {
+                    px: ccrRadiusInPixels,
+                    mm: TargetStore.pxToMm(ccrRadiusInPixels)
+                };
+            }
+            return store;
+        });
         
         const graphics = new Graphics();
         graphics.clear();
@@ -216,44 +255,87 @@ export class ShotPoaTool {
         
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         
+        // Calculate extremes
         const minX = Math.min(...points.map(p => p.x));
         const maxX = Math.max(...points.map(p => p.x));
         const minY = Math.min(...points.map(p => p.y));
         const maxY = Math.max(...points.map(p => p.y));
         
-        const width = maxX - minX;
-        const height = maxY - minY;
-        const diagonal = Math.sqrt(width * width + height * height);
+        const width = maxX - minX;   // X^
+        const height = maxY - minY;  // Y^
         
+        // Calculate Diagonal
+        const diagonalPx = Math.sqrt(width * width + height * height);
+        const diagonalMm = TargetStore.pxToMm(diagonalPx);
+        
+        // Calculate Figure of Merit (FoM)
+        const fomPx = (width + height) / 2;
+        const fomMm = TargetStore.pxToMm(fomPx);
+        
+        // Store measurements
+        TargetStore.update(store => {
+            const group = store.groups.find(g => g.id === groupId);
+            if (group) {
+                group.metrics = group.metrics || {};
+                group.metrics.diagonal = {
+                    px: diagonalPx,
+                    mm: diagonalMm,
+                    width: width,    // store extreme width
+                    height: height,  // store extreme height
+                };
+                group.metrics.fom = {
+                    px: fomPx,
+                    mm: fomMm
+                };
+            }
+            return store;
+        });
+        
+        // Draw graphics
         const graphics = new Graphics();
         graphics.clear();
         
+        // Scale the graphics inversely to maintain constant line width
         const strokeWidth = 2 * 1/this.targetContainer.scale.x;
     
+        // Draw rectangle
         graphics.rect(minX, minY, width, height);
         graphics.stroke({width: strokeWidth, color: 0x00FF00});
         
+        // Draw diagonal
         graphics.moveTo(minX, minY);
         graphics.lineTo(maxX, maxY);
         graphics.stroke({width: strokeWidth, color: 0x00FF00});
-        graphics.eventMode = 'none';
         
+        // Add labels if needed
+        const diagonalLabel = new Text({
+            text: `D: ${diagonalMm.toFixed(1)}mm`,
+            style: {
+                fontSize: 12 * 1/this.targetContainer.scale.x,
+                fill: 0x00FF00
+            }
+        });
+        diagonalLabel.position.set(maxX + 5, maxY);
+        
+        const fomLabel = new Text({
+            text: `FoM: ${fomMm.toFixed(1)}mm`,
+            style: {
+                fontSize: 12 * 1/this.targetContainer.scale.x,
+                fill: 0x00FF00
+            }
+        });
+        fomLabel.position.set(maxX + 5, maxY + 15 * 1/this.targetContainer.scale.x);
+        
+        graphics.addChild(diagonalLabel);
+        graphics.addChild(fomLabel);
+        graphics.eventMode = 'none';
         graphics.label = `diagonal-${groupId}`;
-
-        graphics.visible = this.userSettings.showdiagonal;
         
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
         if (groupContainer) {
             const oldDiagonal = groupContainer.getChildByLabel(`diagonal-${groupId}`);
             if (oldDiagonal) groupContainer.removeChild(oldDiagonal);
             groupContainer.addChild(graphics);
-            
-            const tscale = this.targetContainer.scale.x;
-            // console.log(`Drawing diagonal:`, {
-            //     minX, maxX, minY, maxY,
-            //     width, height, diagonal,
-            //     tscale
-            // });
         }
     }
 
@@ -281,6 +363,19 @@ export class ShotPoaTool {
                 }
             }
         }
+
+        // => targetstore
+        TargetStore.update(store => {
+            const group = store.groups.find(g => g.id === groupId);
+            if (group) {
+                group.metrics = group.metrics || {};
+                group.metrics.extremespread = {
+                    px: maxDistance,
+                    mm: TargetStore.pxToMm(maxDistance)
+                };
+            }
+            return store;
+        });
     
         const graphics = new Graphics();
         graphics.clear();
@@ -289,25 +384,6 @@ export class ShotPoaTool {
         graphics.lineTo(point2.x, point2.y);
         const strokeWidth = 2 * 1/this.targetContainer.scale.x;
         graphics.stroke({width: strokeWidth, color: 0x00FFFF});
-
-        // Label... 
-        // const midPoint = {
-        //     x: (point1.x + point2.x) / 2,
-        //     y: (point1.y + point2.y) / 2
-        // };
-        
-        // const label = new Text({
-        //     text: `ES: ${maxDistance.toFixed(1)}`,
-        //     style: {
-        //         fontSize: 12 * 1/this.targetContainer.scale.x,
-        //         fill: 0xFF0000,
-        //         stroke: 0xFFFFFF,
-        //         strokeThickness: 2 * 1/this.targetContainer.scale.x
-        //     }
-        // });
-        // label.anchor.set(0.5);
-        // label.position.set(midPoint.x, midPoint.y);
-        // graphics.addChild(label);
 
         graphics.eventMode = 'none';
         graphics.label = `es-${groupId}`;
@@ -685,5 +761,15 @@ export class ShotPoaTool {
         return { center, radius };
     }
     
-    
+    private mmToPixels(mm: number): number {
+        const ref = this.targetStore.reference;
+        if (!ref.linelength || !ref.measurement) return 0;
+        
+        // value to mm if in inches
+        const length = this.userSettings.isometrics 
+            ? ref.measurement * 10
+            : ref.measurement * 25.4;
+        
+        return (mm * ref.linelength) / length;
+    }    
 }
