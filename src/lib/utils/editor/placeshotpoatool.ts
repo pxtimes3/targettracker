@@ -1,7 +1,4 @@
-// TODO: PlaceShotPoaTool.ts - Unit testing.
-// TODO: PlaceShotPoaTool.ts - Integrationstester.
-// TODO: AssignSelectedShotsToGroup
-// TODO: Skalan beter sig.
+// TODO: PlaceShotPoaTool.ts - Refactor
 
 // src/lib/utils/editor/placeshotpoatool.ts
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
@@ -33,8 +30,9 @@ export class ShotPoaTool {
         type Point = {x: number, y: number};
 
         this.userSettingsUnsubscribe = UserSettingsStore.subscribe((settings) => {
+            console.log('Settings updated:', settings);
             this.userSettings = settings;
-            this.drawAllMetrics(); // Redraw when settings change
+            this.drawAllMetrics();
         });
     }
 
@@ -102,63 +100,68 @@ export class ShotPoaTool {
         });
     }
 
-    private drawMeanRadius(groupId: number): void 
-    {
+    private drawMeanRadius(groupId: number): void {
         const group = TargetStore.getGroup(groupId);
-        if (!group || !group.shots || group.shots.length < 2 || !this.targetStore.reference.measurement || !this.targetStore.reference.linelength) return;
+        console.log('Drawing MR, group:', group);
+        if (!group || !group.shots || group.shots.length < 2 || !this.targetStore.reference.measurement || !this.targetStore.reference.linelength) {
+            console.log('Early return conditions:', {
+                noGroup: !group,
+                noShots: !group?.shots,
+                notEnoughShots: group?.shots?.length ? group.shots.length < 2 : '',
+                noRefMeasurement: !this.targetStore.reference.measurement,
+                noRefLineLength: !this.targetStore.reference.linelength
+            });
+            return;
+        }
         
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         const meanCenter = {
             x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
             y: points.reduce((sum, p) => sum + p.y, 0) / points.length
         };
-
-        // Calculate AVERAGE distance instead of MAX distance
+    
         const meanRadius = points.reduce((sum, p) => 
             sum + Math.sqrt(
                 Math.pow(p.x - meanCenter.x, 2) + 
                 Math.pow(p.y - meanCenter.y, 2)
             ), 0) / points.length;
-        
-        const meanRadiusInPixels = points.reduce((sum, p) => 
-            sum + Math.sqrt(
-                Math.pow(p.x - meanCenter.x, 2) + 
-                Math.pow(p.y - meanCenter.y, 2)
-            ), 0) / points.length;
-        
-        // => targetstore
-        TargetStore.update(store => {
-            const group = store.groups.find(g => g.id === groupId);
-            if (group) {
-                group.metrics = group.metrics || {};
-                group.metrics.meanradius = {
-                    px: meanRadiusInPixels,
-                    mm: TargetStore.pxToMm(meanRadiusInPixels)
-                };
-            }
-            return store;
+    
+        console.log('Calculated values:', {
+            points,
+            meanCenter,
+            meanRadius,
+            showmr: this.userSettings.showmr
         });
-
-        // draw graphics
+    
+        // Draw graphics
         const graphics = new Graphics();
         graphics.clear();
-        graphics.scale.set(this.setScale());
-        graphics.circle(0, 0, meanRadius * 1/this.setScale());
+
+        graphics.circle(0, 0, meanRadius);
+        // Draw circle
+        graphics.stroke({
+            width: 2 * 1/this.targetContainer.scale.x,
+            color: 0xFF0000,
+            alpha: 0.5
+        });
+        
+        // Position after drawing
         graphics.position.set(meanCenter.x, meanCenter.y);
-        const strokeWidth = 2 * 1/this.setScale();
-        graphics.stroke({width: strokeWidth, color: '0xff0000', alpha: 0.5});
         graphics.eventMode = 'none';
-
         graphics.visible = this.userSettings.showmr;
-
+        graphics.label = `mr-${groupId}`;
+    
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        console.log('Group container:', groupContainer);
+        
         if (groupContainer) {
             const oldCircle = groupContainer.getChildByLabel(`mr-${groupId}`);
-            if (oldCircle) groupContainer.removeChild(oldCircle);
-            graphics.label = `mr-${groupId}`;
+            if (oldCircle) {
+                console.log('Removing old circle');
+                groupContainer.removeChild(oldCircle);
+            }
             groupContainer.addChild(graphics);
-
-            console.log(`MR. center: ${meanCenter.x},${meanCenter.y} radii: ${meanRadius}`);
+            console.log('Added new circle');
         }
     }
     
@@ -400,6 +403,7 @@ export class ShotPoaTool {
     
     public drawAllMetrics(group?: number): void 
     {
+        console.log('Drawing all metrics', { group, groups: this.targetStore.groups });
         if (!group) {
             this.targetStore.groups.forEach((group) => {
                 const groupId = group.id;
@@ -760,7 +764,15 @@ export class ShotPoaTool {
     
         return { center, radius };
     }
-    
+ 
+    public isReferenceSet(): boolean {
+    return !!(
+        this.targetStore.reference.measurement &&
+        this.targetStore.reference.linelength &&
+        this.targetStore.reference.a &&
+        this.targetStore.reference.x
+    );
+}
     private mmToPixels(mm: number): number {
         const ref = this.targetStore.reference;
         if (!ref.linelength || !ref.measurement) return 0;
