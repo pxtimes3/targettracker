@@ -6,6 +6,7 @@
 // src/lib/utils/editor/placeshotpoatool.ts
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type GroupInterface, type ShotInterface, type TargetStoreInterface } from '@/stores/TargetImageStore';
+import { UserSettingsStore, type SettingsInterface } from '@/stores/UserSettingsStore';
 import type { FederatedPointerEvent } from 'pixi.js';
 import { Assets, Container, Sprite, Graphics, Circle, Text } from 'pixi.js';
 import { get } from 'svelte/store';
@@ -14,19 +15,33 @@ export class ShotPoaTool {
     private targetContainer: Container;
     private editorStore: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
+    private userSettings: SettingsInterface;
     private texturePath: string;
     private isDragging: boolean = false;
     private dragTarget: Sprite | null = null;
     private dragStartPosition: {x: number, y: number} | null = null;
     private isSelected: boolean = false;
+    private userSettingsUnsubscribe: () => void;
 
     constructor(targetContainer: Container) {
         this.targetContainer = targetContainer;
         this.editorStore = get(EditorStore);
         this.targetStore = get(TargetStore);
+        this.userSettings = get(UserSettingsStore);
         this.texturePath = '/cursors/shot.svg';
 
         type Point = {x: number, y: number};
+
+        this.userSettingsUnsubscribe = UserSettingsStore.subscribe((settings) => {
+            this.userSettings = settings;
+            this.drawAllMetrics(); // Redraw when settings change
+        });
+    }
+
+    public destroy() {
+        if (this.userSettingsUnsubscribe) {
+            this.userSettingsUnsubscribe();
+        }
     }
 
     public async addShot(x: number, y: number, group: string): Promise<void>
@@ -62,6 +77,7 @@ export class ShotPoaTool {
         shot.position.set(position.x, position.y);
         shot.scale.set(this.setScale());
         shot.width = 48;
+        shot.zIndex = 99;
 
         shot.height = shot.width;
 
@@ -106,9 +122,14 @@ export class ShotPoaTool {
         
         const graphics = new Graphics();
         graphics.clear();
-        
-        graphics.circle(meanCenter.x, meanCenter.y, meanRadius);
-        graphics.stroke({width: 4, color: '0xff0000', alpha: 0.5});
+        graphics.scale.set(this.setScale());
+        graphics.circle(0, 0, meanRadius * 1/this.setScale());
+        graphics.position.set(meanCenter.x, meanCenter.y);
+        const strokeWidth = 2 * 1/this.setScale();
+        graphics.stroke({width: strokeWidth, color: '0xff0000', alpha: 0.5});
+        graphics.eventMode = 'none';
+
+        graphics.visible = this.userSettings.showmr;
 
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
         if (groupContainer) {
@@ -131,9 +152,14 @@ export class ShotPoaTool {
         
         const graphics = new Graphics();
         graphics.clear();
-        graphics.circle(center.x, center.y, radius);
-        // graphics.fill({color: 0x0000ff, alpha: 0.1})
-        graphics.stroke({width: 4, color: 0x0000ff, alpha: 0.5});
+        graphics.scale.set(this.setScale());
+        graphics.circle(0, 0, radius * 1/this.setScale());
+        graphics.position.set(center.x, center.y)
+        const strokeWidth = 2 * 1/this.targetContainer.scale.x;
+        graphics.stroke({width: strokeWidth, color: 0x0000ff, alpha: 0.5});
+        graphics.eventMode = 'none';
+
+        graphics.visible = this.userSettings.showccr;
         
 
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
@@ -167,15 +193,19 @@ export class ShotPoaTool {
 
         graphics.scale.set(this.setScale());
         graphics
-            .rect(0 - off, 0, sz, w).fill({color: 'black'})
-            .rect(0, 0 - off, w, sz).fill({color: 'black'});
+            .rect(0 - off, 0, sz, w).fill({color: 0xFF00FF})
+            .rect(0, 0 - off, w, sz).fill({color: 0xFF00FF});
         graphics.position.set(mpi.x, mpi.y);
+        graphics.eventMode = 'none';
+
+        graphics.visible = this.userSettings.showmpi;
+
+        graphics.label = `mpi-${groupId}`;
 
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
         if (groupContainer) {
             const oldMPI = groupContainer.getChildByLabel(`mpi-${groupId}`);
             if (oldMPI) groupContainer.removeChild(oldMPI);
-            graphics.label = `mpi-${groupId}`;
             groupContainer.addChild(graphics);
         }
     }
@@ -198,19 +228,19 @@ export class ShotPoaTool {
         const graphics = new Graphics();
         graphics.clear();
         
-        // Scale the graphics inversely to maintain constant line width
-        const strokeWidth = 2 * 1/this.targetContainer.scale.x;  // Adjust stroke width based on scale
+        const strokeWidth = 2 * 1/this.targetContainer.scale.x;
     
-    graphics.rect(minX, minY, width, height);
-    graphics.stroke({width: strokeWidth, color: 0x00FF00});
-    
-    graphics.moveTo(minX, minY);
-    graphics.lineTo(maxX, maxY);
-    graphics.stroke({width: strokeWidth, color: 0x00FF00});
+        graphics.rect(minX, minY, width, height);
+        graphics.stroke({width: strokeWidth, color: 0x00FF00});
         
-        
+        graphics.moveTo(minX, minY);
+        graphics.lineTo(maxX, maxY);
+        graphics.stroke({width: strokeWidth, color: 0x00FF00});
+        graphics.eventMode = 'none';
         
         graphics.label = `diagonal-${groupId}`;
+
+        graphics.visible = this.userSettings.showdiagonal;
         
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
         if (groupContainer) {
@@ -219,11 +249,76 @@ export class ShotPoaTool {
             groupContainer.addChild(graphics);
             
             const tscale = this.targetContainer.scale.x;
-            console.log(`Drawing diagonal:`, {
-                minX, maxX, minY, maxY,
-                width, height, diagonal,
-                tscale
-            });
+            // console.log(`Drawing diagonal:`, {
+            //     minX, maxX, minY, maxY,
+            //     width, height, diagonal,
+            //     tscale
+            // });
+        }
+    }
+
+    private drawExtremeSpread(groupId: number): void {
+        const group = TargetStore.getGroup(groupId);
+        if (!group || !group.shots || group.shots.length < 2) return;
+        
+        const shots = group.shots;
+        let maxDistance = 0;
+        let point1 = shots[0];
+        let point2 = shots[0];
+    
+        // Find the two most distant shots
+        for (let i = 0; i < shots.length; i++) {
+            for (let j = i + 1; j < shots.length; j++) {
+                const distance = Math.sqrt(
+                    Math.pow(shots[i].x - shots[j].x, 2) + 
+                    Math.pow(shots[i].y - shots[j].y, 2)
+                );
+                
+                if (distance > maxDistance) {
+                    maxDistance = distance;
+                    point1 = shots[i];
+                    point2 = shots[j];
+                }
+            }
+        }
+    
+        const graphics = new Graphics();
+        graphics.clear();
+        
+        graphics.moveTo(point1.x, point1.y);
+        graphics.lineTo(point2.x, point2.y);
+        const strokeWidth = 2 * 1/this.targetContainer.scale.x;
+        graphics.stroke({width: strokeWidth, color: 0x00FFFF});
+
+        // Label... 
+        // const midPoint = {
+        //     x: (point1.x + point2.x) / 2,
+        //     y: (point1.y + point2.y) / 2
+        // };
+        
+        // const label = new Text({
+        //     text: `ES: ${maxDistance.toFixed(1)}`,
+        //     style: {
+        //         fontSize: 12 * 1/this.targetContainer.scale.x,
+        //         fill: 0xFF0000,
+        //         stroke: 0xFFFFFF,
+        //         strokeThickness: 2 * 1/this.targetContainer.scale.x
+        //     }
+        // });
+        // label.anchor.set(0.5);
+        // label.position.set(midPoint.x, midPoint.y);
+        // graphics.addChild(label);
+
+        graphics.eventMode = 'none';
+        graphics.label = `es-${groupId}`;
+    
+        graphics.visible = this.userSettings.showes;
+    
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (groupContainer) {
+            const oldES = groupContainer.getChildByLabel(`es-${groupId}`);
+            if (oldES) groupContainer.removeChild(oldES);
+            groupContainer.addChild(graphics);
         }
     }
     
@@ -236,12 +331,14 @@ export class ShotPoaTool {
                 this.drawCoveringRadius(groupId);
                 this.drawMPI(groupId);
                 this.drawDiagonal(groupId);
+                this.drawExtremeSpread(groupId);
             })
         } else {
             this.drawMeanRadius(group);
             this.drawCoveringRadius(group);
             this.drawMPI(group);
             this.drawDiagonal(group);
+            this.drawExtremeSpread(group);
         }
     }
 
@@ -404,7 +501,7 @@ export class ShotPoaTool {
         this.dragTarget = target;
         this.dragStartPosition = { x: target.x, y: target.y};
 
-        console.log(`Dragging ${target.label}`)
+        // console.log(`Dragging ${target.label}`)
 
         this.targetContainer.eventMode = 'dynamic';
         this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
@@ -445,6 +542,8 @@ export class ShotPoaTool {
         this.targetContainer.off('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.off('pointerup', this.handleDragEnd.bind(this));
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
+
+        this.drawAllMetrics();
     }
 
     public assignSelectedShotsToGroup(value: string): void
