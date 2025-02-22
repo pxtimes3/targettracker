@@ -5,6 +5,7 @@
 	import { TargetStore } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
 	import InfoPanel from '@/components/target/editor/panels/InfoPanel.svelte';
+	import SettingsPanel from '@/components/target/editor/panels/SettingsPanel.svelte';
 	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
@@ -80,21 +81,6 @@
 		canvasContainer.classList.remove('opacity-35');
 		loader.classList.add('hidden');
 	}
-
-    function changeUserSettings(e: Event): void
-	{
-        const target = e.target as HTMLInputElement;
-        if (!target) return;
-
-        const setting = target.name;
-
-        $UserSettingsStore[setting] = target.type === 'checkbox'
-            ? target.checked
-            : target.id === 'true';
-
-        // TODO: Push to DB
-        // console.log($UserSettingsStore);
-    }
 
     function showPanel(e: Event, name: string): void
 	{
@@ -333,7 +319,7 @@
 			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 			title="Settings"
 			id="settings-button"
-			onclick={ (e) => { showPanel(e, "settings"); $activePanel='settings-panel' }}
+			onclick={ () => togglePanels('settings-panel') }
 		>
 			<SlidersHorizontal
 				size="20"
@@ -443,38 +429,7 @@
 	</div>
 </div>
 
-<div id="settings-panel" class="absolute z-50 {$activePanel === 'settings-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
-    <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
-        <p class="tracking-widest pointer-events-none justify-self-start">Settings</p>
-        <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={(e) => $activePanel = '' } />
-        </p>
-    </div>
-	<form id="settingsForm" bind:this={settingsForm}>
-		<div class="p-4 mb-8 grid grid-flow-row gap-y-2">
-			<div class="text-sm text-primary-950">
-				<input type="checkbox" class="checkbox mr-2" id="cursortips" name="cursortips" checked={$UserSettingsStore.cursortips} onchange={(e) => changeUserSettings(e)} />
-				<label for="cursortips" class="text-sm">Show tips at cursor.</label>
-			</div>
-			<div class="text-sm text-primary-950">
-				Units: <input type="radio" name="isometrics" id="true" checked={$UserSettingsStore.isometrics === true} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)} /><label for="metric">Metric</label>
-				<input type="radio" name="isometrics" id="false" checked={$UserSettingsStore.isometrics === false} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)}/><label for="imperial">Imperial</label>
-			</div>
-			<div class="text-sm text-primary-950">
-				Angle: <input type="radio" name="mils" id="true" checked={$UserSettingsStore.mils === true} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)} /><label for="metric">Mils</label>
-				<input type="radio" name="mils" id="false" checked={$UserSettingsStore.mils === false} class="ml-2 mr-1" onchange={(e) => changeUserSettings(e)}/><label for="imperial">Minute</label>
-			</div>
-			<div class="text-sm text-primary-950">
-				<input type="checkbox" class="checkbox mr-2" name="showallshots" id="showallshots" checked={$UserSettingsStore.showallshots} onchange={(e) => changeUserSettings(e)}/>
-				<label for="showallshots" class="text-sm">Show shots from all groups.</label>
-			</div>
-			<div class="text-sm text-primary-950">
-				<input type="checkbox" class="checkbox mr-2" name="editorcrosshair" id="editorcrosshair" checked={$UserSettingsStore.editorcrosshair} onchange={(e) => changeUserSettings(e)}/>
-				<label for="editorcrosshair" class="text-sm">Show editor crosshairs.</label>
-			</div>
-		</div>
-	</form>
-</div>
+
 
 <!-- <div id="info-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' } grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
@@ -506,7 +461,15 @@
 	</div>
 </div> -->
 
-<InfoPanel />
+<SettingsPanel 
+	data={data}
+	active={false}
+/>
+
+<InfoPanel 
+	data={data}
+	active={false}
+/>
 
 <!-- followcursor -->
 {#if mode === "reference" && $UserSettingsStore.cursortips}
