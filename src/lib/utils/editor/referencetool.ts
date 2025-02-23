@@ -8,14 +8,14 @@ import { get } from 'svelte/store';
 
 interface RefData {
     ref: {
-        measurement: string;
+        measurement: string | number;
         a: [number, number];
         x: [number, number];
         linelength: number;
     }
     target: {
         image: {
-            originalsize: [undefined, undefined],
+            originalsize: [number | undefined, number | undefined];
         }
     }
 }
@@ -28,7 +28,7 @@ export class ReferenceTool {
     private editorStore!: EditorStoreInterface;
     private refLine: Graphics;
     private isDrawingReferenceLine: boolean = false;
-    private aIsSet: boolean = false;
+    public aIsSet: boolean = false;
     private xIsSet: boolean = false;
     private aIsMoved: boolean = true;
     public  xIsMoved: boolean = true;
@@ -67,7 +67,7 @@ export class ReferenceTool {
         this.targetContainer.on('pointermove', this.updateReferenceLine.bind(this));
     }
 
-    private updateReferenceLine(event: FederatedPointerEvent): void
+    private updateReferenceLine(event?: FederatedPointerEvent): void
     {
         if (!this.isDrawingReferenceLine || !this.refLine) return;
 
@@ -87,11 +87,11 @@ export class ReferenceTool {
         });
 
         let startPos = { x: startPoint.x, y: startPoint.y };
-        let endPos;
+        let endPos   = { x: 0, y: 0 };
 
         if (endPoint) {
             endPos = { x: endPoint.x, y: endPoint.y };
-        } else {
+        } else if (event) {
             const localPos = this.referenceContainer.toLocal(event.global);
             endPos = { x: localPos.x, y: localPos.y };
         }
@@ -145,15 +145,31 @@ export class ReferenceTool {
         if (!this.aIsSet) {
             const sprite = await createSprite('/cursors/circle-a.svg', 'ref-a');
             this.aIsSet = true;
-            this.targetStore.reference.a = [sprite.position.x, sprite.position.y];
+            TargetStore.update(store => ({
+                ...store,
+                reference: {
+                    ...store.reference,
+                    a: [sprite.position.x, sprite.position.y]
+                }
+            }));
             return;
         }
 
         if (!this.xIsSet) {
             const sprite = await createSprite('/cursors/circle-x.svg', 'ref-x');
             this.xIsSet = true;
-            this.targetStore.reference.x = [sprite.position.x, sprite.position.y];
+            TargetStore.update(store => ({
+                ...store,
+                reference: {
+                    ...store.reference,
+                    x: [sprite.position.x, sprite.position.y]
+                }
+            }));
             this.isDrawingReferenceLine = true;
+        }
+
+        if (this.xIsSet && this.aIsSet) {
+            console.log('A + X is set!');
         }
     }
 
@@ -187,10 +203,15 @@ export class ReferenceTool {
         this.dragTarget.x = newPosition.x;
         this.dragTarget.y = newPosition.y;
 
-        // Update reference points in store
+        // Update reference points
         if (this.dragTarget.label === 'ref-a') {
-            // TargetStore.setReference('a', [newPosition.x, newPosition.y]);
-            this.targetStore.reference.a = [newPosition.x, newPosition.y];
+            TargetStore.update(store => ({
+                ...store,
+                reference: {
+                    ...store.reference,
+                    a: [newPosition.x, newPosition.y]
+                }
+            }));
 
             EditorStore.update(store => ({
                 ...store,
@@ -198,8 +219,13 @@ export class ReferenceTool {
                 isRefDirty: true
             }));
         } else if (this.dragTarget.label === 'ref-x') {
-            // TargetStore.setReference('x', [newPosition.x, newPosition.y]);
-            this.targetStore.reference.x = [newPosition.x, newPosition.y];
+            TargetStore.update(store => ({
+                ...store,
+                reference: {
+                    ...store.reference,
+                    x: [newPosition.x, newPosition.y]
+                }
+            }));
             EditorStore.update(store => ({
                 ...store,
                 xIsMoved: true,
@@ -223,40 +249,53 @@ export class ReferenceTool {
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
     }
 
-    public setRefMeasurement(): void
-    {
+    public setRefMeasurement(): void {
         const measurement = this.editorStore.refMeasurement;
-
-        if (!this.isValidMeasurementInput(measurement)) {
-            this.addInvalidInputWarning();
+        const refA = this.referenceContainer.getChildByLabel('ref-a');
+        const refX = this.referenceContainer.getChildByLabel('ref-x');
+        
+        if (!refA || !refX || !measurement) {
+            console.error('Missing required values');
             return;
         }
-
-        const normalizedMeasurement = this.normalizeMeasurement(measurement);
-        this.updateTargetStore(normalizedMeasurement);
-
-        const calculation = this.calculateReferenceValues();
-        if (!calculation) {
-            this.handleCalculationError(measurement, normalizedMeasurement);
-            return;
-        }
-
-        const hasChanged = this.hasReferenceValuesChanged(calculation);
-        if (!hasChanged) {
-            console.log('Values are the same, no change.');
-            return;
-        }
-
-        this.updateReferenceValues(calculation);
+    
+        // Single store update with all values
+        TargetStore.update(store => {
+            const newRef = {
+                ...store.reference,
+                measurement: parseFloat(measurement),
+                linelength: this.refLineLength,
+                a: [refA.position.x, refA.position.y] as [number, number],
+                x: [refX.position.x, refX.position.y] as [number, number]
+            };
+    
+            // Calculate immediately with the new values
+            const calculation = {
+                cm: (10 * this.refLineLength) / (parseFloat(measurement) * 10),
+                px: (100 * parseFloat(measurement) * 10) / this.refLineLength
+            };
+    
+            return {
+                ...store,
+                reference: {
+                    ...newRef,
+                    cm: calculation.cm,
+                    px: calculation.px
+                }
+            };
+        });
+    
         this.resetEditorState();
         this.clearWarnings();
     }
 
-    private isValidMeasurementInput(measurement: string): boolean
-    {
-        return this.aIsSet &&
-            this.xIsSet &&
-            !!measurement.match(/^(?!^0$)-?\d+[.,]?\d*$/i);
+    private isValidMeasurementInput(measurement: string): boolean {
+        const refA = this.referenceContainer.getChildByLabel('ref-a');
+        const refX = this.referenceContainer.getChildByLabel('ref-x');
+    
+        return !!refA && 
+               !!refX && 
+               !!measurement.match(/^(?!^0$)-?\d+[.,]?\d*$/i);
     }
 
     private normalizeMeasurement(measurement: string): string
@@ -330,70 +369,96 @@ export class ReferenceTool {
         );
     }
 
-    public isRefValid(refData: any): refData is RefData
+    private isRefValid(refData: any): refData is RefData 
     {
+        console.log("Validating ref data:", refData);
+        
         const missing: string[] = [];
-
-        if (!refData.ref.measurement) missing.push('measurement');
-        if (!refData.ref.a?.[0] || !refData.ref.a?.[1]) missing.push('a coordinates');
-        if (!refData.ref.x?.[0] || !refData.ref.x?.[1]) missing.push('x coordinates');
-        if (!refData.ref.linelength) missing.push('linelength');
-        if (!refData.target.image.originalsize?.[0]) missing.push('originalsize');
-
+    
+        // More specific checks
+        if (refData.ref.measurement === undefined || refData.ref.measurement === null) 
+            missing.push('measurement');
+        
+        if (!Array.isArray(refData.ref.a) || refData.ref.a.length !== 2 || 
+            refData.ref.a[0] === undefined || refData.ref.a[1] === undefined) 
+            missing.push('a coordinates');
+        
+        if (!Array.isArray(refData.ref.x) || refData.ref.x.length !== 2 || 
+            refData.ref.x[0] === undefined || refData.ref.x[1] === undefined) 
+            missing.push('x coordinates');
+        
+        if (refData.ref.linelength === undefined || refData.ref.linelength === 0) 
+            missing.push('linelength');
+    
         if (missing.length > 0) {
             console.log('Missing fields:', missing);
-            console.log(refData, this.targetStore);
+            console.log('Current data:', refData);
             return false;
         }
-
+    
         return true;
     }
 
-    public calculateReferenceValues(): {cm: number, px: number} | undefined
-    {
-        if (!this.isRefValid({ ref: this.targetStore.reference, target: this.targetStore.target })) return;
-
-        const ref: TargetStoreInterface['reference'] = this.targetStore.reference;
-        const target: TargetStoreInterface['target'] = this.targetStore.target;
-
-        const imageDimensions = target.image.originalsize;
-        const userSettings = get(UserSettingsStore);
-
-        if (!ref.x || !ref.x[0] || !ref.a || !ref.a[0] || !ref.measurement) {
-            throw new Error('Refs not set!');
+    public calculateReferenceValues(): {cm: number, px: number} | undefined {
+        // Get fresh store data
+        const currentStore = get(TargetStore);
+        
+        // Create validation data structure from current store
+        const validationData = {
+            ref: {
+                measurement: currentStore.reference.measurement,
+                a: currentStore.reference.a,
+                x: currentStore.reference.x,
+                linelength: currentStore.reference.linelength
+            },
+            target: {
+                image: {
+                    originalsize: currentStore.target.image.originalsize
+                }
+            }
+        };
+    
+        console.log("Calculating with data:", validationData);
+    
+        if (!this.isRefValid(validationData)) {
+            console.error('Invalid data for calculation');
+            return;
         }
-
-        const pixeldistance = ref.x[0] - ref.a[0];
-
+    
+        const userSettings = get(UserSettingsStore);
+    
+        // We know these exist because isRefValid passed
+        const ref = currentStore.reference;
+    
         // convert length to mm
-        let length: number = ref.measurement * 10;
+        let length: number = ref.measurement! * 10;
         // convert length to mm if imperial
         if (!userSettings.isometrics) {
             length = length * 2.54;
         }
-
-        const mmToPixels = (mm: number) => {if (!ref.linelength) return; return (mm * ref.linelength) / length};
-        const pxToMm = (pixels: number) => {if (!ref.linelength) return; return (pixels * length) / ref.linelength};
-
-        let result: {cm: number, px: number} = {cm: mmToPixels(10) || 0, px: pxToMm(100) || 0}
-
-        console.log(`result:`, result);
-
-        return result;
-
-        /*
-        const linePercentOfTarget = (ref.linelength / target.image.originalsize[0]);
-        const totalWidthInMm = (target.image.originalsize[0] * length) / ref.linelength;
-        // ---//
-        console.log('length:', length); // mm
-        console.log('reflinelength:', ref.linelength); // length of referenceline in pixels
-        console.log('image.x:', target.image.originalsize[0]); // pixels
-        console.log(`line is ${linePercentOfTarget * 100}% of target`);
-        console.log(`if line(px) is ${length}mm then the entire image is ${totalWidthInMm} mm wide.`);
-        console.log(`then 46mm is ${mmToPixels(46)} px`);
-        console.log(`and 100px is ${pxToMm(100)} mm`);
-        */
+    
+        const mmToPixels = (mm: number) => (mm * ref.linelength!) / length;
+        const pxToMm = (pixels: number) => (pixels * length) / ref.linelength!;
+    
+        return {
+            cm: mmToPixels(10),
+            px: pxToMm(100)
+        };
     }
+    
+    /*
+    const linePercentOfTarget = (ref.linelength / target.image.originalsize[0]);
+    const totalWidthInMm = (target.image.originalsize[0] * length) / ref.linelength;
+    // ---//
+    console.log('length:', length); // mm
+    console.log('reflinelength:', ref.linelength); // length of referenceline in pixels
+    console.log('image.x:', target.image.originalsize[0]); // pixels
+    console.log(`line is ${linePercentOfTarget * 100}% of target`);
+    console.log(`if line(px) is ${length}mm then the entire image is ${totalWidthInMm} mm wide.`);
+    console.log(`then 46mm is ${mmToPixels(46)} px`);
+    console.log(`and 100px is ${pxToMm(100)} mm`);
+    */
+    
 
     public get isDirty(): boolean
     {

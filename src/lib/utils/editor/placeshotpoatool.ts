@@ -19,6 +19,7 @@ export class ShotPoaTool {
     private dragStartPosition: {x: number, y: number} | null = null;
     private isSelected: boolean = false;
     private userSettingsUnsubscribe: () => void;
+    private targetStoreUnsubscribe: () => void;
 
     constructor(targetContainer: Container) {
         this.targetContainer = targetContainer;
@@ -28,6 +29,10 @@ export class ShotPoaTool {
         this.texturePath = '/cursors/shot.svg';
 
         type Point = {x: number, y: number};
+
+        this.targetStoreUnsubscribe = TargetStore.subscribe((store) => {
+            this.targetStore = store;
+        });
 
         this.userSettingsUnsubscribe = UserSettingsStore.subscribe((settings) => {
             console.log('Settings updated:', settings);
@@ -39,6 +44,9 @@ export class ShotPoaTool {
     public destroy() {
         if (this.userSettingsUnsubscribe) {
             this.userSettingsUnsubscribe();
+        }
+        if (this.targetStoreUnsubscribe) {
+            this.targetStoreUnsubscribe();
         }
     }
 
@@ -100,16 +108,26 @@ export class ShotPoaTool {
         });
     }
 
-    private drawMeanRadius(groupId: number): void {
+    private drawMeanRadius(groupId: number): void 
+    {
+        const currentStore = get(TargetStore);
+        
         const group = TargetStore.getGroup(groupId);
         console.log('Drawing MR, group:', group);
-        if (!group || !group.shots || group.shots.length < 2 || !this.targetStore.reference.measurement || !this.targetStore.reference.linelength) {
+        if (!group || 
+            !group.shots || 
+            group.shots.length < 2 || 
+            !currentStore.reference.measurement || 
+            !currentStore.reference.linelength
+        ) {
             console.log('Early return conditions:', {
                 noGroup: !group,
                 noShots: !group?.shots,
                 notEnoughShots: group?.shots?.length ? group.shots.length < 2 : '',
-                noRefMeasurement: !this.targetStore.reference.measurement,
-                noRefLineLength: !this.targetStore.reference.linelength
+                noRefMeasurement: !currentStore.reference.measurement,
+                refMeasurement: currentStore.reference.measurement,
+                noRefLineLength: !currentStore.reference.linelength,
+                refLineLength: currentStore.reference.linelength,
             });
             return;
         }
@@ -133,19 +151,15 @@ export class ShotPoaTool {
             showmr: this.userSettings.showmr
         });
     
-        // Draw graphics
         const graphics = new Graphics();
         graphics.clear();
-
         graphics.circle(0, 0, meanRadius);
-        // Draw circle
         graphics.stroke({
             width: 2 * 1/this.targetContainer.scale.x,
             color: 0xFF0000,
             alpha: 0.5
         });
         
-        // Position after drawing
         graphics.position.set(meanCenter.x, meanCenter.y);
         graphics.eventMode = 'none';
         graphics.visible = this.userSettings.showmr;
@@ -162,6 +176,8 @@ export class ShotPoaTool {
             }
             groupContainer.addChild(graphics);
             console.log('Added new circle');
+        } else {
+            console.error(`No group container with ${groupId.toString()}`)
         }
     }
     
@@ -194,11 +210,15 @@ export class ShotPoaTool {
         
         const graphics = new Graphics();
         graphics.clear();
-        graphics.scale.set(this.setScale());
-        graphics.circle(0, 0, radius * 1/this.setScale());
+        // graphics.scale.set(this.setScale());
+        graphics.circle(0, 0, radius);
         graphics.position.set(center.x, center.y)
         const strokeWidth = 2 * 1/this.targetContainer.scale.x;
-        graphics.stroke({width: strokeWidth, color: 0x0000ff, alpha: 0.5});
+        graphics.stroke({
+            width: 2 * 1/this.targetContainer.scale.x,
+            color: 0x0000FF,
+            alpha: 0.5
+        });
         graphics.eventMode = 'none';
 
         graphics.visible = this.userSettings.showccr;
@@ -294,43 +314,38 @@ export class ShotPoaTool {
             return store;
         });
         
-        // Draw graphics
+        
         const graphics = new Graphics();
         graphics.clear();
         
-        // Scale the graphics inversely to maintain constant line width
         const strokeWidth = 2 * 1/this.targetContainer.scale.x;
     
-        // Draw rectangle
-        graphics.rect(minX, minY, width, height);
+        graphics.rect(minX, minY, width, height);   // FOM
         graphics.stroke({width: strokeWidth, color: 0x00FF00});
-        
-        // Draw diagonal
-        graphics.moveTo(minX, minY);
+        graphics.moveTo(minX, minY);                // DIAGONAL
         graphics.lineTo(maxX, maxY);
         graphics.stroke({width: strokeWidth, color: 0x00FF00});
         
-        // Add labels if needed
-        const diagonalLabel = new Text({
-            text: `D: ${diagonalMm.toFixed(1)}mm`,
-            style: {
-                fontSize: 12 * 1/this.targetContainer.scale.x,
-                fill: 0x00FF00
-            }
-        });
-        diagonalLabel.position.set(maxX + 5, maxY);
+        // const diagonalLabel = new Text({
+        //     text: `D: ${diagonalMm.toFixed(1)}mm\nFoM: ${fomMm.toFixed(1)}mm`,
+        //     style: {
+        //         fontSize: 24,
+        //         fill: 0x00FF00
+        //     }
+        // });
+        // diagonalLabel.position.set(maxX + 5, maxY);
         
-        const fomLabel = new Text({
-            text: `FoM: ${fomMm.toFixed(1)}mm`,
-            style: {
-                fontSize: 12 * 1/this.targetContainer.scale.x,
-                fill: 0x00FF00
-            }
-        });
-        fomLabel.position.set(maxX + 5, maxY + 15 * 1/this.targetContainer.scale.x);
+        // const fomLabel = new Text({
+        //     text: `FoM: ${fomMm.toFixed(1)}mm`,
+        //     style: {
+        //         fontSize: 24,
+        //         fill: 0x00FF00
+        //     }
+        // });
+        // fomLabel.position.set(maxX + 5, maxY + 27 * 1/this.targetContainer.scale.x);
         
-        graphics.addChild(diagonalLabel);
-        graphics.addChild(fomLabel);
+        // graphics.addChild(diagonalLabel);
+        // graphics.addChild(fomLabel);
         graphics.eventMode = 'none';
         graphics.label = `diagonal-${groupId}`;
         

@@ -1,7 +1,4 @@
-// TODO: Rotation.
-// TODO: Cursor verkar inte funka.
-// TODO: Unit testing.
-
+// src/lib/utils/editor/target.ts
 import { deserialize } from '$app/forms';
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
@@ -93,7 +90,7 @@ export class Target {
 
     private updateBackground(): void {
         if (this.app) {
-            this.app.renderer.background.color = this.dark ? 0x1e293b : 0xcdcdcc;
+            this.app.renderer.background.color = this.dark ? 0x545960 : 0xcccbc9;
         }
     }
 
@@ -109,7 +106,7 @@ export class Target {
         await this.app.init({
             width: this.chromeArea.x,
             height: this.chromeArea.y,
-            backgroundColor: this.dark ? 0x1e293b : 0xcdcdcc,
+            backgroundColor: this.dark ? 0x545960 : 0xcccbc9,
             antialias: true,
             resolution: window.devicePixelRatio || 1,
             hello: true,

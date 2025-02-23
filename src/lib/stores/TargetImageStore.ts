@@ -111,9 +111,9 @@ const TargetStoreSchema = z.object({
         }),
     }),
     reference: z.object({
-        a: z.array(z.number().optional(), z.number().optional()).optional(),            // [x,y]
-        x: z.array(z.number().optional(), z.number().optional()).optional(),
-        y: z.array(z.number().optional(), z.number().optional()).optional(),
+        a: z.tuple([z.number(), z.number()]).optional(), // [x,y]
+        x: z.tuple([z.number(), z.number()]).optional(), // [x,y]
+        y: z.tuple([z.number(), z.number()]).optional(), // [x,y]
         linelength: z.number().optional(),
         measurement: z.number().optional(),    // User supplied;
         cm: z.number().optional(),             // 1 cm === px
@@ -413,7 +413,25 @@ function createTargetStore()
                 return 0;
             }
             return (px * currentState.reference.measurement) / currentState.reference.linelength;
-        }
+        },
+        totalShots: (group?: number) => {
+            let total: number = 0;
+
+            if (!group) {
+                currentState.groups.forEach(group =>{
+                    if (group.shots?.length) {
+                        total += group.shots.length;
+                    }
+                });
+            } else {
+                const grp = currentState.groups.find((g) => group === g.id);
+                if (grp) {
+                    return grp.shots?.length || 0;
+                }
+            }
+            
+            return total;
+        },
     }
 }
 
