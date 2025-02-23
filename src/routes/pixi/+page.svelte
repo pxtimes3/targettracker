@@ -6,6 +6,8 @@
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
 	import InfoPanel from '@/components/target/editor/panels/InfoPanel.svelte';
 	import SettingsPanel from '@/components/target/editor/panels/SettingsPanel.svelte';
+	import GroupPanel from '@/components/target/editor/panels/GroupPanel.svelte';
+	import ReferencePanel from '@/components/target/editor/panels/ReferencePanel.svelte';
 	import { Target } from '@/utils/editor/target';
 	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
@@ -17,7 +19,6 @@
 	let { data } : { data: PageServerData } = $props();
 
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
-	let app: Application<Renderer>;
 	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
 
 	let staticAssets: string[] = $state([
@@ -31,16 +32,11 @@
 	]);
 
 
-	let groupContainers: Container[] = $state([]);
-	let crosshairContainer: Container;
 	let showMainMenu: boolean = $state(false);
 
 	let slider: number = $state(0);
 
-	let atoxInput: HTMLInputElement|undefined = $state();
-
-	let settingsForm: HTMLFormElement;
-
+	
 	let selected: Array<Sprite | Container<ContainerChild>> = $state($EditorStore.selected);
 	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
 
@@ -49,6 +45,7 @@
     let applicationState: string = $state('Loading...');
     let target: Target|undefined = $state();
     let chromeArea: {x: number, y: number} = $state({x: 0, y: 0});
+	let referencebutton: HTMLButtonElement|undefined = $state();
 
 	function mousePosition(e: MouseEvent): void
     {
@@ -185,6 +182,10 @@
 			}, 300);
 		}
 
+		if (referencebutton) {
+			console.log(referencebutton.style.top, referencebutton.style.left)
+		}
+
         if (data.user?.id) {
             await target.initializeAnalysis(data.user.id);
         }
@@ -210,6 +211,10 @@
 		if (chromeArea) {
 			canvasContainer.style.width  = `${chromeArea.x}px`;
 			canvasContainer.style.height = `${chromeArea.y}px`;
+		}
+
+		if (referencebutton != undefined) {
+			console.log(referencebutton.style.top, referencebutton.style.left);
 		}
 
 		// if ($UserSettingsStore) {
@@ -264,11 +269,11 @@
 		<button
 			title="Set reference"
 			id="reference-button"
+			bind:this={referencebutton}
 			onclick={(e) => { $EditorStore.mode === 'reference' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'reference'; showPanel(e, "reference"); $activePanel = "reference-panel"; }}
 			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 grid justify-items-center place-items-center items-center"
 		>
 			<LucideRuler
-
 				class="pointer-events-none"
 			/>
 		</button>
@@ -400,66 +405,17 @@
     </div>
 </div>
 
-<div id="reference-panel" class="absolute z-50 {$activePanel === 'reference-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md left-11 top-10 w-64 max-w-64">
-	<div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
-		<p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
-		<p class="justify-self-end">
-			<LucideX size="14" class="cursor-pointer" onclick={(e) => { $activePanel = ''; }} />
-		</p>
-	</div>
-	<div class="p-4">
-		<label for="atoxInput" class="text-sm text-body-color-dark"></label>
-		<div class="grid grid-cols[1fr_1fr] grid-flow-col">
-			<div class="input-group text-xs divide-primary-200-800 grid-cols-[auto_1fr_auto] divide-x text-body-color-dark bg-white">
-				<div class="input-group-cell preset-tonal-primary">A &rArr; X</div>
-				<input type="text" id="atoxInput" bind:this={atoxInput} class="bg-white text-xs" bind:value={$EditorStore.refMeasurement} pattern={`^(?!^0$)-?\d+[.,]?\d*$`}>
-				<div class="input-group-cell preset-tonal-primary">{#if $UserSettingsStore.isometrics}cm{:else}in{/if}</div>
-			</div>
-			{#if !$EditorStore.isRefDirty}
-				<div class="z-30 absolute right-[7.75rem] mt-2 text-green-700"><LucideCheck size=20/></div>
-			{/if}
-				<button
-					class="rounded btn-md bg-primary-200-800 ml-2 text-sm uppercase"
-					onclick={() => target?.setRefMeasurement()}
-				>Set</button>
-		</div>
-		<div class="italic text-sm text-body-color-dark/70 mt-2" style="line-height: 14px;">
-			Tip: You can change measurement units in <a href="##" class="anchor underline">the settings panel</a>.
-		</div>
-	</div>
-</div>
-
-
-
-<!-- <div id="info-panel" class="absolute z-50 {$activePanel === 'info-panel' ? 'grid' : 'hidden' } grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
-    <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
-        <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Target information</p>
-        <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={(e) => $activePanel = ''} />
-        </p>
-    </div>
-	<div class="p-4 mb-8 grid grid-flow-row gap-y-2">
-		<div class="text-sm text-primary-950">
-			<label for="target_name">Name</label>
-			<input type="text" class="appearance-none block w-full bg-gray-200 text-gray-700 border border-red-500 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white" id="target_name" name="target_name" />
-		</div>
-		<div class="text-sm text-primary-950">
-			Type
-		</div>
-		<div class="text-sm text-primary-950">
-			Note
-		</div>
-		<div class="text-sm text-primary-950">
-			Firearm
-		</div>
-		<div class="text-sm text-primary-950">
-			Ammunition
-		</div>
-		<div class="text-sm text-primary-950">
-			Weather data
-		</div>
-	</div>
-</div> -->
+{#if target}
+<ReferencePanel
+	data={data}
+	active={false}
+	position={{
+		top: referencebutton?.offsetTop + 'px',
+		left: referencebutton?.offsetLeft + 68 + 'px',
+	}}
+	{target}
+/>
+{/if}
 
 <SettingsPanel 
 	data={data}
@@ -483,15 +439,6 @@
 		{:else}
 			All set! Now add point of aim (required for scoring) or start placing shots on the target.
 		{/if}
-	</div>
-{/if}
-
-{#if Array.isArray($EditorStore.warnings) && $EditorStore.warnings.length > 0}
-	<div class="z-[100] absolute right-10 bottom-10 bg-slate-400 p-4 text-sm">
-		Warnings:
-		{#each $EditorStore.warnings as warning}
-			<p>{warning.message}</p>
-		{/each}
 	</div>
 {/if}
 
@@ -524,7 +471,7 @@
 </div>
 
 
-<div id="debugpanel" style="position: absolute; z-index: 99; right: 5rem; bottom: 5rem; background: #ccc; color: #000">
+<div id="debugpanel" style="position: absolute; z-index: 99; right: 5rem; bottom: 5rem; background: #ccc; color: #000" class="hidden">
 	{#each $TargetStore.groups as group}
 		<div>
 		Group: {group.id}
@@ -543,6 +490,8 @@
         ⚠️ Set reference points and measurement to start placing shots!
     </div>
 {/if}
+
+<GroupPanel />
 
 <!-- canvas -->
 <div
