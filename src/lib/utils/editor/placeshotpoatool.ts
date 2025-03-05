@@ -13,7 +13,6 @@ export class ShotPoaTool {
     private editorStore: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
     private userSettings: SettingsInterface;
-    private texturePath: string;
     private isDragging: boolean = false;
     private dragTarget: Sprite | null = null;
     private dragStartPosition: {x: number, y: number} | null = null;
@@ -26,7 +25,6 @@ export class ShotPoaTool {
         this.editorStore = get(EditorStore);
         this.targetStore = get(TargetStore);
         this.userSettings = get(UserSettingsStore);
-        this.texturePath = '/cursors/shot.svg';
 
         type Point = {x: number, y: number};
 
@@ -35,7 +33,7 @@ export class ShotPoaTool {
         });
 
         this.userSettingsUnsubscribe = UserSettingsStore.subscribe((settings) => {
-            console.log('Settings updated:', settings);
+             // console.log('Settings updated:', settings);
             this.userSettings = settings;
             this.drawAllMetrics();
         });
@@ -52,10 +50,11 @@ export class ShotPoaTool {
 
     public async addShot(x: number, y: number, group: string): Promise<void>
     {
-        console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
+         // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
 
         const label = `shot-${this.getShotsTotal + 1}-${group}`;
-        const shot = await this.createSprite(label);
+        // const shot = await this.createSprite(label);
+        const shot = this.createShotGraphic(label);
         const position = this.targetContainer.toLocal({x,y});
 
         let groupContainer: Container|null;
@@ -106,6 +105,15 @@ export class ShotPoaTool {
             if (e.button === 1) { this.removeShot(e) }
             if (e.button === 0) { this.handleSpriteDrag(e); }
         });
+
+        // console.log('Shot created:', {
+        //     label: shot.label,
+        //     position: `${shot.position.x},${shot.position.y}`,
+        //     parent: shot.parent?.label,
+        //     visible: shot.visible,
+        //     scale: `${shot.scale.x},${shot.scale.y}`,
+        //     children: shot.children.length
+        // });
     }
 
     private drawMeanRadius(groupId: number): void 
@@ -113,22 +121,22 @@ export class ShotPoaTool {
         const currentStore = get(TargetStore);
         
         const group = TargetStore.getGroup(groupId);
-        console.log('Drawing MR, group:', group);
+         // console.log('Drawing MR, group:', group);
         if (!group || 
             !group.shots || 
             group.shots.length < 2 || 
             !currentStore.reference.measurement || 
             !currentStore.reference.linelength
         ) {
-            console.log('Early return conditions:', {
-                noGroup: !group,
-                noShots: !group?.shots,
-                notEnoughShots: group?.shots?.length ? group.shots.length < 2 : '',
-                noRefMeasurement: !currentStore.reference.measurement,
-                refMeasurement: currentStore.reference.measurement,
-                noRefLineLength: !currentStore.reference.linelength,
-                refLineLength: currentStore.reference.linelength,
-            });
+            // console.log('Early return conditions:', {
+            //     noGroup: !group,
+            //     noShots: !group?.shots,
+            //     notEnoughShots: group?.shots?.length ? group.shots.length < 2 : '',
+            //     noRefMeasurement: !currentStore.reference.measurement,
+            //     refMeasurement: currentStore.reference.measurement,
+            //     noRefLineLength: !currentStore.reference.linelength,
+            //     refLineLength: currentStore.reference.linelength,
+            // });
             return;
         }
         
@@ -144,20 +152,20 @@ export class ShotPoaTool {
                 Math.pow(p.y - meanCenter.y, 2)
             ), 0) / points.length;
     
-        console.log('Calculated values:', {
-            points,
-            meanCenter,
-            meanRadius,
-            showmr: this.userSettings.showmr
-        });
+        // console.log('Calculated values:', {
+        //     points,
+        //     meanCenter,
+        //     meanRadius,
+        //     showmr: this.userSettings.showmr
+        // });
     
         const graphics = new Graphics();
         graphics.clear();
         graphics.circle(0, 0, meanRadius);
         graphics.stroke({
-            width: 2 * 1/this.targetContainer.scale.x,
             color: 0xFF0000,
-            alpha: 0.5
+            alpha: 0.5,
+            pixelLine: true
         });
         
         graphics.position.set(meanCenter.x, meanCenter.y);
@@ -166,16 +174,16 @@ export class ShotPoaTool {
         graphics.label = `mr-${groupId}`;
     
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
-        console.log('Group container:', groupContainer);
+         // console.log('Group container:', groupContainer);
         
         if (groupContainer) {
             const oldCircle = groupContainer.getChildByLabel(`mr-${groupId}`);
             if (oldCircle) {
-                console.log('Removing old circle');
+                 // console.log('Removing old circle');
                 groupContainer.removeChild(oldCircle);
             }
             groupContainer.addChild(graphics);
-            console.log('Added new circle');
+             // console.log('Added new circle');
         } else {
             console.error(`No group container with ${groupId.toString()}`)
         }
@@ -213,10 +221,9 @@ export class ShotPoaTool {
         // graphics.scale.set(this.setScale());
         graphics.circle(0, 0, radius);
         graphics.position.set(center.x, center.y)
-        const strokeWidth = 2 * 1/this.targetContainer.scale.x;
         graphics.stroke({
-            width: 2 * 1/this.targetContainer.scale.x,
             color: 0x0000FF,
+            pixelLine: true,
             alpha: 0.5
         });
         graphics.eventMode = 'none';
@@ -231,12 +238,11 @@ export class ShotPoaTool {
             graphics.label = `ccr-${groupId}`;
             groupContainer.addChild(graphics);
 
-            console.log(`CCR. center: ${center.x},${center.y} radii: ${radius}`);
+             // console.log(`CCR. center: ${center.x},${center.y} radii: ${radius}`);
         }
     }
     
-    private drawMPI(groupId: number): void 
-    {
+    private drawMPI(groupId: number): void {
         const group = TargetStore.getGroup(groupId);
         if (!group || !group.shots || group.shots.length < 2) return;
         
@@ -246,29 +252,54 @@ export class ShotPoaTool {
             y: points.reduce((sum, p) => sum + p.y, 0) / points.length
         };
     
-        const graphics = new Graphics();
-        graphics.clear();
+        const mpiContainer = new Container();
+        const vertLine = new Graphics()
+            .moveTo(0, -5)
+            .lineTo(0, 5)
+            .stroke({ 
+                color: 0xFF00FF,
+                pixelLine: true
+            })
+        vertLine.label = `mpi-group-${groupId}-vertLine`;
         
-        const sz  = 10;
-        const w   = 2;
-        const off = (sz / 2) - (w / 2);
+        // Draw horizontal line with pixelLine
+        const horiziLine = new Graphics()
+            .moveTo(-5, 0)
+            .lineTo(5, 0)
+            .stroke({ 
+                color: 0xFF00FF,
+                pixelLine: true,
+                width: 2
+            });
+        horiziLine.label = `mpi-group-${groupId}-horizLine`;
 
-        graphics.scale.set(this.setScale());
-        graphics
-            .rect(0 - off, 0, sz, w).fill({color: 0xFF00FF})
-            .rect(0, 0 - off, w, sz).fill({color: 0xFF00FF});
-        graphics.position.set(mpi.x, mpi.y);
-        graphics.eventMode = 'none';
-
-        graphics.visible = this.userSettings.showmpi;
-
-        graphics.label = `mpi-${groupId}`;
-
+        const circle = new Graphics()
+            .circle(0, 0, 3)
+            .stroke({ 
+                color: 0xFF00FF, 
+                pixelLine: true 
+        });
+        circle.label = `mpi-group-${groupId}-circle`;
+        
+        mpiContainer.addChild(vertLine, horiziLine);
+        
+        mpiContainer.position.set(mpi.x, mpi.y);
+        mpiContainer.eventMode = 'none';
+        mpiContainer.visible = this.userSettings.showmpi;
+        mpiContainer.label = `mpi-${groupId}`;
+    
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
         if (groupContainer) {
             const oldMPI = groupContainer.getChildByLabel(`mpi-${groupId}`);
             if (oldMPI) groupContainer.removeChild(oldMPI);
-            groupContainer.addChild(graphics);
+            groupContainer.addChild(mpiContainer);
+            
+            // Debug
+            // console.log('MPI added:', {
+            //     position: `${mpi.x},${mpi.y}`,
+            //     visible: mpiContainer.visible,
+            //     parent: mpiContainer.parent?.label
+            // });
         }
     }
     
@@ -314,38 +345,13 @@ export class ShotPoaTool {
             return store;
         });
         
-        
-        const graphics = new Graphics();
-        graphics.clear();
-        
         const strokeWidth = 2 * 1/this.targetContainer.scale.x;
-    
-        graphics.rect(minX, minY, width, height);   // FOM
-        graphics.stroke({width: strokeWidth, color: 0x00FF00});
-        graphics.moveTo(minX, minY);                // DIAGONAL
-        graphics.lineTo(maxX, maxY);
-        graphics.stroke({width: strokeWidth, color: 0x00FF00});
-        
-        // const diagonalLabel = new Text({
-        //     text: `D: ${diagonalMm.toFixed(1)}mm\nFoM: ${fomMm.toFixed(1)}mm`,
-        //     style: {
-        //         fontSize: 24,
-        //         fill: 0x00FF00
-        //     }
-        // });
-        // diagonalLabel.position.set(maxX + 5, maxY);
-        
-        // const fomLabel = new Text({
-        //     text: `FoM: ${fomMm.toFixed(1)}mm`,
-        //     style: {
-        //         fontSize: 24,
-        //         fill: 0x00FF00
-        //     }
-        // });
-        // fomLabel.position.set(maxX + 5, maxY + 27 * 1/this.targetContainer.scale.x);
-        
-        // graphics.addChild(diagonalLabel);
-        // graphics.addChild(fomLabel);
+        const graphics = new Graphics()
+            .rect(minX, minY, width, height)   // FOM
+            .stroke({width: strokeWidth, color: 0x00FF00, pixelLine: true})
+            .moveTo(minX, minY)                // DIAGONAL
+            .lineTo(maxX, maxY)
+            .stroke({width: strokeWidth, color: 0x00FF00, pixelLine: true});
         graphics.eventMode = 'none';
         graphics.label = `diagonal-${groupId}`;
         
@@ -401,7 +407,7 @@ export class ShotPoaTool {
         graphics.moveTo(point1.x, point1.y);
         graphics.lineTo(point2.x, point2.y);
         const strokeWidth = 2 * 1/this.targetContainer.scale.x;
-        graphics.stroke({width: strokeWidth, color: 0x00FFFF});
+        graphics.stroke({pixelLine: true, color: 0x00FFFF});
 
         graphics.eventMode = 'none';
         graphics.label = `es-${groupId}`;
@@ -418,7 +424,7 @@ export class ShotPoaTool {
     
     public drawAllMetrics(group?: number): void 
     {
-        console.log('Drawing all metrics', { group, groups: this.targetStore.groups });
+        // console.log('Drawing all metrics', { group, groups: this.targetStore.groups });
         if (!group) {
             this.targetStore.groups.forEach((group) => {
                 const groupId = group.id;
@@ -441,14 +447,14 @@ export class ShotPoaTool {
     public async addPoa(x: number, y: number, group: string): Promise<void>
     {
         const label = `poa-${group}`;
-        const poa = await this.createSprite(label, '/cursors/poa.svg');
+        const poa = this.createPoaGraphic(label);
         const groupContainer = await this.getGroupContainer(group);
         const position = this.targetContainer.toLocal({x,y});
 
         poa.position.set(position.x, position.y)
         poa.scale.set(this.setScale());
-        poa.width = 48;
-        poa.height = poa.width;
+        // poa.width = 48;
+        // poa.height = poa.width;
 
         groupContainer?.addChild(poa);
 
@@ -506,7 +512,6 @@ export class ShotPoaTool {
             throw new Error(`Failed to push new group to store!`);
         }
     }
-
     public createNewGroupContainer(id: number): Container | null
     {
         try {
@@ -523,7 +528,6 @@ export class ShotPoaTool {
             return null;
         }
     }
-
     public removeGroup(id: string): void|undefined
     {
         if (this.targetStore.groups.length === 1) {
@@ -548,7 +552,7 @@ export class ShotPoaTool {
         this.targetStore.groups.splice(group, 1);
         this.targetStore.activeGroup = this.targetStore.groups.length;
 
-        console.log(`ActiveGroup is now ${this.targetStore.activeGroup}.`);
+         // console.log(`ActiveGroup is now ${this.targetStore.activeGroup}.`);
     }
 
     public get getCurrentGroupContainer(): Container
@@ -561,22 +565,75 @@ export class ShotPoaTool {
         return currentGroupContainer;
     }
 
-    private async createSprite(
-        label: string,
-        texturePath: string = this.texturePath,
-    ): Promise<Sprite>
+    private createShotGraphic(label: string): Container
     {
-        const texture = await Assets.load(texturePath);
-        const sprite = new Sprite(texture);
+        const shot = new Container();
+        
+        const width = 48;
+        const height = 48;
+        const radius = width / 2;
 
-        sprite.label = label;
-        sprite.eventMode = 'dynamic';
-        sprite.cursor = 'pointer';
-        sprite.interactive = true;
-        sprite.anchor.set(0.5);
-        // sprite.scale.set(1 / this.targetContainer.scale.x);
+        const circle = new Graphics()
+            .circle(0, 0, radius)
+            .moveTo(0, -24)
+            .lineTo(0, -34)
+            .moveTo(0, 24)
+            .lineTo(0, 34)
+            .moveTo(-24, 0)
+            .lineTo(-34, 0)
+            .moveTo(24, 0)
+            .lineTo(34, 0)
+            .stroke({ color: 0x000000, pixelLine: true })
+            .fill({color:0xFFFFFF, alpha: 0.25});    // fill so we can drag anywhere in the circle
+        circle.label = `${label}-graphics`;
 
-        return sprite;
+        shot.addChild(circle);
+        
+        shot.label = label;
+        shot.eventMode = 'dynamic';
+        shot.cursor = 'pointer';
+        shot.interactive = true;
+        
+        shot.pivot.set(0, 0);
+
+        return shot;
+    }
+
+    private createPoaGraphic(label: string): Container
+    {
+        const poa = new Container();
+        poa.setSize(30);
+        
+        const radius = 15;
+        const lineLength = 5;
+
+        const circle = new Graphics()
+            .circle(0, 0, radius)
+            .circle(0, 0, radius - lineLength)
+            .moveTo(0, -radius)
+            .lineTo(0, -radius - lineLength)
+            .moveTo(0, radius)
+            .lineTo(0, radius + lineLength)
+            .moveTo(-radius, 0)
+            .lineTo(-radius - lineLength, 0)
+            .moveTo(radius, 0)
+            .lineTo(radius + lineLength, 0)
+            .stroke({ color: 0x000000, pixelLine: true })
+            .fill({color:0x000000, alpha: 0.25});    // fill so we can drag anywhere in the circle
+        circle.setSize(36);
+        circle.label = `${label}-graphics`;
+
+        poa.addChild(circle);
+        
+        poa.label = label;
+        poa.eventMode = 'dynamic';
+        poa.cursor = 'pointer';
+        poa.interactive = true;
+        
+        poa.pivot.set(0, 0);
+        
+
+        return poa;
     }
 
     private async getGroupContainer(label: string): Promise<Container|null>
@@ -621,11 +678,11 @@ export class ShotPoaTool {
         if (this.dragTarget.label.startsWith('shot')) {
             id = this.dragTarget.label.match(/^shot-(\d+)-\d+$/i)?.[1];
             if (!id) { console.error(`dragTarget label => id failed!`); return; }
-            console.log(get(TargetStore))
+             // console.log(get(TargetStore))
             TargetStore.updateShot(id, parseInt(this.dragTarget.parent.label), this.dragTarget.x, this.dragTarget.y);
         } else if (this.dragTarget.label.startsWith('poa')) {
             id = this.dragTarget.label.match(/^poa-(\d+)$/i)?.[1];
-            console.log(`poagroup: ${id}`)
+             // console.log(`poagroup: ${id}`)
             if (!id) { console.error(`dragTarget label => id failed!`); return; }
             TargetStore.updatePoa(parseInt(id), this.dragTarget.x, this.dragTarget.y)
         }
@@ -690,7 +747,7 @@ export class ShotPoaTool {
     {
         const ids = [...e.target.label.matchAll(/^shot-(\d+)-(\d+)$/g)];
         if (ids) {
-            console.log(e.target.label, ids)
+             // console.log(e.target.label, ids)
             let shotid = ids[0][1];
             let groupid = parseInt(ids[0][2]);
             const res = TargetStore.removeShot(groupid, shotid);
@@ -699,7 +756,7 @@ export class ShotPoaTool {
             
             if (groupContainer) {
                 const sprite = groupContainer.getChildByLabel(e.target.label);
-                console.log(sprite);
+                 // console.log(sprite);
                 if (sprite) {
                     groupContainer.removeChild(sprite);
                 } else {

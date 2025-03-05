@@ -2,8 +2,9 @@
 import { EditorStore, type EditorStoreInterface } from '@/stores/EditorStore';
 import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
 import { UserSettingsStore, type SettingsInterface } from '@/stores/UserSettingsStore';
+import { isNull } from 'drizzle-orm';
 import type { FederatedPointerEvent } from 'pixi.js';
-import { Assets, Container, Graphics, Sprite } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { get } from 'svelte/store';
 
 interface RefData {
@@ -35,7 +36,7 @@ export class ReferenceTool {
     private refLineLength: number = 0;
     public  refMeasurementDirty: boolean = true;
     private isDragging: boolean = false;
-    private dragTarget: Sprite | null = null;
+    private dragTarget: Container | null = null;
     private dragStartPosition: { x: number; y: number } | null = null;
 
     constructor(targetContainer: Container)
@@ -67,83 +68,71 @@ export class ReferenceTool {
         this.targetContainer.on('pointermove', this.updateReferenceLine.bind(this));
     }
 
-    private updateReferenceLine(event?: FederatedPointerEvent): void
-    {
+    private updateReferenceLine(event?: FederatedPointerEvent): void {
         if (!this.isDrawingReferenceLine || !this.refLine) return;
-
+    
         const startPoint = this.referenceContainer.getChildByLabel('ref-a');
         const endPoint = !this.xIsSet ? undefined : this.referenceContainer.getChildByLabel('ref-x');
-
+    
         if (!startPoint) return;
-
+    
         this.refLine.clear();
         this.refLine.beginPath();
         this.refLine.setStrokeStyle({
             width: 3,
+            pixelLine: true,
             color: 0x000000,
             alpha: 0.8,
             cap: 'round',
             join: 'round'
         });
-
+    
         let startPos = { x: startPoint.x, y: startPoint.y };
-        let endPos   = { x: 0, y: 0 };
-
+        let endPos = { x: 0, y: 0 };
+    
         if (endPoint) {
             endPos = { x: endPoint.x, y: endPoint.y };
         } else if (event) {
             const localPos = this.referenceContainer.toLocal(event.global);
             endPos = { x: localPos.x, y: localPos.y };
         }
-
-        this.refLine.moveTo(startPos.x, startPos.y)
-            .lineTo(endPos.x, endPos.y)
-            .stroke();
-
+    
+        // Calculate the total line length for reference
         this.refLineLength = Math.sqrt(
             Math.pow(endPos.x - startPos.x, 2) +
             Math.pow(endPos.y - startPos.y, 2)
         );
+    
+        // Calculate the direction vector
+        const dx = endPos.x - startPos.x;
+        const dy = endPos.y - startPos.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        
+        if (length === 0) return; // Avoid division by zero
+        
+        // Normalize direction vector
+        const ndx = dx / length;
+        const ndy = dy / length;
+        
+        // Radius of the circles
+        const radius = 8; // Same as in createSprite
+        
+        // Calculate start and end points at the edge of the circles
+        const adjustedStartX = startPos.x + ndx * radius;
+        const adjustedStartY = startPos.y + ndy * radius;
+        const adjustedEndX = endPos.x - ndx * radius;
+        const adjustedEndY = endPos.y - ndy * radius;
+        
+        // Draw only the visible part of the line
+        this.refLine.moveTo(adjustedStartX, adjustedStartY)
+            .lineTo(adjustedEndX, adjustedEndY)
+            .stroke();
     }
 
     public async addReferencePoint(x: number, y: number): Promise<void>
     {
-        const createSprite = async (texturePath: string, label: string) => {
-            const texture = await Assets.load(texturePath);
-            const sprite = new Sprite(texture);
-
-            sprite.label = label;
-            sprite.eventMode = 'dynamic';
-            sprite.cursor = 'pointer';
-            sprite.interactive = true;
-            sprite.anchor.set(0.5);
-            sprite.scale.set(1 / this.targetContainer.scale.x);
-
-            const localPosInTarget = this.targetContainer.toLocal({ x, y });
-            const finalPos = this.referenceContainer.toLocal(localPosInTarget, this.targetContainer);
-
-            sprite.position.set(finalPos.x, finalPos.y);
-
-            sprite.on('pointerdown', (e) => {
-                e.stopPropagation();
-                this.handleReferencePointDrag(e);
-            });
-
-            this.referenceContainer.addChild(sprite);
-
-            // Debug logging
-            console.log({
-                clickPosition: { x, y },
-                localInTarget: localPosInTarget,
-                finalPosition: finalPos,
-                spriteGlobalPosition: this.targetContainer.toGlobal(sprite.position)
-            });
-
-            return sprite;
-        };
-
         if (!this.aIsSet) {
-            const sprite = await createSprite('/cursors/circle-a.svg', 'ref-a');
+            const sprite = await this.createSprite('ref-a', x, y);
             this.aIsSet = true;
             TargetStore.update(store => ({
                 ...store,
@@ -156,7 +145,7 @@ export class ReferenceTool {
         }
 
         if (!this.xIsSet) {
-            const sprite = await createSprite('/cursors/circle-x.svg', 'ref-x');
+            const sprite = await this.createSprite('ref-x', x, y);
             this.xIsSet = true;
             TargetStore.update(store => ({
                 ...store,
@@ -173,36 +162,114 @@ export class ReferenceTool {
         }
     }
 
-    private handleReferencePointDrag(event: FederatedPointerEvent): void
+    private async createSprite(label: string, x: number, y: number): Promise<Container> 
     {
-        const target = event.currentTarget as Sprite;
-        this.isDragging = true;
-        this.dragTarget = target;
-        this.dragStartPosition = { x: target.x, y: target.y };
+        const container = new Container({
+            label: label,
+            eventMode: 'dynamic',
+            cursor: 'pointer',
+            interactive: true,
+        });
+        container.label = label;
+    
+        const idLabel: RegExpMatchArray|null = label.match(/\w$/);
+        const text = idLabel && idLabel[0] ? idLabel[0] : '';
+        
+        const radius = 8;
+        const lineWidth = 1.5;
+        const letterSize = radius * 1.2;
+        
+        // Create the circle
+        const marker = new Graphics({label: label})
+            .circle(0, 0, radius)
+            .stroke({color: 0x000000, pixelLine: true})
+            .fill({color: 0xFFFFFF, alpha: 0.5});
+        
+        // Create the letter graphic
+        const letterGraphic = new Graphics();
+        
+        // Draw the appropriate letter
+        if (text.toUpperCase() === 'A') {
+            // Draw letter A
+            const halfWidth = letterSize * 0.4;
+            const height = letterSize * 0.8;
+            
+            // Left line of A
+            letterGraphic.moveTo(-halfWidth, height/2)
+                .lineTo(0, -height/2);
+            
+            // Right line of A
+            letterGraphic.moveTo(0, -height/2)
+                .lineTo(halfWidth, height/2);
+            
+            // Crossbar of A
+            letterGraphic.moveTo(-halfWidth * 0.7, height/6)
+                .lineTo(halfWidth * 0.7, height/6);
+        } 
+        else if (text.toUpperCase() === 'X') {
+            // Draw letter X
+            const size = letterSize * 0.4;
+            
+            // First diagonal of X
+            letterGraphic.moveTo(-size, -size)
+                .lineTo(size, size);
+            
+            // Second diagonal of X
+            letterGraphic.moveTo(size, -size)
+                .lineTo(-size, size);
+        }
 
-        if (target.label === 'ref-a') {
+        letterGraphic.stroke({color: 0x000000, width: lineWidth, pixelLine: true});
+        
+        container.addChild(marker, letterGraphic);
+        
+        const localPosInTarget = this.targetContainer.toLocal({ x, y });
+        const finalPos = this.referenceContainer.toLocal(localPosInTarget, this.targetContainer);
+        
+        container.position.set(finalPos.x, finalPos.y);
+        // container.scale.set(1 / this.targetContainer.scale.x);
+        
+        container.on('pointerdown', (e) => {
+            e.stopPropagation();
+            this.handleReferencePointDrag(e);
+        });
+        
+        this.referenceContainer.addChild(container);
+        
+        return container;
+    }
+
+    private handleReferencePointDrag(event: FederatedPointerEvent): void 
+    {
+        // The current target is now the container, not the sprite
+        const container = event.currentTarget as Container;
+        this.isDragging = true;
+        this.dragTarget = container;
+        this.dragStartPosition = { x: container.x, y: container.y };
+    
+        if (container.label === 'ref-a') {
             this.aIsMoved = true;
         }
-        if (target.label === 'ref-x') {
+        if (container.label === 'ref-x') {
             this.xIsMoved = true;
         }
         this.refMeasurementDirty = true;
-
+    
         // Add drag event listeners
         this.targetContainer.eventMode = 'dynamic';
         this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.on('pointerup', this.handleDragEnd.bind(this));
         this.targetContainer.on('pointerupoutside', this.handleDragEnd.bind(this));
     }
-
-    private handleDragMove(event: FederatedPointerEvent): void
+    
+    private handleDragMove(event: FederatedPointerEvent): void 
     {
         if (!this.isDragging || !this.dragTarget) return;
-
+    
         const newPosition = this.referenceContainer.toLocal(event.global);
         this.dragTarget.x = newPosition.x;
         this.dragTarget.y = newPosition.y;
-
+    
         // Update reference points
         if (this.dragTarget.label === 'ref-a') {
             TargetStore.update(store => ({
@@ -212,7 +279,7 @@ export class ReferenceTool {
                     a: [newPosition.x, newPosition.y]
                 }
             }));
-
+    
             EditorStore.update(store => ({
                 ...store,
                 aIsMoved: true,
@@ -232,21 +299,26 @@ export class ReferenceTool {
                 isRefDirty: true
             }));
         }
+        
+        // Update the reference line when dragging
+        this.updateReferenceLine();
     }
 
-    private handleDragEnd(event: FederatedPointerEvent): void
+    private handleDragEnd(event: FederatedPointerEvent): void 
     {
         if (!this.isDragging || !this.dragTarget) return;
-        console.log(this.dragTarget);
-
+        
         this.isDragging = false;
         this.dragTarget = null;
         this.dragStartPosition = null;
-
+    
         // Remove listeners
         this.targetContainer.off('pointermove', this.handleDragMove.bind(this));
         this.targetContainer.off('pointerup', this.handleDragEnd.bind(this));
         this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
+        
+        // Update the reference line one last time
+        this.updateReferenceLine();
     }
 
     public setRefMeasurement(): void {

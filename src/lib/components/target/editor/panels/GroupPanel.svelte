@@ -7,7 +7,7 @@
     $effect(() => {
         if ($TargetStore) {
             totalShots = TargetStore.totalShots();
-            console.log(totalShots)
+            // console.log(totalShots)
         }
         
     });

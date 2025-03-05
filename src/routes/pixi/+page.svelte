@@ -1,3 +1,4 @@
+<!-- src/routes/pixi/+page.svelte -->
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import Logo from '@/components/logo/logo.svelte';
@@ -9,9 +10,9 @@
 	import GroupPanel from '@/components/target/editor/panels/GroupPanel.svelte';
 	import ReferencePanel from '@/components/target/editor/panels/ReferencePanel.svelte';
 	import { Target } from '@/utils/editor/target';
-	import { LucideBug, LucideCheck, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
+	import { LucideBug, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
-	import { Application, Assets, Container, Sprite } from 'pixi.js';
+	import { Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
 	import { ThemeSwitch } from 'svelte-ux';
@@ -55,28 +56,35 @@
         };
     }
 
-    async function getChromeArea(e?: Event): Promise<void>
-    {
+    async function getChromeArea(e?: Event): Promise<void> {
 		applicationState = "Looking out the window... ";
 
-		let target;
+		let targetWindow;
 
-        if (e && !e.target) {
+		if (e && !e.target) {
 			return;
 		} else if (e && e.target) {
-			target = e.target as Window;
-			chromeArea.x = target.innerWidth;
-        	chromeArea.y = target.innerHeight;
+			targetWindow = e.target as Window;
+			chromeArea.x = targetWindow.innerWidth;
+			chromeArea.y = targetWindow.innerHeight;
 		} else if (!e) {
 			chromeArea.x = window.innerWidth;
-        	chromeArea.y = window.innerHeight;
+			chromeArea.y = window.innerHeight;
 		}
-    }
+		
+		// Reset the application state after getting dimensions
+		applicationState = "Loading...";
+	}
 
-	function loadingDone(): void
-	{
+	function loadingDone(): void {
+		console.log("loadingDone called");
+		console.log("canvasContainer:", canvasContainer);
+		console.log("loader:", loader);
+		
 		canvasContainer.classList.remove('opacity-35');
 		loader.classList.add('hidden');
+		
+		console.log("Loading UI hidden");
 	}
 
     function showPanel(e: Event, name: string): void
@@ -172,29 +180,47 @@
 	}
 
 	onMount(async () => {
-		await getChromeArea();
-		target = new Target(chromeArea, staticAssets);
-        await target.initialize(canvasContainer, (state) => applicationState = state);
-
-		if (target) {
-			setTimeout(() => {
-				loadingDone();
-			}, 300);
+		try {
+			await getChromeArea();
+			applicationState = "Initializing target...";
+			
+			console.log("Creating Target instance");
+			target = new Target(chromeArea, staticAssets);
+			
+			console.log("Starting Target initialization");
+			await target.initialize(canvasContainer, (state) => {
+				console.log(`Target state update: ${state}`);
+				applicationState = state;
+				
+				// If we get to "Done!" state, call loadingDone
+				if (state === 'Done!') {
+					setTimeout(() => {
+						loadingDone();
+					}, 300);
+				}
+			});
+			
+			if (data.user?.id) {
+				console.log("Initializing analysis");
+				await target.initializeAnalysis(data.user.id);
+			}
+		} catch (error) {
+			console.error("Fatal error during initialization:", error);
+			applicationState = `Error: ${(error as Error).message || 'Unknown error'}`;
+			
+			// Show a more user-friendly error on the loading screen
+			loader.innerHTML = `
+				<div>
+					<p>Error loading the target editor</p>
+					<p class="text-sm mt-2">${(error as Error).message || 'WebGL context was lost'}</p>
+					<button class="mt-4 px-4 py-2 bg-surface-500 rounded" onclick="location.reload()">
+						Reload Page
+					</button>
+				</div>
+			`;
 		}
-
-		if (referencebutton) {
-			console.log(referencebutton.style.top, referencebutton.style.left)
-		}
-
-        if (data.user?.id) {
-            await target.initializeAnalysis(data.user.id);
-        }
-
-		window.addEventListener('shotsSelected', ((event: CustomEvent) => {
-			const selectedShots = event.detail.shots;
-			selected = selectedShots;
-		}) as EventListener);
 	});
+
 
 	onDestroy(async () => {
 		if (target) {
@@ -213,9 +239,9 @@
 			canvasContainer.style.height = `${chromeArea.y}px`;
 		}
 
-		if (referencebutton != undefined) {
-			console.log(referencebutton.style.top, referencebutton.style.left);
-		}
+		// if (referencebutton != undefined) {
+		// 	console.log(referencebutton.style.top, referencebutton.style.left);
+		// }
 
 		// if ($UserSettingsStore) {
 		// 	if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
@@ -499,6 +525,6 @@
 	aria-roledescription="The funny thing is that if you can't see properly, why would you use this service? Anyways, compliance is bliss!"
 	bind:this={canvasContainer}
 	onmousemove={mousePosition}
-	class="relative grid justify-items-center align-middle place-content-center opacity-35 w-[100vw] h-[100vh]"
+	class="relative grid justify-items-center align-middle place-content-center opacity-35 w-full h-full overflow-hidden"
 ></div>
 <div bind:this={loader} class="z-50 transition-all top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-center absolute py-6 px-8 w-72 max-w-screen-sm rounded border-2 border-surface-500 bg-surface-300 text-surface-100 shadow-lg">{applicationState}</div>

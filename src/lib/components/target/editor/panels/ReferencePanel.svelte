@@ -19,7 +19,7 @@
     let atoxInput = $state();
     let setRefDisabled: boolean = $state(true);
 
-    console.log('Initial store state:', $TargetStore.reference);
+    // console.log('Initial store state:', $TargetStore.reference);
         
     $effect(() => {
         // Check if both coordinates exist for both points
@@ -30,18 +30,18 @@
         
         setRefDisabled = !(hasPointA && hasPointX);
         
-        console.log('Reference state:', {
-            pointA: $TargetStore.reference.a,
-            pointX: $TargetStore.reference.x,
-            hasPointA,
-            hasPointX,
-            disabled: setRefDisabled
-        });
+        // console.log('Reference state:', {
+        //     pointA: $TargetStore.reference.a,
+        //     pointX: $TargetStore.reference.x,
+        //     hasPointA,
+        //     hasPointX,
+        //     disabled: setRefDisabled
+        // });
     });
     
-    onMount(() => {
-        console.log('Component mounted, store state:', $TargetStore.reference);
-    });
+    // onMount(() => {
+    //     console.log('Component mounted, store state:', $TargetStore.reference);
+    // });
 </script>
 
 {#if $activePanel === 'reference-panel'}
