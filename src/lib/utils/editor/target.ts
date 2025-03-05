@@ -319,6 +319,9 @@ export class Target {
             this.originalHeight = this.targetSprite.height;
     
             console.log("Target dimensions:", this.originalWidth, "x", this.originalHeight);
+
+            // set initialpivot
+            this.targetSprite.pivot.set(this.originalWidth / 2, this.originalHeight / 2);
     
             // dropshadow
             this.targetContainer.filters = [ 
@@ -341,19 +344,13 @@ export class Target {
         }
     }
 
-    public centerTarget(): void
-    {
-        this.targetContainer.pivot.x = this.originalWidth / 2;
-        this.targetContainer.pivot.y = this.originalHeight / 2;
-
+    public centerTarget(): void {
+        // Center the container
         this.targetContainer.x = this.app.screen.width / 2;
         this.targetContainer.y = this.app.screen.height / 2;
-
-         // console.log(`app.screen w:h : ${this.app.screen.width}:${this.app.screen.height}`);
-         // console.log(`Original w:h : ${this.originalWidth}:${this.originalHeight}`);
-         // console.log(`TargetContainer scale: ${this.scale}`);
-         // console.log(`TargetContainer x:y : ${this.targetContainer.x}:${this.targetContainer.y}`);
-         // console.log(`TargetContainer pivot x:y : ${this.targetContainer.pivot.x}:${this.targetContainer.pivot.y}`);
+        
+        // Make sure sprite is at origin of container
+        this.targetSprite.position.set(0, 0);
     }
 
     private updateScale(): void 
@@ -604,7 +601,6 @@ export class Target {
         }
     }
 
-    // rotation
     public rotateTarget(degrees: number = 0, options: { 
         reset?: boolean, 
         slider?: number, 
@@ -612,38 +608,53 @@ export class Target {
     } = {}) {
         const { reset, slider, absolute } = options;
 
+        // console.log("Before rotation:", {
+        //     currentAngle: this.currentAngle,
+        //     position: {x: this.targetSprite.x, y: this.targetSprite.y},
+        //     pivot: {x: this.targetSprite.pivot.x, y: this.targetSprite.pivot.y},
+        //     angle: this.targetSprite.angle,
+        //     visible: this.targetSprite.visible,
+        //     scale: this.targetSprite.scale.x
+        // });
+    
+        // Calculate the new angle
         if (reset) {
             this.currentAngle = 0;
             this.sliderAngle = 0;
-            this.targetContainer.angle = 0;
         } else if (slider !== undefined) {
             const previousSliderAngle = this.sliderAngle;
             this.sliderAngle = slider;
-            
             this.currentAngle = this.currentAngle - previousSliderAngle + this.sliderAngle;
         } else if (absolute) {
-            // textinput 
             this.currentAngle = degrees;
             this.sliderAngle = 0;
         } else {
             this.currentAngle = (this.currentAngle + degrees) % 360;
             this.sliderAngle = 0;
         }
-
-        this.targetContainer.angle = this.currentAngle % 360;
-
-        // Update store
+    
+        const currentScale = this.targetContainer.scale.x;
+        
+        this.targetSprite.position.set(this.app.screen.width / 2, this.app.screen.height / 2);
+        this.targetSprite.pivot.set(this.targetSprite.width / 2, this.targetSprite.height / 2);
+        
+        this.targetSprite.angle = this.currentAngle;
+        
+        // this.targetSprite.scale.set(this.scale);
+        this.centerTarget();
+    
         TargetStore.update(s => {
-            s.target.rotation = this.targetContainer.angle;
+            s.target.rotation = this.currentAngle;
             return s;
         });
-
-        // Debug
-        // console.log({
+        
+        // console.log("After rotation:", {
         //     currentAngle: this.currentAngle,
-        //     sliderAngle: this.sliderAngle,
-        //     containerAngle: this.targetContainer.angle,
-        //     storeRotation: this.targetStore.target.rotation
+        //     position: {x: this.targetSprite.x, y: this.targetSprite.y},
+        //     pivot: {x: this.targetSprite.pivot.x, y: this.targetSprite.pivot.y},
+        //     angle: this.targetSprite.angle,
+        //     visible: this.targetSprite.visible,
+        //     scale: this.targetSprite.scale.x
         // });
     }
 

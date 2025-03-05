@@ -17,6 +17,7 @@ const config = {
 			"$src": "./src",
 			"$routes": "./src/routes",
 			'$types': './.svelte-kit/types/src/routes/$types.d.ts',
+			"$editor": './src/lib/utils/editor'
 		}
 	}
 };
