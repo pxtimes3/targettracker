@@ -256,6 +256,9 @@ function createTargetStore()
             }
             store.set(initialStore);
         },
+        getShots: (groupId: number) => {
+            return currentState.groups.find((g) => g.id === groupId)?.shots;
+        },
         addShot(shot: ShotInterface, groupId: number) {
             this.update(store => {
                 const group = store.groups.find(g => g.id === groupId);
@@ -336,7 +339,7 @@ function createTargetStore()
                     throw new Error(`Tried to delete shot ${shotid} from group: ${groupid} but shots array was empty!`);
                 }
 
-                const shotIndex = group.shots.findIndex(shot => shot.id === (parseInt(shotid) - 1).toString());
+                const shotIndex = group.shots.findIndex(shot => shot.id === (parseInt(shotid)).toString());
                 if (shotIndex === -1) {
                     throw new Error(`Tried to find shot with id: ${shotid} but no shot was found!`);
                 }
