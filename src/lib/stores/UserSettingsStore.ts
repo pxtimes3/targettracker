@@ -11,7 +11,10 @@ const SettingsSchema = z.object({
 	showallshots: z.boolean(),
     editorcrosshair: z.boolean(),
 	editorhelpclosed: z.boolean(),
-    showcircle: z.boolean(),
+    showccr: z.boolean(),
+    showmr: z.boolean(),
+    showes: z.boolean(),
+    showmpi: z.boolean(),
     showdiagonal: z.boolean(),
     showrectangle: z.boolean(),
 	lasttargettype: z.string().optional(),
@@ -34,7 +37,10 @@ const initSettingsStore: SettingsInterface = {
     editorcrosshair: true,
     editorhelpclosed: false,
 
-    showcircle: true,
+    showccr: false,
+    showmr: true,
+    showes: true,
+    showmpi: true,
     showdiagonal: false,
     showrectangle: false,
 

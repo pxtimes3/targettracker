@@ -1,5 +1,6 @@
+// src/lib/utils/editor/crosshairs.ts
 import { EditorStore, type EditorStoreInterface } from "@/stores/EditorStore";
-import { Application, Container, Graphics, type Container as ContainerType } from "pixi.js";
+import { Application, Container, Graphics, type Container as ContainerType, type StrokeStyle } from "pixi.js";
 import { get } from "svelte/store";
 import { UserSettingsStore, type SettingsInterface } from '../../stores/UserSettingsStore';
 
@@ -27,7 +28,7 @@ export class EditorCrosshair {
 		const crosshairContainer = new Container();
         crosshairContainer.label = 'editorCrosshair'
 
-        console.log(`UserSettings crosshair: ${this.userSettings.editorcrosshair}`)
+        // console.log(`UserSettings crosshair: ${this.userSettings.editorcrosshair}`)
 
 		this.targetContainer.addChild(crosshairContainer);
 
@@ -49,6 +50,14 @@ export class EditorCrosshair {
 
 		this.app.ticker.add(() => {
 			if (this.userSettings.editorcrosshair) {
+				const strokeWidth = 1 * 1 / this.targetContainer.scale.x;
+				const strokeStyle: StrokeStyle = {
+					width: strokeWidth,
+					color: 0x000000,
+					alpha: 0.7,
+					cap: 'round',
+					join: 'round'
+				}
                 nLine.visible = true;
                 sLine.visible = true;
                 wLine.visible = true;
@@ -56,13 +65,7 @@ export class EditorCrosshair {
 
 				nLine.clear();
 				nLine.beginPath();
-				nLine.setStrokeStyle({
-					width: 4,
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
+				nLine.setStrokeStyle(strokeStyle);
 				const nStartPoint = this.targetContainer.toLocal({x: this.position.x + 0, y: this.position.y - 5});
 				const nEndPos = this.targetContainer.toLocal({x: this.position.x + 0, y: this.position.y - 3000});
 				nLine.moveTo(nStartPoint.x, nStartPoint.y)
@@ -71,13 +74,7 @@ export class EditorCrosshair {
 
 				sLine.clear();
 				sLine.beginPath();
-				sLine.setStrokeStyle({
-					width: 4,
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
+				sLine.setStrokeStyle(strokeStyle);
 				const sStartPoint = this.targetContainer.toLocal({x: this.position.x + 0, y: this.position.y + 5});
 				const sEndPos = this.targetContainer.toLocal({x: this.position.x + 0, y: this.position.y + 3000});
 				sLine.moveTo(sStartPoint.x, sStartPoint.y)
@@ -86,13 +83,7 @@ export class EditorCrosshair {
 
 				wLine.clear();
 				wLine.beginPath();
-				wLine.setStrokeStyle({
-					width: 4,
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
+				wLine.setStrokeStyle(strokeStyle);
 				const wStartPoint = this.targetContainer.toLocal({x: this.position.x - 5, y: this.position.y + 0});
 				const wEndPos = this.targetContainer.toLocal({x: this.position.x - 3000, y: this.position.y + 0});
 				wLine.moveTo(wStartPoint.x, wStartPoint.y)
@@ -101,13 +92,7 @@ export class EditorCrosshair {
 
 				eLine.clear();
 				eLine.beginPath();
-				eLine.setStrokeStyle({
-					width: 4,
-					color: 0x000000,
-					alpha: 0.3,
-					cap: 'round',
-					join: 'round'
-				});
+				eLine.setStrokeStyle(strokeStyle);
 				const eStartPoint = this.targetContainer.toLocal({x: this.position.x + 5, y: this.position.y + 0});
 				const eEndPos = this.targetContainer.toLocal({x: this.position.x + 3000, y: this.position.y + 0});
 				eLine.moveTo(eStartPoint.x, eStartPoint.y)

@@ -1,4 +1,8 @@
 <script lang="ts">
+   import { getSettings } from "svelte-ux";
+
+   const { currentTheme, themes } = getSettings();
+   
    let {
       width = '36',
       height = '36',
@@ -11,6 +15,8 @@
    $effect(() => {
       // byt färg vid $modechange
 		// $mode === 'light' ? color = light : color = dark;
+      $currentTheme.dark ? color = dark : color = light;
+      
 	});
 </script>
 

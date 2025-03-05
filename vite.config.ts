@@ -1,7 +1,7 @@
 // import { sentrySvelteKit } from "@sentry/sveltekit";
 import { sveltekit } from '@sveltejs/kit/vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [
@@ -18,10 +18,13 @@ export default defineConfig({
 		proxy: {},
 		// port: 443,
 		fs: {
-			allow: [
-				'temp/',
-			],
-		},
+			allow: ['temp/']
+		}
+	},
+	resolve: {
+		alias: {
+			'@svelte-ux': '/node_modules/@svelte-ux'
+		}
 	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}'],

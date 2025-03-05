@@ -1,9 +1,8 @@
+// src/lib/stores/TargetImageStore.ts
 import { browser } from "$app/environment";
 import { calculateReferenceValues } from "@/utils/target";
 import { writable, type Writable } from "svelte/store";
 import { z } from 'zod';
-
-// TODO: Save to database periodsvis.
 
 const STORE_KEY = 'targetTrackerStore';
 
@@ -13,7 +12,7 @@ const STORE_KEY = 'targetTrackerStore';
 export const cameraImageDataStore: Writable<undefined|string> = writable();
 
 const ShotSchema = z.object({
-    id: z.string(),
+    id: z.union([z.string(),z.number()]),
     group: z.number(),
     x: z.number(),
     y: z.number(),
@@ -45,9 +44,28 @@ const GroupSchema = z.object({
     score: z.number().optional(),
     poa: PoaSchema.optional(),
     metrics: z.object({
-        meanradius: z.number().optional(),
-        size: z.number().optional(),
-        diagonal: z.number().optional()
+        meanradius: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional(),
+        coveringradius: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional(),
+        extremespread: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional(),
+        diagonal: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional(),
+            width: z.number().optional(),  // X^ (extreme width)
+            height: z.number().optional(), // Y^ (extreme height)
+        }).optional(),
+        fom: z.object({
+            px: z.number().optional(),
+            mm: z.number().optional()
+        }).optional()
     }).optional()
 }).passthrough();
 
@@ -55,6 +73,21 @@ export type GroupInterface = z.infer<typeof GroupSchema>;
 
 
 const TargetStoreSchema = z.object({
+    info: z.object({
+        name: z.string(),
+        type: z.string(),
+        firearm: z.string(),
+        ammunition: z.string(),
+        weather: z.object({
+            windspeed: z.number(),
+            wind_direction: z.string(),
+            altitude: z.number(),
+            temperature: z.number(),
+            humidity: z.number(),
+        }),
+        note: z.string(),
+        public: z.boolean(),
+    }),
     target: z.object({
         scale: z.number().optional(),
         rotation: z.number().optional(),               // degrees. * Math.PI / 180 => angle
@@ -78,9 +111,9 @@ const TargetStoreSchema = z.object({
         }),
     }),
     reference: z.object({
-        a: z.array(z.number().optional(), z.number().optional()).optional(),            // [x,y]
-        x: z.array(z.number().optional(), z.number().optional()).optional(),
-        y: z.array(z.number().optional(), z.number().optional()).optional(),
+        a: z.tuple([z.number(), z.number()]).optional(), // [x,y]
+        x: z.tuple([z.number(), z.number()]).optional(), // [x,y]
+        y: z.tuple([z.number(), z.number()]).optional(), // [x,y]
         linelength: z.number().optional(),
         measurement: z.number().optional(),    // User supplied;
         cm: z.number().optional(),             // 1 cm === px
@@ -108,6 +141,21 @@ const TargetStoreSchema = z.object({
 export type TargetStoreInterface = z.infer<typeof TargetStoreSchema>;
 
 export const initialStore: TargetStoreInterface = {
+    info: {
+        name: '',
+        type: '',
+        firearm: '',
+        ammunition: '',
+        weather: {
+            windspeed: 0,
+            wind_direction: '',
+            altitude: 0,
+            temperature: 0,
+            humidity: 0,
+        },
+        note: '',
+        public: false,
+    },
     target: {
         type: undefined,
         range: undefined,
@@ -208,6 +256,20 @@ function createTargetStore()
             }
             store.set(initialStore);
         },
+        getShots: (groupId: number) => {
+            return currentState.groups.find((g) => g.id === groupId)?.shots;
+        },
+        addShot(shot: ShotInterface, groupId: number) {
+            this.update(store => {
+                const group = store.groups.find(g => g.id === groupId);
+                if (!group || !group.shots) {
+                    throw new Error('Fail!');
+                } else {
+                    group.shots.push(shot);
+                }
+                return store;
+            });
+        },
         setShot: (label: string, groupid: number, x: number, y: number, score: number = 0) => {
             store.update(state => {
                 const group: number = state.groups.findIndex((g) => g.id === groupid);
@@ -243,8 +305,11 @@ function createTargetStore()
                     throw new Error(`Group ${groupid} not found or has no shots`);
                     
                 const shot = group.shots.find(s => s.id === label);
-                if (!shot) 
-                    throw new Error(`Shot ${label} not found`);
+                if (!shot) {
+                    console.error(group.shots);
+                    console.error(`Shot ${label} not found`);
+                    return state;
+                }
 
                 // Update
                 shot.x = x;
@@ -274,7 +339,7 @@ function createTargetStore()
                     throw new Error(`Tried to delete shot ${shotid} from group: ${groupid} but shots array was empty!`);
                 }
 
-                const shotIndex = group.shots.findIndex(shot => shot.id === shotid);
+                const shotIndex = group.shots.findIndex(shot => shot.id === (parseInt(shotid)).toString());
                 if (shotIndex === -1) {
                     throw new Error(`Tried to find shot with id: ${shotid} but no shot was found!`);
                 }
@@ -327,15 +392,20 @@ function createTargetStore()
                 score: 0,
                 poa: {x:0, y: 0},
                 metrics: {
-                    meanradius: 0,
-                    size: 0,
-                    diagonal:0
+                    meanradius: { px: 0, mm: 0 },
+                    coveringradius: { px: 0, mm: 0 },
+                    extremespread: { px: 0, mm: 0 },
+                    diagonal: { px: 0, mm: 0, width: 0, height: 0 },
+                    fom: { px: 0, mm: 0 }
                 }
             }
             store.update(state => {
                 currentState.groups.push(newGroup);
                 return state;
             });
+            return currentState.groups.find((g) => g.id === id)
+        },
+        getGroup: (id: number = currentState.groups.length) => {
             return currentState.groups.find((g) => g.id === id)
         },
         mmToPx: (mm: number) => {
@@ -349,7 +419,25 @@ function createTargetStore()
                 return 0;
             }
             return (px * currentState.reference.measurement) / currentState.reference.linelength;
-        }
+        },
+        totalShots: (group?: number) => {
+            let total: number = 0;
+
+            if (!group) {
+                currentState.groups.forEach(group =>{
+                    if (group.shots?.length) {
+                        total += group.shots.length;
+                    }
+                });
+            } else {
+                const grp = currentState.groups.find((g) => group === g.id);
+                if (grp) {
+                    return grp.shots?.length || 0;
+                }
+            }
+            
+            return total;
+        },
     }
 }
 
