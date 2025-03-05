@@ -12,7 +12,7 @@ const STORE_KEY = 'targetTrackerStore';
 export const cameraImageDataStore: Writable<undefined|string> = writable();
 
 const ShotSchema = z.object({
-    id: z.string(),
+    id: z.union([z.string(),z.number()]),
     group: z.number(),
     x: z.number(),
     y: z.number(),
@@ -302,8 +302,11 @@ function createTargetStore()
                     throw new Error(`Group ${groupid} not found or has no shots`);
                     
                 const shot = group.shots.find(s => s.id === label);
-                if (!shot) 
-                    throw new Error(`Shot ${label} not found`);
+                if (!shot) {
+                    console.error(group.shots);
+                    console.error(`Shot ${label} not found`);
+                    return state;
+                }
 
                 // Update
                 shot.x = x;
@@ -333,7 +336,7 @@ function createTargetStore()
                     throw new Error(`Tried to delete shot ${shotid} from group: ${groupid} but shots array was empty!`);
                 }
 
-                const shotIndex = group.shots.findIndex(shot => shot.id === shotid);
+                const shotIndex = group.shots.findIndex(shot => shot.id === (parseInt(shotid) - 1).toString());
                 if (shotIndex === -1) {
                     throw new Error(`Tried to find shot with id: ${shotid} but no shot was found!`);
                 }

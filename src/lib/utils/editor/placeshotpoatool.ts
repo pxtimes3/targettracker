@@ -50,12 +50,7 @@ export class ShotPoaTool {
 
     public async addShot(x: number, y: number, group: string): Promise<void>
     {
-         // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
-
-        const label = `shot-${this.getShotsTotal + 1}-${group}`;
-        // const shot = await this.createSprite(label);
-        const shot = this.createShotGraphic(label);
-        const position = this.targetContainer.toLocal({x,y});
+        // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
 
         let groupContainer: Container|null;
         let storeGroup: GroupInterface|undefined;
@@ -77,7 +72,11 @@ export class ShotPoaTool {
         }
 
         shots = storeGroup.shots
-        if (!shots) { console.error(`No shots array found in store-group ${group}!`, storeGroup); return; }
+        if (!shots) { console.error(`No shots-array found in store-group ${group}!`, storeGroup); return; }
+
+        const label = `shot-${shots.length.toString()}-${group}`;
+        const shot = this.createShotGraphic(label);
+        const position = this.targetContainer.toLocal({x,y});
 
         shot.position.set(position.x, position.y);
         shot.scale.set(this.setScale());
@@ -89,7 +88,7 @@ export class ShotPoaTool {
         groupContainer?.addChild(shot);
 
         const newShot = {
-            id: this.getShotsTotal.toString(),
+            id: shots.length.toString(),
             group: parseInt(group),
             x: position.x,
             y: position.y,
@@ -97,6 +96,7 @@ export class ShotPoaTool {
         };
 
         TargetStore.addShot(newShot, parseInt(group));
+        console.log('added shot to store:', newShot, `group ${parseInt(group)}`);
 
         this.drawAllMetrics(parseInt(group))
 
@@ -106,22 +106,32 @@ export class ShotPoaTool {
             if (e.button === 0) { this.handleSpriteDrag(e); }
         });
 
-        // console.log('Shot created:', {
-        //     label: shot.label,
+        console.log('Shot created:', {
+            label: shot.label,
         //     position: `${shot.position.x},${shot.position.y}`,
         //     parent: shot.parent?.label,
         //     visible: shot.visible,
         //     scale: `${shot.scale.x},${shot.scale.y}`,
         //     children: shot.children.length
-        // });
+        });
     }
 
     private drawMeanRadius(groupId: number): void 
     {
-        const currentStore = get(TargetStore);
+        const currentStore: TargetStoreInterface = get(TargetStore);
         
-        const group = TargetStore.getGroup(groupId);
-         // console.log('Drawing MR, group:', group);
+        const group: GroupInterface|undefined = TargetStore.getGroup(groupId);
+
+        const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId.toString());
+        if (!groupContainer) {
+            return;
+        }
+
+        const oldMr = groupContainer.getChildByLabel(`mr-${groupId}`);
+        if (oldMr) {
+            groupContainer.removeChild(oldMr);
+        }
+        
         if (!group || 
             !group.shots || 
             group.shots.length < 2 || 
@@ -173,27 +183,33 @@ export class ShotPoaTool {
         graphics.visible = this.userSettings.showmr;
         graphics.label = `mr-${groupId}`;
     
-        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
-         // console.log('Group container:', groupContainer);
+        // console.log('Group container:', groupContainer);
         
-        if (groupContainer) {
-            const oldCircle = groupContainer.getChildByLabel(`mr-${groupId}`);
-            if (oldCircle) {
-                 // console.log('Removing old circle');
-                groupContainer.removeChild(oldCircle);
-            }
-            groupContainer.addChild(graphics);
-             // console.log('Added new circle');
-        } else {
-            console.error(`No group container with ${groupId.toString()}`)
-        }
+        groupContainer.addChild(graphics);
     }
     
     private drawCoveringRadius(groupId: number): void 
     {
         const group = TargetStore.getGroup(groupId);
-        if (!group || !group.shots || group.shots.length < 2) return;
         
+        // Get the group container first
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (!groupContainer) {
+            return; // Exit if no container exists
+        }
+        
+        // Always remove the old circle if it exists
+        const oldCircle = groupContainer.getChildByLabel(`ccr-${groupId}`);
+        if (oldCircle) {
+            groupContainer.removeChild(oldCircle);
+        }
+        
+        // Only proceed with drawing if we have enough shots
+        if (!group || !group.shots || group.shots.length < 2) {
+            return; // Exit without drawing
+        }
+        
+        // The rest of the function remains the same
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         const {center, radius} = this.findMinCircle(points);
 
@@ -218,7 +234,6 @@ export class ShotPoaTool {
         
         const graphics = new Graphics();
         graphics.clear();
-        // graphics.scale.set(this.setScale());
         graphics.circle(0, 0, radius);
         graphics.position.set(center.x, center.y)
         graphics.stroke({
@@ -227,25 +242,27 @@ export class ShotPoaTool {
             alpha: 0.5
         });
         graphics.eventMode = 'none';
-
         graphics.visible = this.userSettings.showccr;
+        graphics.label = `ccr-${groupId}`;
         
-
-        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
-        if (groupContainer) {
-            const oldCircle = groupContainer.getChildByLabel(`ccr-${groupId}`);
-            if (oldCircle) groupContainer.removeChild(oldCircle);
-            graphics.label = `ccr-${groupId}`;
-            groupContainer.addChild(graphics);
-
-             // console.log(`CCR. center: ${center.x},${center.y} radii: ${radius}`);
-        }
+        groupContainer.addChild(graphics);
     }
     
     private drawMPI(groupId: number): void {
         const group = TargetStore.getGroup(groupId);
+
+        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
+        if (!groupContainer) {
+            return;
+        }
+
+        const oldMpi = groupContainer.getChildByLabel(`mpi-${groupId}`);
+        if (oldMpi) {
+            groupContainer.removeChild(oldMpi);
+        }
+
         if (!group || !group.shots || group.shots.length < 2) return;
-        
+
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         const mpi = {
             x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
@@ -253,58 +270,49 @@ export class ShotPoaTool {
         };
     
         const mpiContainer = new Container();
-        const vertLine = new Graphics()
+        const cross = new Graphics()
             .moveTo(0, -5)
             .lineTo(0, 5)
+            .moveTo(-5, 0)
+            .lineTo(5, 0)
+            .circle(0, 0, 3)
             .stroke({ 
                 color: 0xFF00FF,
                 pixelLine: true
             })
-        vertLine.label = `mpi-group-${groupId}-vertLine`;
+        cross.label = `mpi-group-${groupId}-gfx`;
         
-        // Draw horizontal line with pixelLine
-        const horiziLine = new Graphics()
-            .moveTo(-5, 0)
-            .lineTo(5, 0)
-            .stroke({ 
-                color: 0xFF00FF,
-                pixelLine: true,
-                width: 2
-            });
-        horiziLine.label = `mpi-group-${groupId}-horizLine`;
-
-        const circle = new Graphics()
-            .circle(0, 0, 3)
-            .stroke({ 
-                color: 0xFF00FF, 
-                pixelLine: true 
-        });
-        circle.label = `mpi-group-${groupId}-circle`;
-        
-        mpiContainer.addChild(vertLine, horiziLine);
+        mpiContainer.addChild(cross);
         
         mpiContainer.position.set(mpi.x, mpi.y);
         mpiContainer.eventMode = 'none';
         mpiContainer.visible = this.userSettings.showmpi;
         mpiContainer.label = `mpi-${groupId}`;
     
-        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
-        if (groupContainer) {
-            const oldMPI = groupContainer.getChildByLabel(`mpi-${groupId}`);
-            if (oldMPI) groupContainer.removeChild(oldMPI);
-            groupContainer.addChild(mpiContainer);
+        
+        groupContainer.addChild(mpiContainer);
             
-            // Debug
-            // console.log('MPI added:', {
-            //     position: `${mpi.x},${mpi.y}`,
-            //     visible: mpiContainer.visible,
-            //     parent: mpiContainer.parent?.label
-            // });
-        }
+        // Debug
+        // console.log('MPI added:', {
+        //     position: `${mpi.x},${mpi.y}`,
+        //     visible: mpiContainer.visible,
+        //     parent: mpiContainer.parent?.label
+        // });
     }
     
     private drawDiagonal(groupId: number): void {
-        const group = TargetStore.getGroup(groupId);
+        const group: GroupInterface|undefined = TargetStore.getGroup(groupId);
+
+        const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId.toString());
+        if (!groupContainer) {
+            return;
+        }
+
+        const oldDiagonal: Container|null = groupContainer.getChildByLabel(`diagonal-${groupId}`);
+        if (oldDiagonal) {
+            groupContainer.removeChild(oldDiagonal);
+        }
+
         if (!group || !group.shots || group.shots.length < 2) return;
         
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
@@ -355,16 +363,22 @@ export class ShotPoaTool {
         graphics.eventMode = 'none';
         graphics.label = `diagonal-${groupId}`;
         
-        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
-        if (groupContainer) {
-            const oldDiagonal = groupContainer.getChildByLabel(`diagonal-${groupId}`);
-            if (oldDiagonal) groupContainer.removeChild(oldDiagonal);
-            groupContainer.addChild(graphics);
-        }
+        groupContainer.addChild(graphics);
     }
 
     private drawExtremeSpread(groupId: number): void {
-        const group = TargetStore.getGroup(groupId);
+        const group: GroupInterface|undefined = TargetStore.getGroup(groupId);
+
+        const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId.toString());
+        if (!groupContainer) {
+            return;
+        }
+
+        const oldEs: Container|null = groupContainer.getChildByLabel(`es-${groupId}`);
+        if (oldEs) {
+            groupContainer.removeChild(oldEs);
+        }
+
         if (!group || !group.shots || group.shots.length < 2) return;
         
         const shots = group.shots;
@@ -414,17 +428,12 @@ export class ShotPoaTool {
     
         graphics.visible = this.userSettings.showes;
     
-        const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
-        if (groupContainer) {
-            const oldES = groupContainer.getChildByLabel(`es-${groupId}`);
-            if (oldES) groupContainer.removeChild(oldES);
-            groupContainer.addChild(graphics);
-        }
+        groupContainer.addChild(graphics);
     }
     
     public drawAllMetrics(group?: number): void 
     {
-        // console.log('Drawing all metrics', { group, groups: this.targetStore.groups });
+        console.log('Drawing all metrics', { group, groups: this.targetStore.groups });
         if (!group) {
             this.targetStore.groups.forEach((group) => {
                 const groupId = group.id;
@@ -448,19 +457,35 @@ export class ShotPoaTool {
     {
         const label = `poa-${group}`;
         const poa = this.createPoaGraphic(label);
-        const groupContainer = await this.getGroupContainer(group);
         const position = this.targetContainer.toLocal({x,y});
 
-        poa.position.set(position.x, position.y)
-        poa.scale.set(this.setScale());
-        // poa.width = 48;
-        // poa.height = poa.width;
+        let groupContainer: Container|null;
+        let storeGroup: GroupInterface|undefined;
+        let shots; // ShotInterface
 
-        groupContainer?.addChild(poa);
+        groupContainer = await this.getGroupContainer(group);
+        if (!groupContainer) { 
+            const newGroup = this.createGroup();
+
+            if (!newGroup) {
+                throw new Error(`Failed creating new group! group: ${group}`);
+            }
+
+            storeGroup = newGroup.group;
+            groupContainer = newGroup.container;
+        } else {
+            storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
+            if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
+        }
+
+        poa.position.set(position.x, position.y)
+        // poa.scale.set(this.setScale());
+
+        groupContainer.addChild(poa);
 
         // add to group
-        const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
-        if (!storeGroup) { console.error(`Tried to add poa to group ${group} in targetStore but no such group was found!`); return; }
+        // const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
+        // if (!storeGroup) { console.error(`Tried to add poa to group ${group} in targetStore but no such group was found!`); return; }
 
         storeGroup.poa = {x: position.x, y: position.y};
         
@@ -619,7 +644,7 @@ export class ShotPoaTool {
             .moveTo(radius, 0)
             .lineTo(radius + lineLength, 0)
             .stroke({ color: 0x000000, pixelLine: true })
-            .fill({color:0x000000, alpha: 0.25});    // fill so we can drag anywhere in the circle
+            .fill({color:0x000000, alpha: 0});    // fill so we can drag anywhere in the circle
         circle.setSize(36);
         circle.label = `${label}-graphics`;
 
@@ -653,7 +678,7 @@ export class ShotPoaTool {
         this.dragTarget = target;
         this.dragStartPosition = { x: target.x, y: target.y};
 
-        // console.log(`Dragging ${target.label}`)
+        console.log(`Dragging ${target.label}`)
 
         this.targetContainer.eventMode = 'dynamic';
         this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
@@ -677,8 +702,12 @@ export class ShotPoaTool {
         let id;
         if (this.dragTarget.label.startsWith('shot')) {
             id = this.dragTarget.label.match(/^shot-(\d+)-\d+$/i)?.[1];
-            if (!id) { console.error(`dragTarget label => id failed!`); return; }
-             // console.log(get(TargetStore))
+            if (!id) { 
+                console.error(`dragTarget label => id failed!`); 
+                return; 
+            }
+
+            console.log(`handleDragEnd`, `shotId: ${id}` );
             TargetStore.updateShot(id, parseInt(this.dragTarget.parent.label), this.dragTarget.x, this.dragTarget.y);
         } else if (this.dragTarget.label.startsWith('poa')) {
             id = this.dragTarget.label.match(/^poa-(\d+)$/i)?.[1];
@@ -747,21 +776,37 @@ export class ShotPoaTool {
     {
         const ids = [...e.target.label.matchAll(/^shot-(\d+)-(\d+)$/g)];
         if (ids) {
-             // console.log(e.target.label, ids)
             let shotid = ids[0][1];
             let groupid = parseInt(ids[0][2]);
-            const res = TargetStore.removeShot(groupid, shotid);
-
-            const groupContainer = this.targetContainer.getChildByLabel(ids[0][2]);
             
+            // Remove shot from store
+            const res = TargetStore.removeShot(groupid, shotid);
+            
+            // Remove sprite from container
+            const groupContainer = this.targetContainer.getChildByLabel(ids[0][2]);
             if (groupContainer) {
                 const sprite = groupContainer.getChildByLabel(e.target.label);
-                 // console.log(sprite);
                 if (sprite) {
                     groupContainer.removeChild(sprite);
                 } else {
                     throw new Error(`No such sprite (${e.target.label})`);
                 }
+                
+                // Update all shot labels in this group to match the new indices
+                const shotSprites = groupContainer.children.filter(child => 
+                    child.label && child.label.startsWith('shot-'));
+                
+                // Get the updated group from store
+                const updatedGroup = TargetStore.getGroup(groupid);
+                if (updatedGroup && updatedGroup.shots) {
+                    // Relabel shots to match their new indices
+                    for (let i = 0; i < shotSprites.length; i++) {
+                        shotSprites[i].label = `shot-${i}-${groupid}`;
+                    }
+                }
+                
+                // Redraw metrics after updating labels
+                this.drawAllMetrics(groupid);
             } else {
                 throw new Error(`No such groupcontainer (${ids[0][2]})`);
             }

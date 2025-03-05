@@ -34,6 +34,7 @@ export class ReferenceTool {
     private aIsMoved: boolean = true;
     public  xIsMoved: boolean = true;
     private refLineLength: number = 0;
+    private refRadius: number = 16;
     public  refMeasurementDirty: boolean = true;
     private isDragging: boolean = false;
     private dragTarget: Container | null = null;
@@ -79,7 +80,6 @@ export class ReferenceTool {
         this.refLine.clear();
         this.refLine.beginPath();
         this.refLine.setStrokeStyle({
-            width: 3,
             pixelLine: true,
             color: 0x000000,
             alpha: 0.8,
@@ -115,13 +115,13 @@ export class ReferenceTool {
         const ndy = dy / length;
         
         // Radius of the circles
-        const radius = 8; // Same as in createSprite
+        const radius = 16; // Same as in createSprite
         
         // Calculate start and end points at the edge of the circles
-        const adjustedStartX = startPos.x + ndx * radius;
-        const adjustedStartY = startPos.y + ndy * radius;
-        const adjustedEndX = endPos.x - ndx * radius;
-        const adjustedEndY = endPos.y - ndy * radius;
+        const adjustedStartX = startPos.x + ndx * this.refRadius;
+        const adjustedStartY = startPos.y + ndy * this.refRadius;
+        const adjustedEndX = endPos.x - ndx * this.refRadius;
+        const adjustedEndY = endPos.y - ndy * this.refRadius;
         
         // Draw only the visible part of the line
         this.refLine.moveTo(adjustedStartX, adjustedStartY)
@@ -132,7 +132,7 @@ export class ReferenceTool {
     public async addReferencePoint(x: number, y: number): Promise<void>
     {
         if (!this.aIsSet) {
-            const sprite = await this.createSprite('ref-a', x, y);
+            const sprite = await this.createPoint('ref-a', x, y);
             this.aIsSet = true;
             TargetStore.update(store => ({
                 ...store,
@@ -145,7 +145,7 @@ export class ReferenceTool {
         }
 
         if (!this.xIsSet) {
-            const sprite = await this.createSprite('ref-x', x, y);
+            const sprite = await this.createPoint('ref-x', x, y);
             this.xIsSet = true;
             TargetStore.update(store => ({
                 ...store,
@@ -162,7 +162,7 @@ export class ReferenceTool {
         }
     }
 
-    private async createSprite(label: string, x: number, y: number): Promise<Container> 
+    private async createPoint(label: string, x: number, y: number): Promise<Container> 
     {
         const container = new Container({
             label: label,
@@ -175,13 +175,12 @@ export class ReferenceTool {
         const idLabel: RegExpMatchArray|null = label.match(/\w$/);
         const text = idLabel && idLabel[0] ? idLabel[0] : '';
         
-        const radius = 8;
         const lineWidth = 1.5;
-        const letterSize = radius * 1.2;
+        const letterSize = this.refRadius * 1.2;
         
         // Create the circle
         const marker = new Graphics({label: label})
-            .circle(0, 0, radius)
+            .circle(0, 0, this.refRadius)
             .stroke({color: 0x000000, pixelLine: true})
             .fill({color: 0xFFFFFF, alpha: 0.5});
         

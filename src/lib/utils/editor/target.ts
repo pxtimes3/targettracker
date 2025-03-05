@@ -508,11 +508,11 @@ export class Target {
         // console.log('mousedown',e)
         if (e.button === 1) {
             this.handleDragStart(e);
-        } else if (e.shiftKey) {
-            this.selectionTool.isSelecting = true;
-            this.selecting = true;
-            this.selectionTool.onSelectionStart(e);
-            return
+        // } else if (e.shiftKey) {
+        //     this.selectionTool.isSelecting = true;
+        //     this.selecting = true;
+        //     this.selectionTool.onSelectionStart(e);
+        //     return
         } else if (e.button === 0) {
             if (['shots', 'none'].includes(this.editorStore.mode))
                 this.shotPoaTool.addShot(e.clientX, e.clientY, '1');
