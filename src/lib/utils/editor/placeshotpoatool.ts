@@ -6,6 +6,9 @@ import { MetricsRenderer } from './MetricsRenderer';
 import type { FederatedPointerEvent } from 'pixi.js';
 import { Container, Sprite, Graphics } from 'pixi.js';
 import { get } from 'svelte/store';
+import { DragHandler } from './dragHandler';
+import { ShotManager } from './shotManager';
+import { GroupManager } from './groupManager';
 
 export class ShotPoaTool {
     private targetContainer: Container;
@@ -13,16 +16,22 @@ export class ShotPoaTool {
     private targetStore: TargetStoreInterface;
     private userSettings: SettingsInterface;
     private metricsRenderer: MetricsRenderer;
-    private isDragging: boolean = false;
-    private dragTarget: Sprite | null = null;
-    private dragStartPosition: {x: number, y: number} | null = null;
+    private groupManager: GroupManager;
+    private dragHandler: DragHandler;
+    private shotManager: ShotManager;
+    
     private isSelected: boolean = false;
     private userSettingsUnsubscribe: () => void;
     private targetStoreUnsubscribe: () => void;
 
     constructor(targetContainer: Container) {
         this.targetContainer = targetContainer;
+        
         this.metricsRenderer = new MetricsRenderer(targetContainer);
+        this.dragHandler = new DragHandler(targetContainer);
+        this.groupManager = new GroupManager(targetContainer);
+        this.shotManager = new ShotManager(targetContainer, this.groupManager, this.metricsRenderer, this.dragHandler);
+        
         this.editorStore = get(EditorStore);
         this.targetStore = get(TargetStore);
         this.userSettings = get(UserSettingsStore);
@@ -51,76 +60,82 @@ export class ShotPoaTool {
 
     public async addShot(x: number, y: number, group: string): Promise<void>
     {
-        // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
-
-        let groupContainer: Container|null;
-        let storeGroup: GroupInterface|undefined;
-        let shots; // ShotInterface
-
-        groupContainer = await this.getGroupContainer(group);
-        if (!groupContainer) { 
-            const newGroup = this.createGroup();
-
-            if (!newGroup) {
-                throw new Error(`Failed creating new group! group: ${group}`);
-            }
-
-            storeGroup = newGroup.group;
-            groupContainer = newGroup.container;
-        } else {
-            storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
-            if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
-        }
-
-        shots = storeGroup.shots
-        if (!shots) { console.error(`No shots-array found in store-group ${group}!`, storeGroup); return; }
-
-        const label = `shot-${shots.length.toString()}-${group}`;
-        const shot = this.createShotGraphic(label);
-        const position = this.targetContainer.toLocal({x,y});
-
-        shot.position.set(position.x, position.y);
-        shot.scale.set(this.setScale());
-        shot.width = 48;
-        shot.zIndex = 99;
-
-        shot.height = shot.width;
-
-        groupContainer?.addChild(shot);
-
-        const newShot = {
-            id: shots.length.toString(),
-            group: parseInt(group),
-            x: position.x,
-            y: position.y,
-            score: 0,
-        };
-
-        TargetStore.addShot(newShot, parseInt(group));
-        console.log('added shot to store:', newShot, `group ${parseInt(group)}`);
-
-        this.metricsRenderer.drawAllMetrics(parseInt(group))
-
-        shot.on('pointerdown', (e) => {
-            e.stopPropagation();
-            if (e.button === 1) { this.removeShot(e) }
-            if (e.button === 0) { this.handleSpriteDrag(e); }
-        });
-
-        console.log('Shot created:', {
-            label: shot.label,
-        //     position: `${shot.position.x},${shot.position.y}`,
-        //     parent: shot.parent?.label,
-        //     visible: shot.visible,
-        //     scale: `${shot.scale.x},${shot.scale.y}`,
-        //     children: shot.children.length
-        });
-
-        console.debug(`shots:`, {
-            groupContainer: this.getAllChildren(groupContainer),
-            groupstore: this.getGroupStoreShots(parseInt(group)),
-        });
+        const shot = await this.shotManager.addShot(x, y, group);
+        this.metricsRenderer.drawAllMetrics(parseInt(group));
     }
+
+    // public async addShot(x: number, y: number, group: string): Promise<void>
+    // {
+    //     // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
+
+    //     let groupContainer: Container|null;
+    //     let storeGroup: GroupInterface|undefined;
+    //     let shots; // ShotInterface
+
+    //     groupContainer = await this.getGroupContainer(group);
+    //     if (!groupContainer) { 
+    //         const newGroup = this.createGroup();
+
+    //         if (!newGroup) {
+    //             throw new Error(`Failed creating new group! group: ${group}`);
+    //         }
+
+    //         storeGroup = newGroup.group;
+    //         groupContainer = newGroup.container;
+    //     } else {
+    //         storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
+    //         if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
+    //     }
+
+    //     shots = storeGroup.shots
+    //     if (!shots) { console.error(`No shots-array found in store-group ${group}!`, storeGroup); return; }
+
+    //     const label = `shot-${shots.length.toString()}-${group}`;
+    //     const shot = this.createShotGraphic(label);
+    //     const position = this.targetContainer.toLocal({x,y});
+
+    //     shot.position.set(position.x, position.y);
+    //     shot.scale.set(this.setScale());
+    //     shot.width = 48;
+    //     shot.zIndex = 99;
+
+    //     shot.height = shot.width;
+
+    //     groupContainer?.addChild(shot);
+
+    //     const newShot = {
+    //         id: shots.length.toString(),
+    //         group: parseInt(group),
+    //         x: position.x,
+    //         y: position.y,
+    //         score: 0,
+    //     };
+
+    //     TargetStore.addShot(newShot, parseInt(group));
+    //     console.log('added shot to store:', newShot, `group ${parseInt(group)}`);
+
+    //     this.metricsRenderer.drawAllMetrics(parseInt(group))
+
+    //     shot.on('pointerdown', (e) => {
+    //         e.stopPropagation();
+    //         if (e.button === 1) { this.removeShot(e) }
+    //         if (e.button === 0) { this.handleSpriteDrag(e); }
+    //     });
+
+    //     console.log('Shot created:', {
+    //         label: shot.label,
+    //     //     position: `${shot.position.x},${shot.position.y}`,
+    //     //     parent: shot.parent?.label,
+    //     //     visible: shot.visible,
+    //     //     scale: `${shot.scale.x},${shot.scale.y}`,
+    //     //     children: shot.children.length
+    //     });
+
+    //     console.debug(`shots:`, {
+    //         groupContainer: this.getAllChildren(groupContainer),
+    //         groupstore: this.getGroupStoreShots(parseInt(group)),
+    //     });
+    // }
 
     // private drawMeanRadius(groupId: number): void 
     // {
@@ -459,403 +474,403 @@ export class ShotPoaTool {
     // }
 
 
-    public async addPoa(x: number, y: number, group: string): Promise<void>
-    {
-        const label = `poa-${group}`;
-        const poa = this.createPoaGraphic(label);
-        const position = this.targetContainer.toLocal({x,y});
+    // public async addPoa(x: number, y: number, group: string): Promise<void>
+    // {
+    //     const label = `poa-${group}`;
+    //     const poa = this.createPoaGraphic(label);
+    //     const position = this.targetContainer.toLocal({x,y});
 
-        let groupContainer: Container|null;
-        let storeGroup: GroupInterface|undefined;
-        let shots; // ShotInterface
+    //     let groupContainer: Container|null;
+    //     let storeGroup: GroupInterface|undefined;
+    //     let shots; // ShotInterface
 
-        groupContainer = await this.getGroupContainer(group);
-        if (!groupContainer) { 
-            const newGroup = this.createGroup();
+    //     groupContainer = await this.getGroupContainer(group);
+    //     if (!groupContainer) { 
+    //         const newGroup = this.createGroup();
 
-            if (!newGroup) {
-                throw new Error(`Failed creating new group! group: ${group}`);
-            }
+    //         if (!newGroup) {
+    //             throw new Error(`Failed creating new group! group: ${group}`);
+    //         }
 
-            storeGroup = newGroup.group;
-            groupContainer = newGroup.container;
-        } else {
-            storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
-            if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
-        }
+    //         storeGroup = newGroup.group;
+    //         groupContainer = newGroup.container;
+    //     } else {
+    //         storeGroup = this.targetStore.groups.find((g) => g.id === parseInt(group));
+    //         if (!storeGroup) { console.error(`Tried to add shot to group ${group} in targetStore but no such group was found!`); return; }
+    //     }
 
-        poa.position.set(position.x, position.y)
-        // poa.scale.set(this.setScale());
+    //     poa.position.set(position.x, position.y)
+    //     // poa.scale.set(this.setScale());
 
-        groupContainer.addChild(poa);
+    //     groupContainer.addChild(poa);
 
-        // add to group
-        // const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
-        // if (!storeGroup) { console.error(`Tried to add poa to group ${group} in targetStore but no such group was found!`); return; }
+    //     // add to group
+    //     // const storeGroup: GroupInterface|undefined = this.targetStore.groups.find((g) => g.id === parseInt(group));
+    //     // if (!storeGroup) { console.error(`Tried to add poa to group ${group} in targetStore but no such group was found!`); return; }
 
-        storeGroup.poa = {x: position.x, y: position.y};
+    //     storeGroup.poa = {x: position.x, y: position.y};
         
-        poa.on('pointerdown', (e) => {
-            e.stopPropagation();
-            this.handleSpriteDrag(e);
-        });
-    }
+    //     poa.on('pointerdown', (e) => {
+    //         e.stopPropagation();
+    //         this.handleSpriteDrag(e);
+    //     });
+    // }
 
-    public setScale(scale: number = 1)
-    {
-        return scale / this.targetContainer.scale.x;
-    }
+    // public setScale(scale: number = 1)
+    // {
+    //     return scale / this.targetContainer.scale.x;
+    // }
 
-    public createGroup(): {group: GroupInterface, container: Container} | null
-    {
-        const newGroup: GroupInterface | undefined = this.createNewTargetStoreGroup();
-        if (!newGroup) {
-            console.error('Newgroup was null!');
-            return null;
-        } 
+    // public createGroup(): {group: GroupInterface, container: Container} | null
+    // {
+    //     const newGroup: GroupInterface | undefined = this.createNewTargetStoreGroup();
+    //     if (!newGroup) {
+    //         console.error('Newgroup was null!');
+    //         return null;
+    //     } 
         
-        // console.log('newGroup:', newGroup);
+    //     // console.log('newGroup:', newGroup);
         
-        const groupContainer = this.createNewGroupContainer(newGroup.id)
-        if (groupContainer === null) { console.error(`Failed to createNewGroupContainer`); return null; };
+    //     const groupContainer = this.createNewGroupContainer(newGroup.id)
+    //     if (groupContainer === null) { console.error(`Failed to createNewGroupContainer`); return null; };
 
-        // console.log('created group:', newGroup, groupContainer);
-        return {group: newGroup, container: groupContainer};
-    }
+    //     // console.log('created group:', newGroup, groupContainer);
+    //     return {group: newGroup, container: groupContainer};
+    // }
 
-    public createNewTargetStoreGroup(): GroupInterface | undefined
-    {
-        const newGroup: GroupInterface = {
-            id: this.targetStore.groups.length + 1,
-            shots: [],
-            poa: {x: 0, y: 0},
-            metrics: {},
-            score: 0,
-        };
+    // public createNewTargetStoreGroup(): GroupInterface | undefined
+    // {
+    //     const newGroup: GroupInterface = {
+    //         id: this.targetStore.groups.length + 1,
+    //         shots: [],
+    //         poa: {x: 0, y: 0},
+    //         metrics: {},
+    //         score: 0,
+    //     };
 
-        try {
-            this.targetStore.groups.push(newGroup);
-            const createdGroup = this.targetStore.groups[this.targetStore.groups.length - 1];
-            // console.log(`Created new group:`, createdGroup);
-            return createdGroup;
-        } catch (e) {
-            // TODO: Logging.
-            throw new Error(`Failed to push new group to store!`);
-        }
-    }
-    public createNewGroupContainer(id: number): Container | null
-    {
-        try {
-            let groupContainer = new Container();
-            groupContainer.label = id.toString();
+    //     try {
+    //         this.targetStore.groups.push(newGroup);
+    //         const createdGroup = this.targetStore.groups[this.targetStore.groups.length - 1];
+    //         // console.log(`Created new group:`, createdGroup);
+    //         return createdGroup;
+    //     } catch (e) {
+    //         // TODO: Logging.
+    //         throw new Error(`Failed to push new group to store!`);
+    //     }
+    // }
+    // public createNewGroupContainer(id: number): Container | null
+    // {
+    //     try {
+    //         let groupContainer = new Container();
+    //         groupContainer.label = id.toString();
 
-            // console.log(`Creating group: ${groupContainer.label} ${groupContainer.uid}`);
-            this.targetContainer.addChild(groupContainer);
+    //         // console.log(`Creating group: ${groupContainer.label} ${groupContainer.uid}`);
+    //         this.targetContainer.addChild(groupContainer);
 
-            return groupContainer
-        } catch (e) {
-            // TODO: Logging.
-            console.error(`Failed to create new group!`, e);
-            return null;
-        }
-    }
-    public removeGroup(id: string): void|undefined
-    {
-        if (this.targetStore.groups.length === 1) {
-            console.warn(`Tried to remove the one group that exists. Exiting.`);
-            return;
-        }
+    //         return groupContainer
+    //     } catch (e) {
+    //         // TODO: Logging.
+    //         console.error(`Failed to create new group!`, e);
+    //         return null;
+    //     }
+    // }
+    // public removeGroup(id: string): void|undefined
+    // {
+    //     if (this.targetStore.groups.length === 1) {
+    //         console.warn(`Tried to remove the one group that exists. Exiting.`);
+    //         return;
+    //     }
 
-        let group = this.targetStore.groups.findIndex((g) => g.id === parseInt(id));
-        if (group === -1) {
-            console.error(`No such group (${id}) in targetStore.`);
-            return;
-        }
+    //     let group = this.targetStore.groups.findIndex((g) => g.id === parseInt(id));
+    //     if (group === -1) {
+    //         console.error(`No such group (${id}) in targetStore.`);
+    //         return;
+    //     }
 
-        let container = this.targetContainer.getChildByLabel(id);
-        if (!container) {
-            console.error(`No such groupContainer (${id}) in targetContainer.`);
-            return;
-        }
+    //     let container = this.targetContainer.getChildByLabel(id);
+    //     if (!container) {
+    //         console.error(`No such groupContainer (${id}) in targetContainer.`);
+    //         return;
+    //     }
 
-        container.removeChildren();
-        this.targetContainer.removeChild(container);
-        this.targetStore.groups.splice(group, 1);
-        this.targetStore.activeGroup = this.targetStore.groups.length;
+    //     container.removeChildren();
+    //     this.targetContainer.removeChild(container);
+    //     this.targetStore.groups.splice(group, 1);
+    //     this.targetStore.activeGroup = this.targetStore.groups.length;
 
-         // console.log(`ActiveGroup is now ${this.targetStore.activeGroup}.`);
-    }
+    //      // console.log(`ActiveGroup is now ${this.targetStore.activeGroup}.`);
+    // }
 
-    public get getCurrentGroupContainer(): Container
-    {
-        let storedCurrentGroup = this.targetStore.activeGroup;
-        const currentGroupContainer = this.targetContainer.getChildByLabel(storedCurrentGroup.toString());
+    // public get getCurrentGroupContainer(): Container
+    // {
+    //     let storedCurrentGroup = this.targetStore.activeGroup;
+    //     const currentGroupContainer = this.targetContainer.getChildByLabel(storedCurrentGroup.toString());
 
-        if (!currentGroupContainer) throw new Error(`Tried to get currentGroup but no currentgroup existed in targetContainer!`);
+    //     if (!currentGroupContainer) throw new Error(`Tried to get currentGroup but no currentgroup existed in targetContainer!`);
 
-        return currentGroupContainer;
-    }
+    //     return currentGroupContainer;
+    // }
 
-    private createShotGraphic(label: string): Container
-    {
-        const shot = new Container();
+    // private createShotGraphic(label: string): Container
+    // {
+    //     const shot = new Container();
         
-        const width = 48;
-        const height = 48;
-        const radius = width / 2;
+    //     const width = 48;
+    //     const height = 48;
+    //     const radius = width / 2;
 
-        const circle = new Graphics()
-            .circle(0, 0, radius)
-            .moveTo(0, -24)
-            .lineTo(0, -34)
-            .moveTo(0, 24)
-            .lineTo(0, 34)
-            .moveTo(-24, 0)
-            .lineTo(-34, 0)
-            .moveTo(24, 0)
-            .lineTo(34, 0)
-            .stroke({ color: 0x000000, pixelLine: true })
-            .fill({color:0xFFFFFF, alpha: 0.25});    // fill so we can drag anywhere in the circle
-        circle.label = `${label}-graphics`;
+    //     const circle = new Graphics()
+    //         .circle(0, 0, radius)
+    //         .moveTo(0, -24)
+    //         .lineTo(0, -34)
+    //         .moveTo(0, 24)
+    //         .lineTo(0, 34)
+    //         .moveTo(-24, 0)
+    //         .lineTo(-34, 0)
+    //         .moveTo(24, 0)
+    //         .lineTo(34, 0)
+    //         .stroke({ color: 0x000000, pixelLine: true })
+    //         .fill({color:0xFFFFFF, alpha: 0.25});    // fill so we can drag anywhere in the circle
+    //     circle.label = `${label}-graphics`;
 
-        shot.addChild(circle);
+    //     shot.addChild(circle);
         
-        shot.label = label;
-        shot.eventMode = 'dynamic';
-        shot.cursor = 'pointer';
-        shot.interactive = true;
+    //     shot.label = label;
+    //     shot.eventMode = 'dynamic';
+    //     shot.cursor = 'pointer';
+    //     shot.interactive = true;
         
-        shot.pivot.set(0, 0);
+    //     shot.pivot.set(0, 0);
 
-        return shot;
-    }
+    //     return shot;
+    // }
 
-    private createPoaGraphic(label: string): Container
-    {
-        const poa = new Container();
-        poa.setSize(30);
+    // private createPoaGraphic(label: string): Container
+    // {
+    //     const poa = new Container();
+    //     poa.setSize(30);
         
-        const radius = 15;
-        const lineLength = 5;
+    //     const radius = 15;
+    //     const lineLength = 5;
 
-        const circle = new Graphics()
-            .circle(0, 0, radius)
-            .circle(0, 0, radius - lineLength)
-            .moveTo(0, -radius)
-            .lineTo(0, -radius - lineLength)
-            .moveTo(0, radius)
-            .lineTo(0, radius + lineLength)
-            .moveTo(-radius, 0)
-            .lineTo(-radius - lineLength, 0)
-            .moveTo(radius, 0)
-            .lineTo(radius + lineLength, 0)
-            .stroke({ color: 0x000000, pixelLine: true })
-            .fill({color:0x000000, alpha: 0});    // fill so we can drag anywhere in the circle
-        circle.setSize(36);
-        circle.label = `${label}-graphics`;
+    //     const circle = new Graphics()
+    //         .circle(0, 0, radius)
+    //         .circle(0, 0, radius - lineLength)
+    //         .moveTo(0, -radius)
+    //         .lineTo(0, -radius - lineLength)
+    //         .moveTo(0, radius)
+    //         .lineTo(0, radius + lineLength)
+    //         .moveTo(-radius, 0)
+    //         .lineTo(-radius - lineLength, 0)
+    //         .moveTo(radius, 0)
+    //         .lineTo(radius + lineLength, 0)
+    //         .stroke({ color: 0x000000, pixelLine: true })
+    //         .fill({color:0x000000, alpha: 0});    // fill so we can drag anywhere in the circle
+    //     circle.setSize(36);
+    //     circle.label = `${label}-graphics`;
 
-        poa.addChild(circle);
+    //     poa.addChild(circle);
         
-        poa.label = label;
-        poa.eventMode = 'dynamic';
-        poa.cursor = 'pointer';
-        poa.interactive = true;
+    //     poa.label = label;
+    //     poa.eventMode = 'dynamic';
+    //     poa.cursor = 'pointer';
+    //     poa.interactive = true;
         
-        poa.pivot.set(0, 0);
+    //     poa.pivot.set(0, 0);
         
 
-        return poa;
-    }
+    //     return poa;
+    // }
 
-    private async getGroupContainer(label: string): Promise<Container|null>
-    {
-        return this.targetContainer.getChildByLabel(label);
-    }
+    // private async getGroupContainer(label: string): Promise<Container|null>
+    // {
+    //     return this.targetContainer.getChildByLabel(label);
+    // }
 
     private get getShotsTotal(): number
     {
         return this.targetContainer.getChildrenByLabel(/^shot-/i, true).length || 0;
     }
 
-    private handleSpriteDrag(e: FederatedPointerEvent): void
-    {
-        const target = e.currentTarget as Sprite;
-        this.isDragging = true;
-        this.dragTarget = target;
-        this.dragStartPosition = { x: target.x, y: target.y};
+    // private handleSpriteDrag(e: FederatedPointerEvent): void
+    // {
+    //     const target = e.currentTarget as Sprite;
+    //     this.isDragging = true;
+    //     this.dragTarget = target;
+    //     this.dragStartPosition = { x: target.x, y: target.y};
 
-        console.log(`Dragging ${target.label}`)
+    //     console.log(`Dragging ${target.label}`)
 
-        this.targetContainer.eventMode = 'dynamic';
-        this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
-        this.targetContainer.on('pointerup', this.handleDragEnd.bind(this));
-        this.targetContainer.on('pointerupoutside', this.handleDragEnd.bind(this));
-    }
+    //     this.targetContainer.eventMode = 'dynamic';
+    //     this.targetContainer.on('pointermove', this.handleDragMove.bind(this));
+    //     this.targetContainer.on('pointerup', this.handleDragEnd.bind(this));
+    //     this.targetContainer.on('pointerupoutside', this.handleDragEnd.bind(this));
+    // }
 
-    private handleDragMove(e: FederatedPointerEvent): void
-    {
-        if (!this.isDragging || !this.dragTarget) return;
+    // private handleDragMove(e: FederatedPointerEvent): void
+    // {
+    //     if (!this.isDragging || !this.dragTarget) return;
 
-        const newPosition = this.targetContainer.toLocal(e.global);
-        this.dragTarget.x = newPosition.x;
-        this.dragTarget.y = newPosition.y;
+    //     const newPosition = this.targetContainer.toLocal(e.global);
+    //     this.dragTarget.x = newPosition.x;
+    //     this.dragTarget.y = newPosition.y;
 
-        console.log(`Finished dragging ${this.dragTarget.label}`);
-    }
+    //     console.log(`Finished dragging ${this.dragTarget.label}`);
+    // }
 
-    private handleDragEnd(e: FederatedPointerEvent): void
-    {
-        if (!this.isDragging || !this.dragTarget) return;
+    // private handleDragEnd(e: FederatedPointerEvent): void
+    // {
+    //     if (!this.isDragging || !this.dragTarget) return;
 
-        let id;
-        if (this.dragTarget.label.startsWith('shot')) {
-            const match = this.dragTarget.label.match(/^shot-(\d+)-(\d+)$/i);
-            if (!match) { 
-                console.error(`dragTarget label => id failed!`); 
-                return; 
-            }
+    //     let id;
+    //     if (this.dragTarget.label.startsWith('shot')) {
+    //         const match = this.dragTarget.label.match(/^shot-(\d+)-(\d+)$/i);
+    //         if (!match) { 
+    //             console.error(`dragTarget label => id failed!`); 
+    //             return; 
+    //         }
             
-            // Get the actual shot ID from the label
-            id = match[1];
-            const groupId = parseInt(match[2]);
+    //         // Get the actual shot ID from the label
+    //         id = match[1];
+    //         const groupId = parseInt(match[2]);
 
-            console.log(`handleDragEnd`, `shotId: ${id}` );
-            TargetStore.updateShot(id, groupId, this.dragTarget.x, this.dragTarget.y);
-        } else if (this.dragTarget.label.startsWith('poa')) {
-            id = this.dragTarget.label.match(/^poa-(\d+)$/i)?.[1];
-            if (!id) { console.error(`dragTarget label => id failed!`); return; }
-            TargetStore.updatePoa(parseInt(id), this.dragTarget.x, this.dragTarget.y)
-        }
+    //         console.log(`handleDragEnd`, `shotId: ${id}` );
+    //         TargetStore.updateShot(id, groupId, this.dragTarget.x, this.dragTarget.y);
+    //     } else if (this.dragTarget.label.startsWith('poa')) {
+    //         id = this.dragTarget.label.match(/^poa-(\d+)$/i)?.[1];
+    //         if (!id) { console.error(`dragTarget label => id failed!`); return; }
+    //         TargetStore.updatePoa(parseInt(id), this.dragTarget.x, this.dragTarget.y)
+    //     }
 
-        this.isDragging = false;
-        this.dragTarget = null;
-        this.dragStartPosition = null;
+    //     this.isDragging = false;
+    //     this.dragTarget = null;
+    //     this.dragStartPosition = null;
 
-        this.targetContainer.off('pointermove', this.handleDragMove.bind(this));
-        this.targetContainer.off('pointerup', this.handleDragEnd.bind(this));
-        this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
+    //     this.targetContainer.off('pointermove', this.handleDragMove.bind(this));
+    //     this.targetContainer.off('pointerup', this.handleDragEnd.bind(this));
+    //     this.targetContainer.off('pointerupoutside', this.handleDragEnd.bind(this));
 
-        this.metricsRenderer.drawAllMetrics();
-    }
+    //     this.metricsRenderer.drawAllMetrics();
+    // }
 
-    public assignSelectedShotsToGroup(value: string): void
-    {
-        const shots = this.editorStore.selected;
-        let group: GroupInterface|undefined;
-        let container: Container|null;
+    // public assignSelectedShotsToGroup(value: string): void
+    // {
+    //     const shots = this.editorStore.selected;
+    //     let group: GroupInterface|undefined;
+    //     let container: Container|null;
 
-        if (value === 'createNew') {
-            const res = this.createGroup();
-            if (res && res.group && res.container) {
-                group = res.group;
-                container = res.container;
-            } else {
-                throw new Error(`this.createGroup() caused an error!`)
-            }
-        } else {
-            group = this.targetStore.groups.find((g) => g.id === parseInt(value));
-            container = this.targetContainer.getChildByLabel(value);
+    //     if (value === 'createNew') {
+    //         const res = this.createGroup();
+    //         if (res && res.group && res.container) {
+    //             group = res.group;
+    //             container = res.container;
+    //         } else {
+    //             throw new Error(`this.createGroup() caused an error!`)
+    //         }
+    //     } else {
+    //         group = this.targetStore.groups.find((g) => g.id === parseInt(value));
+    //         container = this.targetContainer.getChildByLabel(value);
 
-            if (!group) {
-                throw new Error(`No group found with id: ${value}`);
-            }
-            if (!container) {
-                throw new Error(`No container found with the label ${value}`);
-            }
-        }
+    //         if (!group) {
+    //             throw new Error(`No group found with id: ${value}`);
+    //         }
+    //         if (!container) {
+    //             throw new Error(`No container found with the label ${value}`);
+    //         }
+    //     }
             
-        shots.forEach((shot) => {
-            // update targetStore
-            const ids = shot.label.match(/shot-(\d+)-(\d+)/i);
-            if (!ids[1]) { console.error(`Found no shotID in label ${shot.label}!`); return; }
-            if (!ids[2]) { console.error(`Found no groupID in label ${shot.label}!`); return; }
-            TargetStore.setShot(ids[1], group.id, shot.x, shot.y, 0);
-            TargetStore.removeShot(ids[2], ids[1]);
+    //     shots.forEach((shot) => {
+    //         // update targetStore
+    //         const ids = shot.label.match(/shot-(\d+)-(\d+)/i);
+    //         if (!ids[1]) { console.error(`Found no shotID in label ${shot.label}!`); return; }
+    //         if (!ids[2]) { console.error(`Found no groupID in label ${shot.label}!`); return; }
+    //         TargetStore.setShot(ids[1], group.id, shot.x, shot.y, 0);
+    //         TargetStore.removeShot(ids[2], ids[1]);
             
-            // update label
-            shot.label = `shot-${group.shots?.length}-${group.id}`;
-            // add to new container
-            container.addChild(shot);
-            // remove from old container
-            const oldContainer = this.targetContainer.getChildByLabel(ids[2]);
-            if (!oldContainer) { console.error(`No container labelled ${ids[2]}!`); return; }
-            oldContainer.removeChild(shot);
-        });
-    }
+    //         // update label
+    //         shot.label = `shot-${group.shots?.length}-${group.id}`;
+    //         // add to new container
+    //         container.addChild(shot);
+    //         // remove from old container
+    //         const oldContainer = this.targetContainer.getChildByLabel(ids[2]);
+    //         if (!oldContainer) { console.error(`No container labelled ${ids[2]}!`); return; }
+    //         oldContainer.removeChild(shot);
+    //     });
+    // }
 
-    public removeShot(e: FederatedPointerEvent): void
-    {
-        const ids = [...e.target.label.matchAll(/^shot-(\d+)-(\d+)$/g)];
-        if (ids) {
-            let shotid = ids[0][1];
-            let groupid = parseInt(ids[0][2]);
+    // public removeShot(e: FederatedPointerEvent): void
+    // {
+    //     const ids = [...e.target.label.matchAll(/^shot-(\d+)-(\d+)$/g)];
+    //     if (ids) {
+    //         let shotid = ids[0][1];
+    //         let groupid = parseInt(ids[0][2]);
             
-            // Remove shot from store
-            TargetStore.removeShot(groupid, shotid);
+    //         // Remove shot from store
+    //         TargetStore.removeShot(groupid, shotid);
             
-            // Remove sprite from container
-            const groupContainer = this.targetContainer.getChildByLabel(ids[0][2]);
-            if (groupContainer) {
-                const sprite = groupContainer.getChildByLabel(e.target.label);
-                if (sprite) {
-                    groupContainer.removeChild(sprite);
-                } else {
-                    throw new Error(`No such sprite (${e.target.label})`);
-                }
+    //         // Remove sprite from container
+    //         const groupContainer = this.targetContainer.getChildByLabel(ids[0][2]);
+    //         if (groupContainer) {
+    //             const sprite = groupContainer.getChildByLabel(e.target.label);
+    //             if (sprite) {
+    //                 groupContainer.removeChild(sprite);
+    //             } else {
+    //                 throw new Error(`No such sprite (${e.target.label})`);
+    //             }
                 
-                // Get the updated shots from the store
-                const updatedGroup = TargetStore.getGroup(groupid);
-                if (updatedGroup && updatedGroup.shots) {
-                    // Get all shot sprites in this group
-                    const shotSprites = groupContainer.children.filter(child => 
-                        child.label && child.label.startsWith('shot-'));
+    //             // Get the updated shots from the store
+    //             const updatedGroup = TargetStore.getGroup(groupid);
+    //             if (updatedGroup && updatedGroup.shots) {
+    //                 // Get all shot sprites in this group
+    //                 const shotSprites = groupContainer.children.filter(child => 
+    //                     child.label && child.label.startsWith('shot-'));
                     
-                    // Relabel shots to match their new indices AND IDs
-                    for (let i = 0; i < shotSprites.length; i++) {
-                        // Get the corresponding shot from the store
-                        const storeShot = updatedGroup.shots[i];
-                        if (storeShot) {
-                            // Update the label to use the store shot ID
-                            shotSprites[i].label = `shot-${storeShot.id}-${groupid}`;
-                        }
-                    }
-                }
+    //                 // Relabel shots to match their new indices AND IDs
+    //                 for (let i = 0; i < shotSprites.length; i++) {
+    //                     // Get the corresponding shot from the store
+    //                     const storeShot = updatedGroup.shots[i];
+    //                     if (storeShot) {
+    //                         // Update the label to use the store shot ID
+    //                         shotSprites[i].label = `shot-${storeShot.id}-${groupid}`;
+    //                     }
+    //                 }
+    //             }
                 
-                this.metricsRenderer.drawAllMetrics(groupid);
+    //             this.metricsRenderer.drawAllMetrics(groupid);
                 
-                console.debug(`Removed shot ${shotid}`);
-                console.debug(`shots:`, {
-                    groupContainer: this.getAllChildren(groupContainer),
-                    groupstore: this.getGroupStoreShots(groupid)
-                });
-            } else {
-                throw new Error(`No such groupcontainer (${ids[0][2]})`);
-            }
-        }
-    }
+    //             console.debug(`Removed shot ${shotid}`);
+    //             console.debug(`shots:`, {
+    //                 groupContainer: this.getAllChildren(groupContainer),
+    //                 groupstore: this.getGroupStoreShots(groupid)
+    //             });
+    //         } else {
+    //             throw new Error(`No such groupcontainer (${ids[0][2]})`);
+    //         }
+    //     }
+    // }
 
-    private getAllChildren(container: Container)
-    {
-        let labels: string[] = []
-        container.children.forEach((child) => {
-            if (child.label.startsWith('shot')) {
-                labels.push(child.label);
-            }
-        });
-        return labels;
-    }
+    // private getAllChildren(container: Container)
+    // {
+    //     let labels: string[] = []
+    //     container.children.forEach((child) => {
+    //         if (child.label.startsWith('shot')) {
+    //             labels.push(child.label);
+    //         }
+    //     });
+    //     return labels;
+    // }
 
-    private getGroupStoreShots(id: number)
-    {
-        let ids: string[] = []
+    // private getGroupStoreShots(id: number)
+    // {
+    //     let ids: string[] = []
         
-        const shots = TargetStore.getShots(id);
-        if (!shots) { console.error(`No such group! (${id})`); return; }
+    //     const shots = TargetStore.getShots(id);
+    //     if (!shots) { console.error(`No such group! (${id})`); return; }
         
-        shots.forEach(shot => ids.push(shot.id.toString()))
+    //     shots.forEach(shot => ids.push(shot.id.toString()))
 
-        return ids;
-    }
+    //     return ids;
+    // }
 
 
     // private makeCircleFromTwoPoints(p1: {x: number, y: number}, 
