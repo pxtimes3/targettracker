@@ -39,7 +39,6 @@ export default defineConfig({
         alias: {
             '@': resolve(__dirname, './src/lib'),
             '$app': resolve('./src/mocks/app')
-            // Add any other aliases your project uses
         }
     }
 });

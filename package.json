@@ -13,7 +13,7 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
 		"test:unit": "vitest --exclude \"**targettracker.analysis/**\"",
-		"test": "npm run test:unit -- --run",
+		"test": "npm run test:unit -- --run --coverage",
 		"coverage": "vitest run --coverage",
 		"lint": "eslint . && prettier --check .",
 		"format": "prettier --write ."
