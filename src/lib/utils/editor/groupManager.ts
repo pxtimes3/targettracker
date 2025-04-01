@@ -7,14 +7,14 @@ import { Container, Sprite, Graphics } from 'pixi.js';
 import { get } from 'svelte/store';
 
 export class GroupManager {
-    private targetContainer: Container;
-    private editorStore: EditorStoreInterface;
-    private targetStore: TargetStoreInterface;
-    private userSettings: SettingsInterface;
+    public targetContainer: Container;
+    public editorStore: EditorStoreInterface;
+    public targetStore: TargetStoreInterface;
+    public userSettings: SettingsInterface;
     
-    private userSettingsUnsubscribe: () => void;
-    private targetStoreUnsubscribe: () => void;
- 
+    public userSettingsUnsubscribe: () => void;
+    public targetStoreUnsubscribe: () => void;
+    
     constructor(targetContainer: Container) {
         this.targetContainer = targetContainer;
 
@@ -74,12 +74,15 @@ export class GroupManager {
             this.targetStore.groups.push(newGroup);
             const createdGroup = this.targetStore.groups[this.targetStore.groups.length - 1];
             // console.log(`Created new group:`, createdGroup);
+            this.targetStore.activeGroup = this.targetStore.groups.length;
             return createdGroup;
         } catch (e) {
             // TODO: Logging.
             throw new Error(`Failed to push new group to store!`);
         }
     }
+
+
     public createNewGroupContainer(id: number): Container | null
     {
         try {
@@ -96,16 +99,17 @@ export class GroupManager {
             return null;
         }
     }
+    
     public removeGroup(id: string): void|undefined
     {
-        if (this.targetStore.groups.length === 1) {
-            console.warn(`Tried to remove the one group that exists. Exiting.`);
-            return;
-        }
-
         let group = this.targetStore.groups.findIndex((g) => g.id === parseInt(id));
         if (group === -1) {
             console.error(`No such group (${id}) in targetStore.`);
+            return;
+        }
+
+        if (this.targetStore.groups.length === 1) {
+            console.warn(`Tried to remove the one group that exists. Exiting.`);
             return;
         }
 
