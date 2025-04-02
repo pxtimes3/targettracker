@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Stores
 const mockUserSettingsSubscribe = vi.fn((cb) => {
@@ -72,17 +72,12 @@ vi.mock('svelte/store', () => ({
 }));
 
 import { DragHandler } from '@/utils/editor/dragHandler';
-import { MetricsRenderer } from '@/utils/editor/MetricsRenderer';
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { Container } from 'pixi.js';
 import { TargetStore } from '@/stores/TargetImageStore';
 import { UserSettingsStore } from '@/stores/UserSettingsStore';
-import { EditorStore } from '@/stores/EditorStore';
 import { GroupManager } from '@/utils/editor/groupManager';
-import FederatedPointerEvent from 'pixi.js';
 import { get } from 'svelte/store';
-import { getAllChildren } from '../../../src/lib/utils/editor/editorUtils';
-import { object } from 'zod';
-import { GroupInterface } from '../../../src/lib/stores/TargetImageStore';
+import type { GroupInterface } from '../../../src/lib/stores/TargetImageStore';
 
 
 describe('GroupManager', () => {
@@ -439,5 +434,23 @@ describe('GroupManager', () => {
         expect(() => groupManager.createNewTargetStoreGroup()).toThrowError(
             'Failed to push new group to store!'
         );
+    });
+
+    it('should unsubscribe from stores when destroy is called', () => {
+        // Arrange
+        const groupManager = new GroupManager(mockContainer);
+        
+        // Mock
+        const targetStoreUnsubscribeSpy = vi.fn();
+        const userSettingsUnsubscribeSpy = vi.fn();
+        groupManager.targetStoreUnsubscribe = targetStoreUnsubscribeSpy;
+        groupManager.userSettingsUnsubscribe = userSettingsUnsubscribeSpy;
+        
+        // Act
+        groupManager.destroy();
+        
+        // Assert
+        expect(targetStoreUnsubscribeSpy).toHaveBeenCalled();
+        expect(userSettingsUnsubscribeSpy).toHaveBeenCalled();
     });
 });
