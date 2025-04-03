@@ -106,11 +106,11 @@ describe('EditorCrosshair', () => {
         crosshair.userSettings = mockUserSettings;
 
         const addChildSpy = vi.spyOn(mockContainer, 'addChild');
-        const crosshairContainer = addChildSpy.mock.calls[0][0] as Container;
+        const crosshairContainer = addChildSpy.mock.calls[0]?.[0] as Container;
         const [nLine, sLine, eLine, wLine] = crosshairContainer.children;
 
         // Tick!
-        const tickerCallback = tickerAddMock.mock.calls[0][0];
+        const tickerCallback = tickerAddMock.mock.calls[0]?.[0];
         tickerCallback();
 
         // Act
@@ -137,11 +137,11 @@ describe('EditorCrosshair', () => {
         crosshair.userSettings = mockUserSettings;
 
         const addChildSpy = vi.spyOn(mockContainer, 'addChild');
-        const crosshairContainer = addChildSpy.mock.calls[0][0] as Container;
+        const crosshairContainer = addChildSpy.mock.calls[0]?.[0] as Container;
         const [nLine, sLine, eLine, wLine] = crosshairContainer.children;
 
         // Tick!
-        const tickerCallback = tickerAddMock.mock.calls[0][0];
+        const tickerCallback = tickerAddMock.mock.calls[0]?.[0];
         tickerCallback();
 
         // Act
