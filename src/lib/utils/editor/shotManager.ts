@@ -156,12 +156,38 @@ export class ShotManager {
     
     
       
-    public async addShot(x: number, y: number, groupId: string): Promise<Container|undefined> {
+    public async addShot(x: number, y: number, groupId: string): Promise<Container|undefined> 
+    {
         return this.addElement({ x, y, groupId, type: ElementType.SHOT });
     }
       
-    public async addPoa(x: number, y: number, groupId: string): Promise<Container|undefined> {
-        return this.addElement({ x, y, groupId, type: ElementType.POA });
+    public async addPoa(x: number, y: number, groupId: string): Promise<Container|undefined> 
+    {
+        const currentPoa = TargetStore.getGroup(parseInt(groupId))?.poa;
+        
+        if (!currentPoa) {
+            // No existing POA, create a new one
+            return this.addElement({ x, y, groupId, type: ElementType.POA });
+        }
+        
+        const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId);
+        if (!groupContainer) { 
+            console.error('We have a POA but could not fetch the group container!'); 
+            return; 
+        }
+        
+        const poaContainer: Container|null = groupContainer.getChildByLabel(/poa-.*/); 
+
+        if (!poaContainer) {
+            return this.addElement({ x, y, groupId, type: ElementType.POA });
+        } else {
+            // Move existing POA
+            const position = this.targetContainer.toLocal({x, y});
+            poaContainer.position = {x: position.x, y: position.y};
+            // Update store
+            TargetStore.updatePoa(parseInt(groupId), position.x, position.y);
+            return poaContainer;
+        }
     }
 
     public assignSelectedShotsToGroup(value: string): void

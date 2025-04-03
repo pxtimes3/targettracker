@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Create mock functions for store subscriptions
+// Stores
 const mockUserSettingsSubscribe = vi.fn((cb) => {
  	cb({});
  	return () => {};
@@ -11,7 +11,7 @@ const mockTargetStoreSubscribe = vi.fn((cb) => {
   	return () => {};
 });
 
-// Mock dependencies first, before importing the actual modules
+// Dependencies
 vi.mock('@/utils/editor/groupManager', () => ({
   	GroupManager: vi.fn().mockImplementation(() => ({
     	getGroupContainer: vi.fn(),
@@ -43,21 +43,24 @@ vi.mock('@/stores/EditorStore', () => ({
 }));
 
 vi.mock('@/stores/TargetImageStore', () => {
-	// Define the mock functions inside the factory
-	const subscribe = vi.fn((cb) => {
-		cb({ groups: [] });
-		return () => {};
-	});
+    // Define the mock functions inside the factory
+    const subscribe = vi.fn((cb) => {
+        cb({ groups: [] });
+        return () => {};
+    });
 
-	return {
-		TargetStore: {
-			subscribe,
-			addShot: vi.fn(),
-			removeShot: vi.fn(),
-			getGroup: vi.fn(),
-			getShots: vi.fn()
-		}
-	};
+    return {
+        TargetStore: {
+            subscribe,
+            addShot: vi.fn(),
+            removeShot: vi.fn(),
+            getGroup: vi.fn(),
+            getShots: vi.fn(),
+            updateShot: vi.fn(),
+            updatePoa: vi.fn(),
+            setShot: vi.fn()
+        }
+    };
 });
 
 vi.mock('@/stores/UserSettingsStore', () => {
@@ -84,7 +87,6 @@ vi.mock('svelte/store', () => ({
   	}))
 }));
 
-// Now import the modules after all mocks are defined
 import { ShotManager } from '@/utils/editor/shotManager';
 import { Container, FederatedPointerEvent } from 'pixi.js';
 import { ElementType } from '@/types/editor';
@@ -178,21 +180,29 @@ describe('ShotManager', () => {
 			mockDragHandler as any
 		);
 	
-		// Mock addElement to avoid actual implementation
+		// Mock addElement to track all calls
 		shotManager.addElement = vi.fn().mockResolvedValue(new Container());
+		
+		// Mock TargetStore.getGroup to return null for the second call (addPoa)
+		// This simulates a group without an existing POA
+		TargetStore.getGroup = vi.fn().mockReturnValue(null);
 	
 		// Act
 		await shotManager.addShot(100, 200, '1');
+		
+		// For addPoa, we need to mock a group with no POA
+		TargetStore.getGroup = vi.fn().mockReturnValue({ id: 2 }); // Group exists but no POA
 		await shotManager.addPoa(300, 400, '2');
 	
-		// Assert
-		expect(shotManager.addElement).toHaveBeenCalledWith({
+		// Assert - check specific calls by index
+		expect(shotManager.addElement).toHaveBeenCalledTimes(2);
+		expect(shotManager.addElement).toHaveBeenNthCalledWith(1, {
 			x: 100,
 			y: 200,
 			groupId: '1',
 			type: ElementType.SHOT
 		});
-		expect(shotManager.addElement).toHaveBeenCalledWith({
+		expect(shotManager.addElement).toHaveBeenNthCalledWith(2, {
 			x: 300,
 			y: 400,
 			groupId: '2',
@@ -200,6 +210,7 @@ describe('ShotManager', () => {
 		});
 	});
 
+	
 	// addElement creates and adds a shot element to the target container, ensuring TargetStore.addShot is properly mocked
     it('should create and add a shot element to the target container', async () => {
 		// Arrange
@@ -334,31 +345,6 @@ describe('ShotManager', () => {
 		expect(mockContainer.getChildByLabel).toHaveBeenCalledWith('3');
 	});
 
-	// addShot and addPoa correctly delegate to addElement with appropriate parameters
-	it('should call addElement with correct parameters when addShot and addPoa are called', async () => {
-		// Arrange
-		const shotManager = new ShotManager(new Container());
-		vi.spyOn(shotManager, 'addElement');
-	
-		// Act
-		await shotManager.addShot(100, 200, '1');
-		await shotManager.addPoa(300, 400, '2');
-	
-		// Assert
-		expect(shotManager.addElement).toHaveBeenCalledWith({
-			x: 100,
-			y: 200,
-			groupId: '1',
-			type: ElementType.SHOT
-		});
-		expect(shotManager.addElement).toHaveBeenCalledWith({
-			x: 300,
-			y: 400,
-			groupId: '2',
-			type: ElementType.POA
-		});
-	});
-
 	// assignSelectedShotsToGroup moves shots to a newly created group when 'createNew' is specified
 	it('should move selected shots to a new group when assignSelectedShotsToGroup is called with "createNew"', () => {
 		// Arrange
@@ -375,7 +361,9 @@ describe('ShotManager', () => {
 		const mockTargetStore = { groups: [{ id: 1, shots: [mockShot] }] };
 		const mockUserSettings = {};
 	
-		const shotManager = new ShotManager(mockContainer);
+		const shotManager = new ShotManager(
+			mockContainer
+		);
 		shotManager.editorStore = mockEditorStore;
 		shotManager.targetStore = mockTargetStore;
 		shotManager.userSettings = mockUserSettings;
@@ -580,4 +568,97 @@ describe('ShotManager', () => {
 		expect(result.storeGroup).toBeUndefined();
 		// Should log an error - you could spy on console.error to verify
 	});
+
+	// When a POA exists but no POA container is found, it should create a new POA
+	it('should create a new POA when a POA exists but no POA container is found', async () => {
+		// Arrange
+		const mockContainer = new Container();
+		const mockGroupContainer = new Container();
+		mockContainer.getChildByLabel = vi.fn().mockReturnValue(mockGroupContainer); // Return valid group container
+		mockGroupContainer.getChildByLabel = vi.fn().mockReturnValue(null); // No existing POA container
+		mockContainer.toLocal = vi.fn().mockReturnValue({ x: 10, y: 20 });
+
+		// Mock TargetStore.getGroup to return a group with a POA
+		TargetStore.getGroup = vi.fn().mockReturnValue({ 
+			id: 1, 
+			poa: { x: 5, y: 5 } 
+		});
+		
+		// Mock TargetStore.updatePoa
+		TargetStore.updatePoa = vi.fn();
+
+		const shotManager = new ShotManager(mockContainer);
+		shotManager.addElement = vi.fn().mockResolvedValue(new Container());
+
+		// Act
+		await shotManager.addPoa(100, 200, '1');
+
+		// Assert
+		expect(shotManager.addElement).toHaveBeenCalledWith({
+			x: 100,
+			y: 200,
+			groupId: '1',
+			type: ElementType.POA
+		});
+	});
+
+    // The method should convert coordinates to local space using toLocal and update the position of an existing poaContainer.
+    it('should convert coordinates to local space and update existing poaContainer', async () => {
+        // Arrange
+        const mockPoaContainer = {
+            position: { x: 0, y: 0 }
+        } as unknown as Container;
+
+        const mockGroupContainer = {
+            getChildByLabel: vi.fn().mockReturnValue(mockPoaContainer)
+        } as unknown as Container;
+
+        const mockContainer = {
+            toLocal: vi.fn().mockReturnValue({ x: 10, y: 20 }),
+            getChildByLabel: vi.fn().mockReturnValue(mockGroupContainer)
+        } as unknown as Container;
+
+        vi.spyOn(TargetStore, 'getGroup').mockReturnValue({ id: 0, poa: {x: 0, y: 0} });
+        vi.spyOn(TargetStore, 'updatePoa').mockImplementation(() => {});
+
+        const shotManager = new ShotManager(mockContainer);
+        shotManager.targetContainer = mockContainer;
+
+        // Act
+        const result = await shotManager.addPoa(100, 200, '1');
+
+        // Assert
+        expect(mockContainer.toLocal).toHaveBeenCalledWith({ x: 100, y: 200 });
+        expect(mockGroupContainer.getChildByLabel).toHaveBeenCalledWith(/poa-.*/);
+        expect(TargetStore.updatePoa).toHaveBeenCalledWith(1, 10, 20);
+        expect(result).toBeDefined();
+    });	
+
+    
+    // The method should update the POA position in the TargetStore and return the updated POA container
+    it('should update POA position in TargetStore when POA exists', async () => {
+        // Arrange
+        const mockContainer = new Container();
+        mockContainer.toLocal = vi.fn().mockReturnValue({ x: 300, y: 400 });
+        const mockGroupContainer = new Container();
+        const mockPoaContainer = new Container();
+        mockGroupContainer.getChildByLabel = vi.fn().mockReturnValue(mockPoaContainer);
+        mockContainer.getChildByLabel = vi.fn().mockReturnValue(mockGroupContainer);
+
+        const shotManager = new ShotManager(mockContainer);
+
+        TargetStore.getGroup = vi.fn().mockReturnValue({ poa: true });
+        TargetStore.updatePoa = vi.fn();
+
+        // Act
+        const result = await shotManager.addPoa(300, 400, '1');
+
+        // Assert
+        expect(mockContainer.toLocal).toHaveBeenCalledWith({ x: 300, y: 400 });
+        expect(mockPoaContainer.position).toMatchObject({ _x: 300, _y: 400 });
+        expect(TargetStore.updatePoa).toHaveBeenCalledWith(1, 300, 400);
+        expect(result).toBe(mockPoaContainer);
+    });
+
+
 });

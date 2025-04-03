@@ -1,38 +1,44 @@
 // utils/editor/MetricsRenderer.ts
 
-import { Container, Graphics } from "pixi.js";
+import { Container } from "pixi.js";
 import { type SettingsInterface, UserSettingsStore } from '@/stores/UserSettingsStore';
 import { TargetStore, type TargetStoreInterface, type GroupInterface } from "@/stores/TargetImageStore";
 import { Geometry } from '../geometry';
+import { GraphicsFactory } from "./GraphicsFactory";
 import { get } from "svelte/store";
 
 export class MetricsRenderer {
-    private targetContainer: Container;
-    private userSettings: SettingsInterface;
-    private userSettingsUnsubscribe: () => void;
-    private geometry: Geometry;
+    public targetContainer: Container;
+    public userSettings: SettingsInterface;
+    public targetStore: TargetStoreInterface;
+    public userSettingsUnsubscribe: () => void;
+    public geometry: Geometry;
+    public graphicsFactory: GraphicsFactory;
     
     constructor(targetContainer: Container) {
         this.targetContainer = targetContainer;
         this.userSettings = get(UserSettingsStore);
+        this.targetStore = get(TargetStore);
         this.geometry = new Geometry();
+        this.graphicsFactory = new GraphicsFactory(targetContainer);
       
         this.userSettingsUnsubscribe = UserSettingsStore.subscribe((settings) => {
-            // console.log('Settings updated:', settings);
             this.userSettings = settings;
             this.drawAllMetrics();
         });
     }
 
-    public destroy() {
+    public destroy()
+    {
         if (this.userSettingsUnsubscribe) {
             this.userSettingsUnsubscribe();
         }
     }
     
-    public drawAllMetrics(group?: number): void {
+    public drawAllMetrics(group?: number): void 
+    {
         if (!group) {
-            get(TargetStore).groups.forEach(group => {
+            this.targetStore.groups.forEach(group => {
                 this.drawGroupMetrics(group.id);
             });
         } else {
@@ -40,7 +46,8 @@ export class MetricsRenderer {
         }
     }
     
-    private drawGroupMetrics(groupId: number): void {
+    public drawGroupMetrics(groupId: number): void 
+    {
         this.drawMeanRadius(groupId);
         this.drawCoveringRadius(groupId);
         this.drawMPI(groupId);
@@ -48,10 +55,9 @@ export class MetricsRenderer {
         this.drawExtremeSpread(groupId);
     }
     
-    private drawMeanRadius(groupId: number): void 
+    public drawMeanRadius(groupId: number): void 
     {
         const currentStore: TargetStoreInterface = get(TargetStore);
-        
         const group: GroupInterface|undefined = TargetStore.getGroup(groupId);
 
         const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId.toString());
@@ -79,6 +85,7 @@ export class MetricsRenderer {
             //     noRefLineLength: !currentStore.reference.linelength,
             //     refLineLength: currentStore.reference.linelength,
             // });
+            console.warn('No reference points set!');
             return;
         }
         
@@ -94,54 +101,46 @@ export class MetricsRenderer {
                 Math.pow(p.y - meanCenter.y, 2)
             ), 0) / points.length;
     
-        // console.log('Calculated values:', {
-        //     points,
-        //     meanCenter,
-        //     meanRadius,
-        //     showmr: this.userSettings.showmr
-        // });
-    
-        const graphics = new Graphics();
-        graphics.clear();
-        graphics.circle(0, 0, meanRadius);
-        graphics.stroke({
-            color: 0xFF0000,
-            alpha: 0.5,
-            pixelLine: true
+        TargetStore.update(store => {
+            const group = store.groups.find(g => g.id === groupId);
+            if (group) {
+                group.metrics = group.metrics || {};
+                group.metrics.meanradius = {
+                    px: meanRadius,
+                    mm: TargetStore.pxToMm(meanRadius)
+                };
+            }
+            return store;
         });
-        
-        graphics.position.set(meanCenter.x, meanCenter.y);
-        graphics.eventMode = 'none';
-        graphics.visible = this.userSettings.showmr;
-        graphics.label = `mr-${groupId}`;
     
-        // console.log('Group container:', groupContainer);
+        const graphics = this.graphicsFactory.createMeanRadiusGraphics(
+            groupId,
+            meanCenter,
+            meanRadius,
+            this.userSettings.showmr
+        );
         
         groupContainer.addChild(graphics);
     }
     
-    private drawCoveringRadius(groupId: number): void 
+    public drawCoveringRadius(groupId: number): void 
     {
         const group = TargetStore.getGroup(groupId);
         
-        // Get the group container first
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
         if (!groupContainer) {
-            return; // Exit if no container exists
+            return;
         }
         
-        // Always remove the old circle if it exists
         const oldCircle = groupContainer.getChildByLabel(`ccr-${groupId}`);
         if (oldCircle) {
             groupContainer.removeChild(oldCircle);
         }
         
-        // Only proceed with drawing if we have enough shots
         if (!group || !group.shots || group.shots.length < 2) {
-            return; // Exit without drawing
+            return; // Inget eller bara en träff 
         }
         
-        // The rest of the function remains the same
         const points = group.shots.map(shot => ({x: shot.x, y: shot.y}));
         const {center, radius} = this.geometry.findMinCircle(points);
 
@@ -156,7 +155,7 @@ export class MetricsRenderer {
             const group = store.groups.find(g => g.id === groupId);
             if (group) {
                 group.metrics = group.metrics || {};
-                group.metrics.meanradius = {
+                group.metrics.coveringradius = {
                     px: ccrRadiusInPixels,
                     mm: TargetStore.pxToMm(ccrRadiusInPixels)
                 };
@@ -164,23 +163,17 @@ export class MetricsRenderer {
             return store;
         });
         
-        const graphics = new Graphics();
-        graphics.clear();
-        graphics.circle(0, 0, radius);
-        graphics.position.set(center.x, center.y)
-        graphics.stroke({
-            color: 0x0000FF,
-            pixelLine: true,
-            alpha: 0.5
-        });
-        graphics.eventMode = 'none';
-        graphics.visible = this.userSettings.showccr;
-        graphics.label = `ccr-${groupId}`;
+        const graphics = this.graphicsFactory.createCoveringRadiusGraphics(
+            groupId,
+            center,
+            radius,
+            this.userSettings.showccr
+        );
         
         groupContainer.addChild(graphics);
     }
 
-    private drawMPI(groupId: number): void {
+    public drawMPI(groupId: number): void {
         const group = TargetStore.getGroup(groupId);
 
         const groupContainer = this.targetContainer.getChildByLabel(groupId.toString());
@@ -200,41 +193,17 @@ export class MetricsRenderer {
             x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
             y: points.reduce((sum, p) => sum + p.y, 0) / points.length
         };
-    
-        const mpiContainer = new Container();
-        const mpiGfx = new Graphics({
-            label: `mpi-group-${groupId}-gfx`,
-        })
-            .circle(0, 0, 3)
-            .stroke({ 
-                color: 0xFF00FF,
-                pixelLine: true,
-                alpha: 0.9,
-            })
-            .fill({
-                color: 0xFF00FF,
-                alpha: 0.75,
-            });
+
+        const graphics = this.graphicsFactory.createMPIGraphics(
+            groupId,
+            {x: mpi.x, y: mpi.y},
+            this.userSettings.showmpi
+        );
         
-        mpiContainer.addChild(mpiGfx);
-        
-        mpiContainer.position.set(mpi.x, mpi.y);
-        mpiContainer.eventMode = 'none';
-        mpiContainer.visible = this.userSettings.showmpi;
-        mpiContainer.label = `mpi-${groupId}`;
-    
-        
-        groupContainer.addChild(mpiContainer);
-            
-        // Debug
-        // console.log('MPI added:', {
-        //     position: `${mpi.x},${mpi.y}`,
-        //     visible: mpiContainer.visible,
-        //     parent: mpiContainer.parent?.label
-        // });
+        groupContainer.addChild(graphics);
     }
     
-    private drawDiagonal(groupId: number): void {
+    public drawDiagonal(groupId: number): void {
         const group: GroupInterface|undefined = TargetStore.getGroup(groupId);
 
         const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId.toString());
@@ -287,20 +256,19 @@ export class MetricsRenderer {
             return store;
         });
         
-        const strokeWidth = 2 * 1/this.targetContainer.scale.x;
-        const graphics = new Graphics()
-            .rect(minX, minY, width, height)   // FOM
-            .stroke({width: strokeWidth, color: 0x00FF00, pixelLine: true})
-            .moveTo(minX, minY)                // DIAGONAL
-            .lineTo(maxX, maxY)
-            .stroke({width: strokeWidth, color: 0x00FF00, pixelLine: true});
-        graphics.eventMode = 'none';
-        graphics.label = `diagonal-${groupId}`;
+        const diagonalGfx = this.graphicsFactory.createDiagonalGraphics(
+            groupId,
+            minX,
+            minY,
+            width,
+            height,
+            this.userSettings.showdiagonal
+        )
         
-        groupContainer.addChild(graphics);
+        groupContainer.addChild(diagonalGfx);
     }
 
-    private drawExtremeSpread(groupId: number): void {
+    public drawExtremeSpread(groupId: number): void {
         const group: GroupInterface|undefined = TargetStore.getGroup(groupId);
 
         const groupContainer: Container|null = this.targetContainer.getChildByLabel(groupId.toString());
@@ -320,7 +288,6 @@ export class MetricsRenderer {
         let point1 = shots[0];
         let point2 = shots[0];
     
-        // Find the two most distant shots
         for (let i = 0; i < shots.length; i++) {
             for (let j = i + 1; j < shots.length; j++) {
                 const distance = Math.sqrt(
@@ -349,19 +316,13 @@ export class MetricsRenderer {
             return store;
         });
     
-        const graphics = new Graphics();
-        graphics.clear();
+        const graphics = this.graphicsFactory.createExtremeSpreadGraphics(
+            groupId,
+            point1,
+            point2,
+            this.userSettings.showes
+        )
         
-        graphics.moveTo(point1.x, point1.y);
-        graphics.lineTo(point2.x, point2.y);
-        const strokeWidth = 2 * 1/this.targetContainer.scale.x;
-        graphics.stroke({pixelLine: true, color: 0x00FFFF});
-
-        graphics.eventMode = 'none';
-        graphics.label = `es-${groupId}`;
-    
-        graphics.visible = this.userSettings.showes;
-    
         groupContainer.addChild(graphics);
     }
 }

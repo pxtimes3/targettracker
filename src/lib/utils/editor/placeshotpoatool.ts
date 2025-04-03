@@ -64,6 +64,12 @@ export class ShotPoaTool {
         this.metricsRenderer.drawAllMetrics(parseInt(group));
     }
 
+    public async addPoa(x: number, y: number, group: string): Promise<void>
+    {
+        const poa = await this.shotManager.addPoa(x, y, group);
+        this.metricsRenderer.drawAllMetrics(parseInt(group));
+    }
+
     // public async addShot(x: number, y: number, group: string): Promise<void>
     // {
     //     // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
