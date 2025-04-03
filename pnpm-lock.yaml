@@ -42,8 +42,8 @@ importers:
         specifier: ^0.39.2
         version: 0.39.2(@libsql/client-wasm@0.14.0)(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(postgres@3.4.5)
       exifreader:
-        specifier: ^4.26.1
-        version: 4.26.1
+        specifier: ^4.27.0
+        version: 4.27.0
       lucide-svelte:
         specifier: ^0.475.0
         version: 0.475.0(svelte@5.19.9)
@@ -1755,8 +1755,8 @@ packages:
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
     engines: {node: '>=10.0.0'}
 
-  '@xmldom/xmldom@0.9.7':
-    resolution: {integrity: sha512-syvR8iIJjpTZ/stv7l89UAViwGFh6lbheeOaqSxkYx9YNmIVvPTRH+CT/fpykFtUx5N+8eSMDRvggF9J8GEPzQ==}
+  '@xmldom/xmldom@0.9.8':
+    resolution: {integrity: sha512-p96FSY54r+WJ50FIOsCOjyj/wavs8921hG5+kVMmZgKcvIKxMXHTrjNJvRgWa/zuX3B6t2lijLNFaOyuxUH+2A==}
     engines: {node: '>=14.6'}
 
   '@zxcvbn-ts/core@3.0.4':
@@ -2320,8 +2320,8 @@ packages:
   eventemitter3@5.0.1:
     resolution: {integrity: sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==}
 
-  exifreader@4.26.1:
-    resolution: {integrity: sha512-5u7LooUryPAhdQ/Wn5n/P8WsWJ/DxZ5AToc7gTDlzN41QlecGFEt3y+rXpaOe7GhxZ8cD5t8E7yqrq0oZeVHmw==}
+  exifreader@4.27.0:
+    resolution: {integrity: sha512-wrjtidE4MN5yQGI0ydeJm0Yw+HeCrziQGj5MccnHS0G+IyDoF8cyazKabXxj9F5LjXxqYTKiXm9nTYqvKAESzg==}
 
   expect-type@1.1.0:
     resolution: {integrity: sha512-bFi65yM+xZgk+u/KRIpekdSYkTB5W1pEf0Lt8Q8Msh7b+eQ7LXVtIB1Bkm4fvclDEL1b2CZkMhv2mOeF8tMdkA==}
@@ -5329,7 +5329,7 @@ snapshots:
 
   '@xmldom/xmldom@0.8.10': {}
 
-  '@xmldom/xmldom@0.9.7':
+  '@xmldom/xmldom@0.9.8':
     optional: true
 
   '@zxcvbn-ts/core@3.0.4':
@@ -5855,9 +5855,9 @@ snapshots:
 
   eventemitter3@5.0.1: {}
 
-  exifreader@4.26.1:
+  exifreader@4.27.0:
     optionalDependencies:
-      '@xmldom/xmldom': 0.9.7
+      '@xmldom/xmldom': 0.9.8
 
   expect-type@1.1.0: {}
 

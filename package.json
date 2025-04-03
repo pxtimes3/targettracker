@@ -67,7 +67,7 @@
 		"@zxcvbn-ts/language-en": "^3.0.2",
 		"@zxcvbn-ts/matcher-pwned": "^3.0.4",
 		"drizzle-orm": "^0.39.2",
-		"exifreader": "^4.26.1",
+		"exifreader": "^4.27.0",
 		"lucide-svelte": "^0.475.0",
 		"luxon": "^3.5.0",
 		"pixi.js": "^8.7.3",
