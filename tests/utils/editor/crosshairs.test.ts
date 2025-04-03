@@ -53,24 +53,30 @@ describe('EditorCrosshair', () => {
         // Arrange
         mockApp = { ticker: { add: vi.fn() } } as unknown as Application;
         mockContainer = new Container();
-        mockContainer.addChild = vi.fn();
-
+        
+        const addChildSpy = vi.spyOn(mockContainer, 'addChild');
+        
         const mockEditorStore = { /* mock editor store properties */ };
         const mockUserSettings = { editorcrosshair: true };
-
+    
         const crosshair = new EditorCrosshair(mockContainer, mockApp);
         // @ts-ignore
         crosshair.editorStore = mockEditorStore;
         // @ts-ignore
         crosshair.userSettings = mockUserSettings;
-
-        // Act
-        const addChildSpy = vi.spyOn(mockContainer, 'addChild');
-        const crosshairContainer = addChildSpy.mock.calls[0][0] as Container;
-        const [nLine, sLine, eLine, wLine] = crosshairContainer.children;
-
+    
         // Assert
         expect(addChildSpy).toHaveBeenCalled();
+        
+        const crosshairContainer = addChildSpy.mock.calls[0]?.[0] as Container;
+        
+        if (!crosshairContainer) {
+            console.warn('Container not added to mockContainer');
+            return;
+        }
+        
+        const [nLine, sLine, eLine, wLine] = crosshairContainer.children;
+    
         expect(crosshairContainer).toBeInstanceOf(Container);
         expect(crosshairContainer.label).toBe('editorCrosshair');
         expect(crosshairContainer.children.length).toBe(4);
@@ -94,26 +100,38 @@ describe('EditorCrosshair', () => {
         const tickerAddMock = vi.fn();
         mockApp = { ticker: { add: tickerAddMock } } as unknown as Application;
         mockContainer = new Container();
-        mockContainer.addChild = vi.fn();
-
+        
+        const addChildSpy = vi.spyOn(mockContainer, 'addChild');
+    
         const mockEditorStore = { };
         const mockUserSettings = { editorcrosshair: false };
-
+    
         const crosshair = new EditorCrosshair(mockContainer, mockApp);
+
         // @ts-ignore
         crosshair.editorStore = mockEditorStore;
         // @ts-ignore
         crosshair.userSettings = mockUserSettings;
-
-        const addChildSpy = vi.spyOn(mockContainer, 'addChild');
+    
         const crosshairContainer = addChildSpy.mock.calls[0]?.[0] as Container;
+        
+        if (!crosshairContainer) {
+            console.warn('Container not added to mockContainer');
+            return;
+        }
+        
         const [nLine, sLine, eLine, wLine] = crosshairContainer.children;
-
+    
         // Tick!
         const tickerCallback = tickerAddMock.mock.calls[0]?.[0];
+        if (!tickerCallback) {
+            console.warn('Ticker callback not added');
+            return;
+        }
+        
         tickerCallback();
-
-        // Act
+    
+        // Assert
         expect(nLine.visible).toBe(false);
         expect(sLine.visible).toBe(false);
         expect(eLine.visible).toBe(false);
@@ -127,17 +145,24 @@ describe('EditorCrosshair', () => {
         mockContainer = new Container();
         mockContainer.addChild = vi.fn();
 
+        const addChildSpy = vi.spyOn(mockContainer, 'addChild');
+
         const mockEditorStore = { };
         const mockUserSettings = { editorcrosshair: true };
+        const crosshairContainer = addChildSpy.mock.calls[0]?.[0] as Container;
 
         const crosshair = new EditorCrosshair(mockContainer, mockApp);
+
         // @ts-ignore
         crosshair.editorStore = mockEditorStore;
         // @ts-ignore
         crosshair.userSettings = mockUserSettings;
 
-        const addChildSpy = vi.spyOn(mockContainer, 'addChild');
-        const crosshairContainer = addChildSpy.mock.calls[0]?.[0] as Container;
+        if (!crosshairContainer) {
+            console.warn('Container not added to mockContainer');
+            return;
+        }
+        
         const [nLine, sLine, eLine, wLine] = crosshairContainer.children;
 
         // Tick!
