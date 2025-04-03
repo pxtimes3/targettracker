@@ -48,27 +48,27 @@ interface AnalysisResult {
 
 export class Target {
     public app!: ApplicationType<RendererType>;
-    private targetContainer!: ContainerType;
-    private targetSprite!: SpriteType;
-    private shotPoaTool!: ShotPoaTool;
-    private referenceTool!: ReferenceTool;
-    private selectionTool!: SelectionTool;
+    public targetContainer!: ContainerType;
+    public targetSprite!: SpriteType;
+    public shotPoaTool!: ShotPoaTool;
+    public referenceTool!: ReferenceTool;
+    public selectionTool!: SelectionTool;
     public  crosshairs!: EditorCrosshair;
-    private store: TargetStoreInterface;
-    private editorStore!: EditorStoreInterface;
-    private targetStore: TargetStoreInterface;
+    public store: TargetStoreInterface;
+    public editorStore!: EditorStoreInterface;
+    public targetStore: TargetStoreInterface;
     public scale: number;
     public  selecting: boolean = false;
     public  currentAngle: number = 0;
     public  sliderAngle: number = 0;
-    private staticAssets: string[];
-    private chromeArea: { x: number, y: number };
-    private originalWidth!: number;
-    private originalHeight!: number;
-    private isDragging: boolean = false;
-    private dragStartPosition: { x: number; y: number } | null = null;
-    private dragStartMousePosition: { x: number; y: number } | null = null;
-    private dark: boolean = false;
+    public staticAssets: string[];
+    public chromeArea: { x: number, y: number };
+    public originalWidth!: number;
+    public originalHeight!: number;
+    public isDragging: boolean = false;
+    public dragStartPosition: { x: number; y: number } | null = null;
+    public dragStartMousePosition: { x: number; y: number } | null = null;
+    public dark: boolean = false;
 
     constructor(chromeArea: { x: number, y: number }, staticAssets: string[]) 
     {
@@ -101,7 +101,7 @@ export class Target {
         });
     }
 
-    private updateBackground(): void {
+    public updateBackground(): void {
         if (this.app) {
             this.app.renderer.background.color = this.dark ? 0x545960 : 0xcccbc9;
         }
@@ -182,7 +182,7 @@ export class Target {
         }
     }
 
-    private createWebGLContext(): HTMLCanvasElement {
+    public createWebGLContext(): HTMLCanvasElement {
         // Create a canvas element
         const canvas = document.createElement('canvas');
         
@@ -205,7 +205,7 @@ export class Target {
         return canvas;
     }
 
-    private async loadAssets(): Promise<void> 
+    public async loadAssets(): Promise<void> 
     {
         // Configure global asset options first
         Assets.setPreferences({
@@ -254,7 +254,7 @@ export class Target {
         }
     }
 
-    private getTargetPath(): string | undefined
+    public getTargetPath(): string | undefined
     {
         const { filename } = this.store.target.image;
         if (!filename) {
@@ -270,7 +270,7 @@ export class Target {
             : `/temp/${filename}`;
     }
 
-    private async createTarget(): Promise<void> {
+    public async createTarget(): Promise<void> {
         try {
             const targetPath = this.getTargetPath();
             if (!targetPath) { 
@@ -353,7 +353,7 @@ export class Target {
         this.targetSprite.position.set(0, 0);
     }
 
-    private updateScale(): void 
+    public updateScale(): void 
     {
         // Calculate scale based on available space
         this.scale = Math.min(
@@ -393,7 +393,7 @@ export class Target {
         }
     }
 
-    private async fetchAnalysis(userId: string) {
+    public async fetchAnalysis(userId: string) {
         if (!this.store.target.image.filename) {
             console.error('No this.store.target.image.filename!');
             return;
@@ -486,7 +486,7 @@ export class Target {
         }
     }
 
-    private setupInteractivity(): void
+    public setupInteractivity(): void
     {
         this.targetContainer.eventMode = 'dynamic';
         this.targetContainer.cursor = 'default';
@@ -520,7 +520,7 @@ export class Target {
         }
     }
 
-    private handleDragStart(e: FederatedPointerEvent): void
+    public handleDragStart(e: FederatedPointerEvent): void
     {
         if (e.button !== 1) return;
 
@@ -538,7 +538,7 @@ export class Target {
         };
     }
 
-    private handleDragMove(e: FederatedPointerEvent): void
+    public handleDragMove(e: FederatedPointerEvent): void
     {
         if (this.selecting) {
             this.selectionTool.onSelectionMove(e);
@@ -556,7 +556,7 @@ export class Target {
         this.targetContainer.y = this.dragStartPosition.y + dy;
     }
 
-    private handleDragEnd(e: FederatedPointerEvent): void
+    public handleDragEnd(e: FederatedPointerEvent): void
     {
         if (this.selecting) {
             this.selectionTool.onSelectionEnd(e);
@@ -664,10 +664,10 @@ export class Target {
         this.referenceTool.setRefMeasurement();
     }
 
-    public assignSelectedShotsToGroup(value: string)
-    {
-        this.shotPoaTool.assignSelectedShotsToGroup(value);
-    }
+    // public assignSelectedShotsToGroup(value: string)
+    // {
+    //     this.shotPoaTool.assignSelectedShotsToGroup(value);
+    // }
 
     // Getter, får och annat bös!
     public get getApp(): ApplicationType<RendererType> {
