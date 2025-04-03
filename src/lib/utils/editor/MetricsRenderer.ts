@@ -85,6 +85,7 @@ export class MetricsRenderer {
             //     noRefLineLength: !currentStore.reference.linelength,
             //     refLineLength: currentStore.reference.linelength,
             // });
+            console.warn('No reference points set!');
             return;
         }
         
@@ -100,12 +101,17 @@ export class MetricsRenderer {
                 Math.pow(p.y - meanCenter.y, 2)
             ), 0) / points.length;
     
-        // console.log('Calculated values:', {
-        //     points,
-        //     meanCenter,
-        //     meanRadius,
-        //     showmr: this.userSettings.showmr
-        // });
+        TargetStore.update(store => {
+            const group = store.groups.find(g => g.id === groupId);
+            if (group) {
+                group.metrics = group.metrics || {};
+                group.metrics.meanradius = {
+                    px: meanRadius,
+                    mm: TargetStore.pxToMm(meanRadius)
+                };
+            }
+            return store;
+        });
     
         const graphics = this.graphicsFactory.createMeanRadiusGraphics(
             groupId,
@@ -149,7 +155,7 @@ export class MetricsRenderer {
             const group = store.groups.find(g => g.id === groupId);
             if (group) {
                 group.metrics = group.metrics || {};
-                group.metrics.meanradius = {
+                group.metrics.coveringradius = {
                     px: ccrRadiusInPixels,
                     mm: TargetStore.pxToMm(ccrRadiusInPixels)
                 };
@@ -187,14 +193,14 @@ export class MetricsRenderer {
             x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
             y: points.reduce((sum, p) => sum + p.y, 0) / points.length
         };
-    
-        const mpiGfx = this.graphicsFactory.createMPIGraphics(
+
+        const graphics = this.graphicsFactory.createMPIGraphics(
             groupId,
             {x: mpi.x, y: mpi.y},
             this.userSettings.showmpi
-        )
+        );
         
-        groupContainer.addChild(mpiGfx);
+        groupContainer.addChild(graphics);
     }
     
     public drawDiagonal(groupId: number): void {
