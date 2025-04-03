@@ -70,6 +70,21 @@ export class ShotPoaTool {
         this.metricsRenderer.drawAllMetrics(parseInt(group));
     }
 
+    public async drawAllMetrics(group?: GroupInterface): Promise<void>
+    {
+        this.metricsRenderer.drawAllMetrics(group?.id);
+    }
+    
+    public async createGroup(): Promise<{group: GroupInterface, container: Container} | null>
+    {
+        return this.groupManager.createGroup();
+    }
+
+    public async assignSelectedShotsToGroup(): Promise<void>
+    {
+        // not used
+    }
+
     // public async addShot(x: number, y: number, group: string): Promise<void>
     // {
     //     // console.log(`addShot called: x:${x}, y:${y}, group:${group}`);
