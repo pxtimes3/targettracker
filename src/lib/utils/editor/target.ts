@@ -254,27 +254,28 @@ export class Target {
         }
     }
 
-    public getTargetPath(): string | undefined
+    public getTargetPath(): string
     {
-        const { filename } = this.store.target.image;
-        if (!filename) {
-            console.error('TargetStore filename invalid!?');
-            return;
+        let filename: string;
+        if (!this.store.target.image.filename) {
+            throw new Error('TargetStore filename invalid!?');
+        } else {
+            filename = this.store.target.image.filename
         }
 
         if (filename.startsWith('debug')) {
             return '/img/debugtarget.jpg';
         }
         return filename.startsWith('uploads')
-            ? `/uploads/${filename}`
+            ? `/${filename}`
             : `/temp/${filename}`;
     }
 
-    public async createTarget(): Promise<void> {
+    public async createTarget(): Promise<void> 
+    {
         try {
             const targetPath = this.getTargetPath();
             if (!targetPath) { 
-                console.error('No targetPath!?'); 
                 throw new Error('Target image path not found');
             }
     
