@@ -176,13 +176,13 @@ export const initialStore: TargetStoreInterface = {
         }
     },
     reference: {
-        x: undefined,
-        a: undefined,
+        x: [693.6582781456955, -441.3245033112584],
+        a: [-718.5801324503311, -435.09403973509944],
         y: undefined,
-        linelength: undefined,
-        measurement: undefined,    // User supplied, converted to mm
-        cm: undefined,             // 10 mm === px
-        px: undefined,             // 100px == mm
+        linelength: 1410.175353247501,
+        measurement: 7.5,    // User supplied, converted to mm
+        cm: 201.7503077426864,             // 10 mm === px
+        px: 5.318487507761503,             // 100px == mm
     },
     analysisFetched: false,
     activeGroup: 0,

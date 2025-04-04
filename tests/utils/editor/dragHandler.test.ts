@@ -78,7 +78,7 @@ vi.mock('svelte/store', () => ({
      }))
 }));
 
-import { DragHandler } from '@/utils/editor/dragHandler';
+import { DragHandler } from '@/utils/editor/DragHandler';
 import { MetricsRenderer } from '@/utils/editor/MetricsRenderer';
 import { Container, FederatedPointerEvent, Sprite } from 'pixi.js';
 import { TargetStore } from '@/stores/TargetImageStore';

@@ -223,7 +223,7 @@ vi.mock('svelte-ux', () => ({
     })
 }));
 
-import { Target } from "@/utils/editor/target";
+import { Target } from "@/utils/editor/Target";
 import { TargetStore } from "@/stores/TargetImageStore";
 import { Application, Assets, Container, Sprite } from "pixi.js";
 

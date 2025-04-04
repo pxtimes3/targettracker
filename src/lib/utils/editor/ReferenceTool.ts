@@ -321,7 +321,7 @@ export class ReferenceTool {
     }
 
     public setRefMeasurement(): void {
-        const measurement = this.editorStore.refMeasurement;
+        const measurement = this.normalizeMeasurement(this.editorStore.refMeasurement);
         const refA = this.referenceContainer.getChildByLabel('ref-a');
         const refX = this.referenceContainer.getChildByLabel('ref-x');
         

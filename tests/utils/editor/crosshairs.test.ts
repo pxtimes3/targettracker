@@ -1,6 +1,6 @@
 import { EditorStore } from '@/stores/EditorStore';
 import { UserSettingsStore } from '@/stores/UserSettingsStore';
-import { EditorCrosshair } from '@/utils/editor/crosshairs';
+import { EditorCrosshair } from '@/utils/editor/EditorCrosshair';
 import { Container, Application } from 'pixi.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 

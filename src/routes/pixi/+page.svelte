@@ -9,7 +9,7 @@
 	import SettingsPanel from '@/components/target/editor/panels/SettingsPanel.svelte';
 	import GroupPanel from '@/components/target/editor/panels/GroupPanel.svelte';
 	import ReferencePanel from '@/components/target/editor/panels/ReferencePanel.svelte';
-	import { Target } from '@/utils/editor/target';
+	import { Target } from '@/utils/editor/Target';
 	import { LucideBug, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
 	import { Assets, Container, Sprite } from 'pixi.js';
@@ -107,7 +107,7 @@
 
 		const panel = document.getElementById(`${name}-panel`);
 		if (!panel) {
-			console.error(`${name} couldn't be found!?`);
+			console.warn(`${name}-panel couldn't be found!?`);
 			return;
 		}
 
@@ -238,18 +238,6 @@
 			canvasContainer.style.width  = `${chromeArea.x}px`;
 			canvasContainer.style.height = `${chromeArea.y}px`;
 		}
-
-		// if (referencebutton != undefined) {
-		// 	console.log(referencebutton.style.top, referencebutton.style.left);
-		// }
-
-		// if ($UserSettingsStore) {
-		// 	if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
-		// 		crosshairContainer.visible = true;
-		// 	} else if (crosshairContainer) {
-		// 		crosshairContainer.visible = false;
-		// 	}
-		// }
 
 		if ($activeButton) {
 			console.log($activeButton);
@@ -431,7 +419,6 @@
     </div>
 </div>
 
-{#if target}
 <ReferencePanel
 	data={data}
 	active={false}
@@ -441,7 +428,6 @@
 	}}
 	{target}
 />
-{/if}
 
 <SettingsPanel 
 	data={data}
@@ -486,7 +472,7 @@
 					<option value="createNew">Add to new group</option>
 				</select>
 				<button
-					onclick={ () => { assignToGroupSelect?.value ? target?.assignSelectedShotsToGroup(assignToGroupSelect?.value) : '';}}
+					onclick={ /* () => { assignToGroupSelect?.value ? target?.assignSelectedShotsToGroup(assignToGroupSelect?.value) : '';} */ () => console.log('not implemented yet')}
 				>
 					Go
 				</button>
@@ -501,7 +487,7 @@
 	{#each $TargetStore.groups as group}
 		<div>
 		Group: {group.id}
-		Container: {target?.app.stage.getChildByLabel(group.id.toString())}
+		Container: {target?.targetRenderer?.app ? target.targetRenderer.app.stage.getChildByLabel(group.id.toString()) : 'App not ready'}
 		{#if group.shots}
 			{#each group?.shots as shot}
 				<div>ID: {shot.id} Pos: {shot.x.toFixed(0)}:{shot.y.toFixed(0)}</div>

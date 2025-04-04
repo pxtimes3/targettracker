@@ -87,7 +87,7 @@ vi.mock('svelte/store', () => ({
   	}))
 }));
 
-import { ShotManager } from '@/utils/editor/shotManager';
+import { ShotManager } from '@/utils/editor/ShotManager';
 import { Container, FederatedPointerEvent } from 'pixi.js';
 import { ElementType } from '@/types/editor';
 import { TargetStore } from '@/stores/TargetImageStore';
