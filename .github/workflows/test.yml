@@ -115,9 +115,10 @@ jobs:
           '{
             schemaVersion: 1,
             label: "coverage",
-            message: $pct + "% (" + $covered + "/" + $total + ")",
+            message: ($pct + "% (" + $covered + "/" + $total + ")"),
             color: $color
           }')
+
 
           GIST_CONTENT=$(jq -n \
             --arg content "$JSON_CONTENT" \
