@@ -40,19 +40,29 @@ export class Target {
     public dragStartPosition: { x: number; y: number } | null = null;
     public dragStartMousePosition: { x: number; y: number } | null = null;
     public dark: boolean = false;
-    private editorStoreUnsubscribe: () => void;
-    private targetStoreUnsubscribe: () => void;
+    public editorStoreUnsubscribe: () => void;
+    public targetStoreUnsubscribe: () => void;
 
-    constructor(chromeArea: { x: number, y: number }, staticAssets: string[]) 
-    {
+    constructor(
+        chromeArea: { x: number, y: number }, 
+        staticAssets: string[],
+        testStore?: TargetStoreInterface
+    ) {
         this.chromeArea = chromeArea;
         this.staticAssets = staticAssets;
         this.scale = 1;
         
         // Stores
-        this.targetStoreUnsubscribe = TargetStore.subscribe((store) => {
-            this.targetStore = store;
-        });
+        if (testStore) {
+            // For testing
+            this.targetStore = testStore;
+            this.targetStoreUnsubscribe = () => {};
+        } else {
+            this.targetStoreUnsubscribe = TargetStore.subscribe((store) => {
+                this.targetStore = store;
+            });
+        };
+
         this.editorStoreUnsubscribe = EditorStore.subscribe(value => {
             this.editorStore = value;
         });
@@ -121,14 +131,27 @@ export class Target {
         await this.targetAnalysisProcessor.processAnalysisResults(analysis);
     }
 
-    public setupInteractivity(): void
-    {
-        this.targetInteractionManager.setupInteractivity();
-    }
-
     public handleResize(): void
     {
         this.targetRenderer.handleResize();
+    }
+
+    public rotateTarget(degrees: number = 0, options: { 
+        reset?: boolean, 
+        slider?: number, 
+        absolute?: boolean 
+    } = {}) {
+        const { reset, slider, absolute } = options;
+        this.targetRenderer.rotateTarget(degrees, options);
+    }
+
+    public get getApp(): ApplicationType<RendererType> {
+        return this.targetRenderer.app;
+    }
+
+    public setupInteractivity(): void
+    {
+        this.targetInteractionManager.setupInteractivity();
     }
 
     public handleWheel(e: WheelEvent): void
@@ -156,39 +179,34 @@ export class Target {
         this.targetInteractionManager.handleDragEnd(e);
     }
 
-    public rotateTarget(degrees: number = 0, options: { 
-        reset?: boolean, 
-        slider?: number, 
-        absolute?: boolean 
-    } = {}) {
-        const { reset, slider, absolute } = options;
-        this.targetRenderer.rotateTarget(degrees, options);
-    }
-
     public setRefMeasurement()
     {
         this.referenceTool.setRefMeasurement();
     }
 
-    public get getApp(): ApplicationType<RendererType> {
-        return this.targetRenderer.app;
-    }
+    
 
-    public get getContainer(): Container {
+    public get getContainer(): Container 
+    {
         return this.targetContainer;
     }
 
-    public get getSprite(): Sprite {
+    public get getSprite(): Sprite 
+    {
         return this.targetSprite;
     }
 
-    public get getScale(): number {
+    public get getScale(): number 
+    {
         return this.scale;
     }
 
-    public destroy(): void {
+    public destroy(): void 
+    {
         this.app.destroy(true, true);
         this.targetContainer.removeAllListeners();
+        if (this.targetStoreUnsubscribe) this.targetStoreUnsubscribe();
+        if (this.editorStoreUnsubscribe) this.editorStoreUnsubscribe();
     }
 
 

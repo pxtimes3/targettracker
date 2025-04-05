@@ -1,1022 +1,279 @@
 import { vi, describe, it, beforeEach, afterEach, expect } from "vitest";
-
-// Stores
-const mockUserSettingsSubscribe = vi.fn((cb) => {
-    cb({});
-    return () => {};
-});
-
-const mockTargetStoreSubscribe = vi.fn((cb) => {
-     cb({ groups: [] });
-     return () => {};
-});
-
-// Dependencies
-vi.mock('pixi.js', () => {
-    const mockCanvas = document.createElement('canvas');
-    const mockApplication = {
-      init: vi.fn().mockResolvedValue(undefined),
-      canvas: mockCanvas,
-      stage: { addChild: vi.fn() },
-      screen: { width: 1024, height: 768 },
-      renderer: { 
-        type: 'WebGL', 
-        background: { color: 0 },
-        resize: vi.fn(),
-      },
-      destroy: vi.fn()
-    };
-    
-    return {
-      Application: vi.fn(() => mockApplication),
-      Container: vi.fn(() => ({
-        addChild: vi.fn(),
-        removeAllListeners: vi.fn(),
-        scale: { set: vi.fn(), x: 1, y: 1 },
-        position: { set: vi.fn() },
-        x: 0,
-        y: 0,
-        angle: 0,
-        rotation: 0,
-        label: '',
-        cursor: '',
-        eventMode: 'none',
-        on: vi.fn(),
-        children: [],
-        filters: []
-      })),
-      Sprite: vi.fn(() => ({
-        scale: { set: vi.fn(), x: 1, y: 1 },
-        position: { set: vi.fn() },
-        pivot: { set: vi.fn(), x: 0, y: 0 },
-        width: 500,
-        height: 400,
-        cursor: '',
-        label: '',
-        angle: 0,
-        visible: true
-      })),
-      Graphics: vi.fn(),
-      Assets: {
-        setPreferences: vi.fn(),
-        add: vi.fn(),
-        load: vi.fn().mockResolvedValue({}),
-        cache: {
-          has: vi.fn().mockReturnValue(false)
-        }
-      },
-      DropShadowFilter: vi.fn()
-    };
-});
-
-vi.mock('@/utils/editor/groupManager', () => ({
-     GroupManager: vi.fn().mockImplementation(() => ({
-       getGroupContainer: vi.fn(),
-       createGroup: vi.fn(),
-       getGroupStoreShots: vi.fn()
-     }))
-}));
-
-vi.mock('@/utils/editor/MetricsRenderer', () => ({
-     MetricsRenderer: vi.fn().mockImplementation(() => ({
-       drawAllMetrics: vi.fn()
-   }))
-}));
-
-vi.mock('@/utils/editor/dragHandler', () => ({
-     DragHandler: vi.fn().mockImplementation(() => ({
-       handleSpriteDrag: vi.fn()
-   }))
-}));
-
-// Mock stores with inline functions
-vi.mock('@/stores/EditorStore', () => ({
-   EditorStore: {
-       subscribe: vi.fn((cb) => {
-           cb({ selected: [] });
-           return () => {};
-       })
-   }
-}));
-
-vi.mock('@/stores/TargetImageStore', () => {
-   // Define the mock functions inside the factory
-   const subscribe = vi.fn((cb) => {
-       cb({ groups: [] });
-       return () => {};
-   });
-
-   return {
-       TargetStore: {
-           subscribe,
-           addShot: vi.fn(),
-           removeShot: vi.fn(),
-           getGroup: vi.fn(),
-           getShots: vi.fn(),
-           updateShot: vi.fn(),
-           updatePoa: vi.fn(),
-           setShot: vi.fn()
-       }
-   };
-});
-
-vi.mock('@/stores/UserSettingsStore', () => {
-     // Define the mock functions inside the factory
-     const subscribe = vi.fn((cb) => {
-       cb({});
-       return () => {};
-     });
- 
-     return {
-       UserSettingsStore: {
-             subscribe
-       }
-     };
-});
-
-// Mock svelte/store
-vi.mock('svelte/store', () => ({
-    get: vi.fn().mockImplementation((store) => {
-            if (store === TargetStore) return {
-                groups: [
-                    { 
-                        id: 1,
-                        shots: [
-                            { x: 10, y: 10 },
-                            { x: 20, y: 20 },
-                            { x: 30, y: 30 },
-                        ]
-                    }, 
-                    { 
-                        id: 666,
-                        shots: [
-                            { x: 10, y: 10 },
-                        ]
-                    }
-                ],
-                activeGroup: 1,
-                reference: { measurement: 10, linelength: 100 },
-                target: {
-                    rotation: 0,
-                },
-            };
-            return {};
-        }),
-    writable: vi.fn(() => ({
-       subscribe: vi.fn(),
-       set: vi.fn(),
-       update: vi.fn()
-     }))
-}));
-
-vi.mock('@/utils/editor/placeshotpoatool', () => ({
-    ShotPoaTool: vi.fn().mockImplementation(() => ({
-      drawAllMetrics: vi.fn(),
-      createGroup: vi.fn().mockResolvedValue({ id: 1 }),
-      addShot: vi.fn()
-    }))
-  }));
-  
-  vi.mock('@/utils/editor/referencetool', () => ({
-    ReferenceTool: vi.fn().mockImplementation(() => ({}))
-  }));
-  
-  vi.mock('@/utils/editor/crosshairs', () => ({
-    EditorCrosshair: vi.fn().mockImplementation(() => ({}))
-  }));
-  
-  vi.mock('svelte-ux', () => ({
-    getSettings: vi.fn().mockReturnValue({
-      currentTheme: {
-        subscribe: vi.fn(callback => {
-          callback({ dark: false });
-          return () => {};
-        })
-      }
-    })
-  }));
-
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation(query => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(), // Deprecated
-        removeListener: vi.fn(), // Deprecated
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-    })),
-});
-
-// Mock svelte-ux
-vi.mock('svelte-ux', () => ({
-    getSettings: vi.fn().mockReturnValue({
-      currentTheme: {
-        subscribe: vi.fn(callback => {
-          callback({ dark: false });
-          return () => {};
-        })
-      }
-    })
-}));
-
+import { MockTargetStoreSubscribe, MockUserSettingsSubscribe, TargetStoreMock } from "../../storeMocks";
 import { Target } from "@/utils/editor/Target";
-import { TargetStore } from "@/stores/TargetImageStore";
-import { Application, Assets, Container, Sprite } from "pixi.js";
+import { Application, Container, FederatedPointerEvent, RendererType, Sprite, type Renderer } from "pixi.js";
+import { fetchAnalysis } from "@/utils/target";
+
+const mockTargetRenderer = {
+    initialize: vi.fn().mockResolvedValue(undefined),
+    targetContainer: new Container(),
+    app: {},
+    rotateTarget: vi.fn(),
+    handleResize: vi.fn(),
+};
+vi.mock('@/utils/editor/TargetRenderer', () => ({
+    TargetRenderer: vi.fn().mockImplementation(() => mockTargetRenderer)
+}));
+
+const mockCrosshairs = { initialize: vi.fn() };
+vi.mock('@/utils/editor/EditorCrosshair', () => ({
+    EditorCrosshair: vi.fn().mockImplementation(() => mockCrosshairs)
+}));
+
+const mockShotPoaTool = {};
+vi.mock('@/utils/editor/PlaceShotPoaTool', () => ({
+    ShotPoaTool: vi.fn().mockImplementation(() => mockShotPoaTool)
+}));
+
+const mockReferenceTool = {
+    setRefMeasurement: vi.fn(),
+};
+vi.mock('@/utils/editor/ReferenceTool', () => ({
+    ReferenceTool: vi.fn().mockImplementation(() => mockReferenceTool)
+}));
+
+const mockInteractionManager = {
+    setupInteractivity: vi.fn(),
+    handleWheel: vi.fn(),
+    handleMouseDown: vi.fn(),
+    handleDragStart: vi.fn(),
+    handleDragMove: vi.fn(),
+    handleDragEnd: vi.fn(),
+};
+vi.mock('@/utils/editor/TargetInteractionManager', () => ({
+    TargetInteractionManager: vi.fn().mockImplementation(() => mockInteractionManager)
+}));
+
+const mockAnalysisProcessor = {
+    initializeAnalysis: vi.fn().mockResolvedValue(undefined),
+    fetchAnalysis: vi.fn().mockResolvedValue(undefined),
+    processAnalysisResults: vi.fn().mockResolvedValue(undefined),
+};
+vi.mock('@/utils/editor/TargetAnalysisProcessor', () => ({
+    TargetAnalysisProcessor: vi.fn().mockImplementation(() => mockAnalysisProcessor)
+}));
+
+const mockTargetAssetManager = {
+    loadAssets: vi.fn(),
+};
+vi.mock('@/utils/editor/TargetAssetManager', () => ({
+    TargetAssetManager: vi.fn().mockImplementation(() => mockTargetAssetManager)
+}));
+
 
 describe('Target', () => {
+    let   mockCanvasContainer: HTMLDivElement;
+    let   target: Target;
+    const mockSetApplicationState = vi.fn();
 
     beforeEach(() => {
+        mockCanvasContainer = document.createElement('div');
         vi.clearAllMocks();
+        TargetStoreMock.target.rotation = 0;
+
+        mockTargetRenderer.rotateTarget = vi.fn();
+
+        target = new Target({ x: 0, y: 0 }, []);
     });
 
     afterEach(() => {
-
+        vi.clearAllMocks();
     });
 
-    it('should load and display the target image when initialized with a valid image path', async () => {
-        expect(true).toBeTruthy();
-    });
+    describe('Initialization', () => {
+        it('Should set application state', async () => {
+            // Act
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
 
-    it('should update the target angle correctly when rotated by a specific degree', () => {
-        // Arrange
-        const mockApp = {
-            screen: { width: 800, height: 600 }
-        };
-        
-        const mockContainer = {
-            rotation: 0,
-            scale: { x: 1, y: 1 },
-            addChild: vi.fn(),
-            removeAllListeners: vi.fn()
-        };
-        
-        const mockTargetStore = {
-            target: {
-                rotation: 0,
-                image: { /* any required image properties */ }
-            },
-            groups: [],
-            // Add any other properties needed by the method
-        };
-
-        const target = new Target({ x: 800, y: 600 }, []);
-
-        // @ts-ignore
-        target['store'] = mockTargetStore;
-        // @ts-ignore
-        target['targetStore'] = mockTargetStore;
-        // @ts-ignore
-        target['app'] = mockApp;
-        // @ts-ignore
-        target['targetContainer'] = mockContainer;
-
-        // Act
-        target.rotate(45);
-
-        // Assert
-        expect(mockContainer.rotation).toBeCloseTo(45 * (Math.PI / 180));
-        expect(target['targetStore'].target.rotation).toBe(45);
-    });
-
-    it('should update the target angle correctly when absolute is set to true', () => {
-        // Arrange
-        const mockApp = {
-            screen: { width: 800, height: 600 }
-        };
-        
-        const mockContainer = {
-            rotation: 10,
-            scale: { x: 1, y: 1 },
-            addChild: vi.fn(),
-            removeAllListeners: vi.fn()
-        };
-        
-        const mockTargetStore = {
-            target: {
-                rotation: 0,
-                image: { /* any required image properties */ }
-            },
-            groups: [],
-            // Add any other properties needed by the method
-        };
-
-        const target = new Target({ x: 800, y: 600 }, []);
-
-        // @ts-ignore
-        target['store'] = mockTargetStore;
-        // @ts-ignore
-        target['targetStore'] = mockTargetStore;
-        // @ts-ignore
-        target['app'] = mockApp;
-        // @ts-ignore
-        target['targetContainer'] = mockContainer;
-
-        // Act
-        target.rotate(45, true);
-
-        // Assert
-        expect(mockContainer.rotation).toBeCloseTo(45 * (Math.PI / 180));
-        expect(target['targetStore'].target.rotation).toBe(45);
-    });
-
-    // Scale is correctly calculated based on available space with 100px margin
-    it('should calculate correct scale based on available space with 100px margin', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 1000,
-                height: 800
-            }
-        };
-    
-        const mockTargetContainer = {
-            scale: {
-            set: vi.fn()
-            }
-        };
-    
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 500;
-        target.originalHeight = 400;
-        target.scale = 0;
-    
-        // Act
-        target.updateScale();
-    
-        // Assert
-        const expectedScale = Math.min(
-            (800 - 100) / 400,
-            (1000 - 100) / 500
-        );
-        expect(target.scale).toBe(expectedScale);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(expectedScale);
-    });
-
-    // Scale is correctly calculated and applied to targetContainer using scale.set()
-    it('should apply calculated scale to targetContainer using scale.set()', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 800,
-                height: 600
-            }
-        };
-
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 500;
-        target.originalHeight = 400;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(target.scale);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledTimes(1);
-    });
-
-    // Scale is correctly calculated and applied to targetContainer using scale.set()
-    it('should apply calculated scale to targetContainer using scale.set()', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 800,
-                height: 600
-            }
-        };
-
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 500;
-        target.originalHeight = 400;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(target.scale);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledTimes(1);
-    });
-
-    // Correctly handles app screen dimensions smaller than 100px margin
-    it('should handle app screen dimensions smaller than 100px margin', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 90,
-                height: 80
-            }
-        };
-
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 500;
-        target.originalHeight = 400;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        // When dimensions are smaller than margin, scale becomes negative
-        expect(target.scale).toBeLessThan(0);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(target.scale);
-    });
-
-    // Correctly calculates scale for extremely large original image dimensions
-    it('should handle extremely large original image dimensions', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 1000,
-                height: 800
-            }
-        };
-
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 800;
-        target.originalHeight = 1000;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        expect(target.scale).toBe(0.7);
-        expect(target.scale).toBeLessThan(1);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(0.7);
-    });
-
-    // Ensures the scale is calculated correctly using the minimum value from the available space and applied to the target container.
-    it('should calculate correct scale based on original dimensions and apply to target container', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 800,
-                height: 600
-            }
-        };
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-        
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 400;
-        target.originalHeight = 300;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        // @ts-ignore
-        expect(target.scale).toBe(1.6666666666666667);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(1.6666666666666667);
-    });
-
-    // Scale is correctly calculated using Math.min to maintain aspect ratio
-    it('should calculate scale using Math.min to maintain aspect ratio', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 800,
-                height: 600
-            }
-        };
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 400;
-        target.originalHeight = 300;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        // @ts-ignore
-        expect(target.scale).toBeCloseTo(1.66, 1);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(1.6666666666666667);
-    });
-
-    // Scale is correctly calculated and applied to the target container based on app dimensions
-    it('should correctly calculate and store scale based on app dimensions', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 800,
-                height: 600
-            }
-        };
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 400;
-        target.originalHeight = 300;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        // @ts-ignore
-        expect(target.scale).toBeCloseTo(1.6666666666666667);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(1.6666666666666667);
-    });
-
-    // Correct scale calculation for very wide images
-    it('should correctly calculate scale for very wide images', () => {
-        // Arrange
-        const mockApp = {
-            screen: {
-                width: 2000,
-                height: 500
-            }
-        };
-        
-        const mockTargetContainer = {
-            scale: {
-                set: vi.fn()
-            }
-        };
-
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        // @ts-ignore
-        target.targetContainer = mockTargetContainer;
-        target.originalWidth = 100;
-        target.originalHeight = 1000;
-        target.scale = 0;
-
-        // Act
-        target.updateScale();
-
-        // Assert
-        // @ts-ignore
-        expect(target.scale).toBeCloseTo(0.4, 1);
-        expect(mockTargetContainer.scale.set).toHaveBeenCalledWith(0.4);
-    });
-
-    it('should set background color to 0x545960 when dark mode is enabled and 0xcccbc9 when light mode is enabled', () => {
-        // Arrange
-        const mockRenderer = {
-            background: {
-                color: 0
-            }
-        };
-        const mockApp = {
-            renderer: mockRenderer
-        };
-        
-        const target = new Target({ x: 500, y: 400 }, []);
-        // @ts-ignore
-        target.app = mockApp;
-        
-        // Act & Assert Dark
-        target.dark = true;
-        target.updateBackground();
-        expect(mockApp.renderer.background.color).toBe(0x545960);
-
-        // Act & Assert Light
-        target.dark = false;
-        target.updateBackground();
-        expect(mockApp.renderer.background.color).toBe(0xcccbc9);
-    });
-
-    it('should initialize the target application correctly', async () => {
-        // Mock DOM elements
-        const mockCanvasContainer = document.createElement('div');
-        const appendChildSpy = vi.spyOn(mockCanvasContainer, 'appendChild');
-        const mockSetApplicationState = vi.fn();
-        
-        // Mock createWebGLContext
-        const mockCanvas = document.createElement('canvas');
-        const createWebGLContextSpy = vi.spyOn(Target.prototype, 'createWebGLContext')
-          .mockReturnValue(mockCanvas);
-        
-        // Mock store with target image
-        const mockStore = {
-          target: {
-            image: {
-              filename: 'test.jpg',
-              originalsize: [0, 0]
-            },
-            rotation: 45
-          },
-          groups: []
-        };
-        
-        // Mock methods
-        const loadAssetsSpy = vi.spyOn(Target.prototype, 'loadAssets')
-          .mockResolvedValue(undefined);
-        const createTargetSpy = vi.spyOn(Target.prototype, 'createTarget')
-          .mockResolvedValue(undefined);
-        const setupInteractivitySpy = vi.spyOn(Target.prototype, 'setupInteractivity')
-          .mockImplementation(() => {});
-        
-        // Create target instance with mocked properties
-        const target = new Target({ x: 800, y: 600 }, []);
-        // @ts-ignore
-        target['store'] = mockStore;
-        // @ts-ignore
-        target['targetStore'] = mockStore;
-        // @ts-ignore
-        target.targetContainer = { angle: 0 }
-        
-        // Act
-        await target.initialize(mockCanvasContainer, mockSetApplicationState);
-        
-        // Assert
-        expect(mockSetApplicationState).toHaveBeenCalledWith('Initializing application...');
-        expect(createWebGLContextSpy).toHaveBeenCalled();
-        expect(appendChildSpy).toHaveBeenCalled();
-        expect(loadAssetsSpy).toHaveBeenCalled();
-        expect(createTargetSpy).toHaveBeenCalled();
-        expect(setupInteractivitySpy).toHaveBeenCalled();
-        expect(mockSetApplicationState).toHaveBeenLastCalledWith('Done!');
-      });
-    
-      it('should handle errors during initialization', async () => {
-        // Mock DOM elements
-        const mockCanvasContainer = document.createElement('div');
-        const mockSetApplicationState = vi.fn();
-        
-        // Create target instance with mocked properties
-        const target = new Target({ x: 800, y: 600 }, []);
-        
-        // Mock store with missing target image
-        const mockStore = {
-          target: {
-            image: {
-              filename: '' // Empty filename to trigger error
-            }
-          }
-        };
-        
-        // @ts-ignore
-        target['store'] = mockStore;
-        
-        // Mock app initialization to succeed (to get past that part)
-        vi.spyOn(Target.prototype, 'createWebGLContext')
-          .mockReturnValue(document.createElement('canvas'));
-        
-        // Act & Assert
-        await expect(target.initialize(mockCanvasContainer, mockSetApplicationState))
-          .rejects.toThrow();
-        
-        expect(mockSetApplicationState).toHaveBeenCalledWith('Initializing application...');
-        expect(mockSetApplicationState).toHaveBeenCalledWith(expect.stringMatching(/Error:/));
-      });
-    
-      it('should fall back to canvas renderer if WebGL fails', async () => {
-        // Reset the Application mock to simulate WebGL failure
-        const mockCanvas = document.createElement('canvas');
-        let initCallCount = 0;
-        
-        const mockInitFn = vi.fn().mockImplementation(async () => {
-          if (initCallCount === 0) {
-            initCallCount++;
-            throw new Error('WebGL failed');
-          }
-          return undefined;
+            // Assert
+            expect(mockSetApplicationState).toHaveBeenCalledTimes(2);
+            expect(mockSetApplicationState).nthCalledWith(1, expect.stringMatching(/^Initializing.*/));
+            expect(mockSetApplicationState).nthCalledWith(2, expect.stringMatching(/^Done.*/));
         });
-        
-        const mockApp = {
-          init: mockInitFn,
-          canvas: mockCanvas,
-          stage: { addChild: vi.fn() },
-          screen: { width: 1024, height: 768 },
-          renderer: { type: 'Canvas', background: { color: 0 } }
-        };
-        
-        // Update the Application mock for this test
-        vi.mocked(Application).mockImplementation(() => mockApp as any);
-        
-        // Mock DOM elements
-        const mockCanvasContainer = document.createElement('div');
-        const mockSetApplicationState = vi.fn();
-        
-        // Mock store with target image
-        const mockStore = {
-          target: {
-            image: {
-              filename: 'test.jpg',
-              originalsize: [0, 0]
-            },
-            rotation: 0
-          },
-          groups: []
-        };
-        
-        // Create target instance with mocked properties
-        const target = new Target({ x: 800, y: 600 }, []);
-        // @ts-ignore
-        target['store'] = mockStore;
-        // @ts-ignore
-        target['targetStore'] = mockStore;
-        // @ts-ignore
-        target.targetContainer = { angle: 0 };
-        
-        // Mock methods to avoid actual implementation
-        vi.spyOn(Target.prototype, 'createWebGLContext')
-          .mockReturnValue(document.createElement('canvas'));
-        vi.spyOn(Target.prototype, 'loadAssets')
-          .mockResolvedValue(undefined);
-        vi.spyOn(Target.prototype, 'createTarget')
-          .mockResolvedValue(undefined);
-        vi.spyOn(Target.prototype, 'setupInteractivity')
-          .mockImplementation(() => {});
-        
-        // Act
-        await target.initialize(mockCanvasContainer, mockSetApplicationState);
-        
-        // Assert
-        expect(mockInitFn).toHaveBeenCalledTimes(2);
-        expect(mockSetApplicationState).toHaveBeenLastCalledWith('Done!');
-    });
 
-    it('createWebGLContext should create a canvas element and return it', () => {
-        const target = new Target({ x: 800, y: 600 }, []);
-        const result = target.createWebGLContext();
-        
-        expect(result).toBeInstanceOf(HTMLCanvasElement);
-    });
-
-    it('should inspect the loadAssets method execution', async () => {
-        // Create a target instance
-        const target = new Target({ x: 800, y: 600 }, ['asset1.png']);
-        
-        // @ts-ignore
-        target['store'] = { target: { image: { filename: 'test.jpg' } } };
-        
-        // Mock getTargetPath
-        vi.spyOn(target, 'getTargetPath' as any).mockReturnValue('/temp/test.jpg');
-        
-        // Mock the method to see what's happening
-        const originalMethod = target.loadAssets;
-        target.loadAssets = async function() {
-            console.log('loadAssets called');
+        it('Should not rotate target when rotation is 0', async () => {
+            // @ts-ignore
+            const target = new Target({ x: 0, y: 0 }, [], TargetStoreMock);
             
-            // Log the state
-            console.log('this.staticAssets:', this.staticAssets);
-            console.log('this.store:', this.store);
-            console.log('getTargetPath result:', this.getTargetPath());
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+
+            expect(mockTargetRenderer.rotateTarget).not.toBeCalled();
+        });
+
+        it('Should rotate target when rotation has a value', async () => {
+            vi.clearAllMocks();
+            TargetStoreMock.target.rotation = 69;
             
-            try {
-                // Call the original method
-                const result = await originalMethod.call(this);
-                console.log('loadAssets completed successfully');
-                return result;
-            } catch (error) {
-                console.error('loadAssets error:', error);
-                throw error;
-            }
-        };
+            // Act
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
         
-        // Execute the method
-        await target.loadAssets();
-        
-        // Basic assertion to make the test pass
-        expect(true).toBe(true);
+            // Assert
+            expect(mockTargetRenderer.rotateTarget).toBeCalledWith(45, { absolute: true });
+        });
+
+        it('Should use default parameters in rotateTarget', async () => {
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+            vi.clearAllMocks();
+            
+            target.rotateTarget();
+            expect(mockTargetRenderer.rotateTarget).toHaveBeenCalledWith(0, {});
+        });
+
+        it('Should handle errors gracefully and with tact', async () => {
+            vi.clearAllMocks();
+            mockTargetRenderer.initialize = vi.fn().mockRejectedValue( new Error('mock error') );
+
+            await expect(() => target.initialize(mockCanvasContainer, mockSetApplicationState)).rejects.toThrow('mock error');
+            expect(mockSetApplicationState).toHaveBeenCalledWith(expect.stringMatching(/Error: mock error/));
+
+            // Cleanup
+            mockTargetRenderer.initialize = vi.fn();
+        });
     });
 
-    it('should return a string starting with /temp/ if filename is not starting with uploads', () => {
-        const target = new Target({ x: 800, y: 600 }, ['asset1.png']);
-        // @ts-ignore
-        target['store'] = { target: { image: { filename: 'test.jpg' } } };
+    describe('TargetAssetManager', () => {
+        it('Should pass loadAssets to targetAssetManager', async () => {
+            await target.loadAssets();
 
-        // Act
-        const result = target.getTargetPath();
-
-        // Assert
-        expect(result).toBe('/temp/test.jpg');
+            expect(mockTargetAssetManager.loadAssets).toBeCalled();
+        });
     });
 
-    it('should return a string starting with /uploads/ if filename is starting with uploads', () => {
-        const target = new Target({ x: 800, y: 600 }, ['asset1.png']);
-        // @ts-ignore
-        target['store'] = { target: { image: { filename: 'uploads/test.jpg' } } };
+    describe('TargetAnalysis', () => {
+        it('Should pass calls to targetAnalysisProcesser', async () => {
+            vi.clearAllMocks();
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
 
-        // Act
-        const result = target.getTargetPath();
+            await target.initializeAnalysis('69');
+            expect(mockAnalysisProcessor.initializeAnalysis).toHaveBeenCalledWith('69');
 
-        // Assert
-        expect(result).toBe('/uploads/test.jpg');
+            await target.fetchAnalysis('666');
+            expect(mockAnalysisProcessor.fetchAnalysis).toHaveBeenCalledWith('666');
+
+            await target.processAnalysisResults({ monkey: true });
+            expect(mockAnalysisProcessor.processAnalysisResults).toHaveBeenCalledWith({ monkey: true });
+        });
     });
 
-    it('should return `/img/debugtarget.jpg` if filename is starting with debug', () => {
-        const target = new Target({ x: 800, y: 600 }, ['asset1.png']);
-        // @ts-ignore
-        target['store'] = { target: { image: { filename: 'debug' } } };
+    describe('TargetRenderer', () => {
+        it('Should pass calls to targetRenderer', async () => {
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+            const mockApp = { foo: 'bar' };
+            mockTargetRenderer.app = mockApp;
+            
+            const app = target.getApp;
+            expect(app).toBe(mockApp);
 
-        // Act
-        const result = target.getTargetPath();
+            target.handleResize();
+            expect(mockTargetRenderer.handleResize).toBeCalledTimes(1);
 
-        // Assert
-        expect(result).toBe('/img/debugtarget.jpg');
+            let options = { reset: true, slider: 2, absolute: false };
+            target.rotateTarget(69, options);
+            expect(mockTargetRenderer.rotateTarget).toHaveBeenCalledWith(69, options);
+        });
     });
 
-    it('should throw an error if filename is invalid', () => {
-        const target = new Target({ x: 800, y: 600 }, ['asset1.png']);
-        // @ts-ignore
-        target['store'] = { target: { image: { filename: undefined } } };
+    describe('InteractionMangager', () => {
+        it('Should pass calls to the interactionMangaer', async () => {
+            const wheelEvent = 0 as unknown as WheelEvent;
+            const federatedPointerEvent = 0 as unknown as FederatedPointerEvent;
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
 
-        expect(() => target.getTargetPath()).toThrow();
+            vi.clearAllMocks();
+
+            target.setupInteractivity();
+            expect(mockInteractionManager.setupInteractivity).toHaveBeenCalledTimes(1);
+            expect(mockInteractionManager.setupInteractivity).toHaveBeenCalledWith();
+
+            target.handleWheel(wheelEvent);
+            expect(mockInteractionManager.handleWheel).toHaveBeenCalledTimes(1);
+            expect(mockInteractionManager.handleWheel).toHaveBeenCalledWith(wheelEvent);
+
+            target.handleMouseDown(federatedPointerEvent);
+            expect(mockInteractionManager.handleMouseDown).toHaveBeenCalledTimes(1);
+            expect(mockInteractionManager.handleMouseDown).toHaveBeenCalledWith(federatedPointerEvent);
+
+            target.handleDragStart(federatedPointerEvent);
+            expect(mockInteractionManager.handleDragStart).toHaveBeenCalledTimes(1);
+            expect(mockInteractionManager.handleDragStart).toHaveBeenCalledWith(federatedPointerEvent);
+            
+            target.handleDragMove(federatedPointerEvent);
+            expect(mockInteractionManager.handleDragMove).toHaveBeenCalledTimes(1);
+            expect(mockInteractionManager.handleDragMove).toHaveBeenCalledWith(federatedPointerEvent);
+            
+            target.handleDragEnd(federatedPointerEvent);
+            expect(mockInteractionManager.handleDragEnd).toHaveBeenCalledTimes(1);
+            expect(mockInteractionManager.handleDragEnd).toHaveBeenCalledWith(federatedPointerEvent);
+        });
     });
 
-    it('should test error handling for createTarget', async () => {
-        const target = new Target({ x: 800, y: 600 }, []);
-        
-        // Verify createTarget is a spy
-        if (!vi.isMockFunction(target.createTarget)) {
-            console.warn('createTarget is not a mock function - this test may not work as expected');
-        }
-        
-        // Get the original implementation
-        const originalImpl = vi.isMockFunction(target.createTarget) 
-            ? target.createTarget.getMockImplementation() 
-            : target.createTarget;
-        
-        // Create a new implementation that simulates an error
-        const errorImpl = async function() {
-            throw new Error('Failed to create target: simulated error');
-        };
-        
-        // Replace the implementation
-        if (vi.isMockFunction(target.createTarget)) {
-            target.createTarget.mockImplementation(errorImpl);
-        } else {
-            target.createTarget = errorImpl;
-        }
-        
-        // Test with try/catch
-        let errorCaught = false;
-        let errorMessage = '';
-        
-        try {
-            await target.createTarget();
-        } catch (error) {
-            errorCaught = true;
-            errorMessage = error.message;
-        }
-        
-        // Restore original implementation
-        if (vi.isMockFunction(target.createTarget)) {
-            target.createTarget.mockImplementation(originalImpl);
-        } else {
-            target.createTarget = originalImpl;
-        }
-        
-        // Verify
-        expect(errorCaught).toBe(true);
-        expect(errorMessage).toBe('Failed to create target: simulated error');
-    });
-
-    it('should center the target container and sprite', async () => {
-        const target = new Target({ x: 800, y: 600 }, []);
-        target.app = {
+    describe('ReferenceTool', () => {
+        it('Should pass calls to the referenceTool', () => {
+            vi.clearAllMocks();
+            target.initialize(mockCanvasContainer, mockSetApplicationState);
             // @ts-ignore
-            screen: {
-                width: 1000,
-                height: 1000,
-            }
-        }
-
-        // Create a mockable position object
-        const mockPosition = {
-            x: 100,
-            y: 100,
-            set: vi.fn()
-        };
-
-        // Create mocks for container and sprite
-        // @ts-ignore
-        target.targetContainer = {
-            x: 0,
-            y: 0
-        };
-
-        target.targetSprite = {
-            // @ts-ignore
-            position: mockPosition,
-            // @ts-ignore
-            pivot: {
-                set: vi.fn()
-            }
-        };
-
-        target.centerTarget();
-
-        // Verify container position
-        expect(target.targetContainer.x).toBe(500); // width/2
-        expect(target.targetContainer.y).toBe(500); // height/2
-        
-        // Verify sprite position was set to 0,0
-        expect(mockPosition.set).toHaveBeenCalledWith(0, 0);
+            target.referenceTool = mockReferenceTool;
+            target.setRefMeasurement();
+            expect(mockReferenceTool.setRefMeasurement).toHaveBeenCalledTimes(1);
+        });
     });
 
-    /*
-    public handleResize(): void
-    {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        
-         // console.log(`Handle resize. Window: ${width}:${height}`);
-        this.app.renderer.resize(width, height);
-        
-        // Update chromeArea to match
-        this.chromeArea.x = width;
-        this.chromeArea.y = height;
-        
-        this.updateScale();
-        this.centerTarget();
-    }
-    */
+    describe('Getters & Destroy', () => {
+        it('Should return a container when getContainer() is called', async () => {
+            vi.clearAllMocks();
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+            target.targetContainer = new Container();
 
-    it('should handle resizing of the window', () => {
-        const target = new Target({ x: 800, y: 600 }, []);
-        target.app = new Application();
-        target.app.renderer.resize = vi.fn();
-        target.chromeArea = {x: 0, y: 0};
-        target.updateScale = vi.fn();
-        target.centerTarget = vi.fn();
+            const getContainer = target.getContainer;
+            expect(getContainer).toBe(target.targetContainer);
+        });
 
-        window.innerWidth = 1024;
-        window.innerHeight = 768;
-    
-        target.handleResize();
+        it('Should return targetSprite when getSprite() is called', async () => {
+            vi.clearAllMocks();
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+            target.targetSprite = new Sprite();
 
-        expect(target.chromeArea).toEqual({ x: 1024, y: 768 });
-        expect(target.updateScale).toBeCalledTimes(1);
-        expect(target.centerTarget).toBeCalledTimes(1);
+            const getSprite = target.getSprite;
+            expect(getSprite).toBe(target.targetSprite);
+        });
+
+        it('Should return the scale, as a number when getScale() is called', async () => {
+            vi.clearAllMocks();
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+            
+            const getScale = target.scale;
+            expect(getScale).toBe(1);
+            expect(getScale).toBeTypeOf('number');
+        });
+
+        it('Should destroy the app and remove any listeners from the targetContainer when destroy() is called', async () => {
+            vi.clearAllMocks();
+            await target.initialize(mockCanvasContainer, mockSetApplicationState);
+            target.targetContainer = new Container();
+            target.targetContainer.removeAllListeners = vi.fn();
+
+            const mockApp = { foo: 'bar', destroy: vi.fn() } as unknown as Application<Renderer>;
+            target.app = mockApp;
+
+            target.destroy();
+
+            expect(target.app).toBe(mockApp);
+            expect(target.app.destroy).toBeCalledTimes(1);
+            expect(target.targetContainer.removeAllListeners).toBeCalledTimes(1);
+        });
+
+        it('Should unsubscribe from stores when destroyed', async () => {
+            target.app = { destroy: vi.fn() } as any;
+            target.targetContainer = { removeAllListeners: vi.fn() } as any;
+            
+            // Mock the unsubscribe functions
+            const unsubscribeSpy = vi.fn();
+            target.targetStoreUnsubscribe = unsubscribeSpy;
+            target.editorStoreUnsubscribe = unsubscribeSpy;
+            
+            target.destroy();
+            
+            expect(unsubscribeSpy).toHaveBeenCalledTimes(2);
+        });
     });
 });
