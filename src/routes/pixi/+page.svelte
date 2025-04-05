@@ -454,6 +454,8 @@
 	</div>
 {/if}
 
+<!-- selection -->
+<!--
 <div class="absolute z-50 top-2 right-2 text-black">
 	<div
 		class="grid grid-cols-1 grid-flow-row"
@@ -481,7 +483,7 @@
 		{/if}
 	</div>
 </div>
-
+-->
 
 <div id="debugpanel" style="position: absolute; z-index: 99; right: 5rem; bottom: 5rem; background: #ccc; color: #000" class="hidden">
 	{#each $TargetStore.groups as group}
