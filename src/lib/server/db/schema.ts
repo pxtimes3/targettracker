@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, pgEnum, pgPolicy, pgRole, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgEnum, pgPolicy, pgRole, pgTable, text, timestamp, uuid, doublePrecision } from "drizzle-orm/pg-core";
 
 export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true }).existing();
 export const service = pgRole('service', { createRole: true, createDb: true, inherit: true }).existing();
 
 export const rolesEnum = pgEnum("roles", ["user", "vip", "admin", "service"]);
+export const gunTypeEnum = pgEnum('gunType', ['rifle', 'pistol', 'air-rifle', 'air-pistol']);
+export const measurementsEnum = pgEnum('measurements', ['metric', 'imperial']);
 
 export const user = pgTable('user', {
 	id: uuid('id').primaryKey(),
@@ -135,8 +137,32 @@ export const settings = pgTable("settings", {
 	lastgun: uuid("lastgun"),
 });
 
+export const gun = pgTable('gun', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	userId: uuid('user_id').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	name: text('name').notNull(),
+	type: gunTypeEnum('type').notNull(),
+	manufacturer: text('manufacturer'),
+	caliber: text('caliber').notNull(),
+	sights: text('sights'),
+	barrel: text('barrel'),
+	barrelLength: doublePrecision('barrelLength'),
+	stock: text('stock'),
+	note: text('note'),
+	manufacturerOther: text('manufacturer_other'),
+	barrelTwist: text('barrel_twist'),
+	pictureOriginal: text('picture_original'),
+	caliberMm: doublePrecision('caliber_mm'),
+	model: text('model'),
+	barrelLengthUnit: measurementsEnum('barrel_length_unit'),
+	barrelTwistUnit: measurementsEnum('barrel_twist_unit'),
+});
+
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type InviteCodes = typeof invitecodes.$inferSelect;
 export type Faq = typeof faq.$inferSelect;
 export type Analysis = typeof analysis.$inferSelect;
+export type Gun = typeof gun.$inferSelect;
+export type GunType = (typeof gunTypeEnum.enumValues)[number];

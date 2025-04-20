@@ -1,24 +1,39 @@
 import { z } from 'zod';
+import type { Gun, GunType } from '@/server/db/schema';
 
-export interface PageData {
-    activated: boolean;
-    error: string | null;
-}
+declare global {
+    interface PageData {
+        activated: boolean;
+        error: string | null;
+    }
 
-export interface Invites {
-    "id": string,
-    "code": string,
-    "user": string,
-    "invitee_email": string|null,
-    "invite_sent": Date,
-    "accepted": boolean,
-    "active": boolean
-}
+    interface Invites {
+        "id": string,
+        "code": string,
+        "user": string,
+        "invitee_email": string|null,
+        "invite_sent": Date,
+        "accepted": boolean,
+        "active": boolean
+    }
 
-export interface SendInviteData {
-    recipient: string;
-    inviteCode: string;
-    senderUserName: string;
+    interface SendInviteData {
+        recipient: string;
+        inviteCode: string;
+        senderUserName: string;
+    }
+
+    type AnalysisDbType = z.infer<typeof AnalysisSchema>;
+    type AnalysisRequest = z.infer<typeof AnalysisRequestSchema>;
+
+    type GunData = Gun | { error: { message: string } };
+    type GunType = import('@/server/db/schema').GunType;
+
+    interface GunEditPageServerData {
+        user: any; // Define proper user type
+        gundata: GunData;
+        gunTypes: GunType;
+    }
 }
 
 const AnalysisSchema = z.object({
@@ -29,11 +44,9 @@ const AnalysisSchema = z.object({
     image_name: z.string().uuid()
 });
 
-export type AnalysisDbType = z.infer<typeof AnalysisSchema>;
-
 const AnalysisRequestSchema = z.object({
     user_id: z.string(),
     imagename: z.string().uuid(),
 });
 
-export type AnalysisRequest = z.infer<typeof AnalysisRequestSchema>;
+export {};

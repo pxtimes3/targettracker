@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PageServerData } from './$types'
+	import type { PageServerData } from '$types';
 	import { Button } from 'svelte-ux';
 	import { slide } from 'svelte/transition'
 	import { quadInOut } from 'svelte/easing';
@@ -11,7 +11,7 @@
 
 	type Chevron = {
 		name: string;
-		icon: typeof IconType;
+		icon: IconType;
 	}
 
 	const chevronIcon = {
@@ -120,12 +120,40 @@
 					</select>
 				</div>
 				<div class="text-sm text-primary-950">
+					<label for="distance">Distance</label>
+					<div
+						id="distance-input-container"
+						class="grid grid-flow-col gap-x-4"
+					>
+						<input 
+							type="text"  
+							id="distance" 
+							name="distance" 
+							pattern="\d{1,5}"
+							title="Distance"
+							maxlength="5"
+							placeholder="#####"
+							class="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white invalid:bg-red-400"
+						/>
+						<select 
+							id="distance-unit"
+							class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
+							onchange={ () => {saved = false} }
+							bind:value={$TargetStore.target.rangeUnit}
+						>
+							<option value="metric">Meters</option>
+							<option value="imperial">Yards</option>
+						</select>
+					</div>
+				</div>
+				<div class="text-sm text-primary-950">
 					<label for="firearm">Firearm</label>
 					<select 
 						id="firearm"
 						class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
 						onchange={ () => {saved = false} }
 					>
+						
 						<option>Create new</option>
 					</select>
 				</div>

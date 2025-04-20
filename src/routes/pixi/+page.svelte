@@ -256,16 +256,17 @@
 <aside
 	class="absolute grid grid-flow-row grid-rows-[auto_auto_auto_1fr] place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
 >
-	<button
-		id="targetTrackerMenu"
-		class="w-16 h-12 p-2 ml-2 my-4 cursor-pointer"
-		onclick={() => showMainMenu = true}
-	>
-		<Logo
-			width=36
-			height=36
-		/>
-	</button>
+	<a href="/">
+		<button
+			id="targetTrackerMenu"
+			class="w-16 h-12 p-2 ml-2 my-4 cursor-pointer"
+		>
+			<Logo
+				width=36
+				height=36
+			/>
+		</button>
+	</a>
 	<div id="tools" class="grid grid-flow-row">
 		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 		<button
