@@ -13,7 +13,7 @@ export const CaliberSchema = z.object({
 });
 
 export const calibers = readable<Caliber[]>([], (set) => {
-  fetch('/calibers.json')
+  fetch('/public/calibers.json')
     .then(response => response.json())
     .then(data => set(validateCalibers(data)))
     .catch(error => console.error('Failed to load calibers:', error));
