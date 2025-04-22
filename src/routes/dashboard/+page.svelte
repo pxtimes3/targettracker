@@ -50,7 +50,7 @@
                     {/each}
                 {/if}
             </div>
-            <a href="../gun/add">
+            <a href="../gun/edit/">
                 <button
                     class="grid bg-slate-400/10 border-slate-200/10 border-[1px] rounded-xl p-8 min-h-12 place-content-center items-center w-full"
                 >

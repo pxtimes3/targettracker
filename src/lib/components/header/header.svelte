@@ -4,7 +4,8 @@
 
 	import type { PageServerData } from "../../../routes/$types";
 	import Logo from "../logo/logo.svelte";
-	import Lightswitch from "./Lightswitch.svelte";
+	import Profile from "./Profile.svelte";
+	import { ThemeSelect } from "svelte-ux";
 	import MenuLinks from "./MenuLinks.svelte";
 
     let {data}: {data: PageServerData} = $props();
@@ -61,38 +62,11 @@
 						isLoggedIn={data.user ?? false}
 					/>
 				</div>
-				<Lightswitch />
+				<ThemeSelect />
 				{#if isLoggedIn}
-				<!--
-					<DropdownMenu.Root>
-						<DropdownMenu.Trigger asChild let:builder>
-							<Button
-								builders={[builder]}
-								variant="ghost"
-								size="icon"
-								class="rounded"
-							>
-							<CircleUser class="h-5 w-5" />
-							<span class="sr-only">Toggle user menu</span>
-							</Button>
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Content align="end">
-							<DropdownMenu.Label>Your Account</DropdownMenu.Label>
-							<DropdownMenu.Separator />
-							<DropdownMenu.Item href="/dashboard">Dashboard</DropdownMenu.Item>
-							<DropdownMenu.Item href="/dashboard/settings">Settings</DropdownMenu.Item>
-							<DropdownMenu.Item href="/dashboard/invite">Invite friends</DropdownMenu.Item>
-							<DropdownMenu.Item href="/faq">FAQ / Support</DropdownMenu.Item>
-							<DropdownMenu.Separator />
-							<DropdownMenu.Item>
-								<form method="post" action="/?/logout" use:enhance>
-									<button>Sign out</button>
-								</form>
-							</DropdownMenu.Item>
-						</DropdownMenu.Content>
-					</DropdownMenu.Root>
-				-->
-					USER
+					<Profile 
+						data = {data}
+					/>
 				{:else}
 					<button
 						class="rounded"

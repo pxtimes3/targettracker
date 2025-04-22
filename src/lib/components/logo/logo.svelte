@@ -15,8 +15,8 @@
    $effect(() => {
       // byt färg vid $modechange
 		// $mode === 'light' ? color = light : color = dark;
-      $currentTheme.dark ? color = dark : color = light;
-      
+      $currentTheme.theme == "dark" || $currentTheme.dark == true ? color = dark : color = light;
+      console.log($currentTheme)
 	});
 </script>
 
