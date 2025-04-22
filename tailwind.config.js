@@ -3,7 +3,7 @@ const colors = require('tailwindcss/colors');
 const layerstack = require('@layerstack/tailwind/plugin');
 
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
 	content: [
 		'./src/**/*.{html,svelte}', 
 		'./node_modules/svelte-ux/**/*.{svelte,js}'
