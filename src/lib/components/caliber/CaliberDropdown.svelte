@@ -27,6 +27,7 @@
 <div class="mb-4 text-surface-content text-sm">Search by name, or size (mm/in)</div>
   
 <SelectField
+    id="caliber"
     options={options}
     {value}
     {name}

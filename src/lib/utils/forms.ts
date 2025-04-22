@@ -4,9 +4,15 @@ export function validate(e: Event) {
 
     const target = e.target as HTMLInputElement;
 
-    if (!target.pattern) {
+    if (
+        !target.pattern || 
+        !target.min || 
+        target.value.trim().length < 2
+    ) {
         return true;
     }
+
+    if (target.value.length < parseInt(target.min)) return;
     
     let patternStr = target.pattern;
     
@@ -71,4 +77,13 @@ export function convertComma(event: Event)
     target.value = newValue;
 
     validate(event);
+}
+
+export function convertInchToMm(value: string|number): number
+{
+    const inch: number = 2.54;
+    let val: number;
+    typeof value == "string" ? val = parseFloat(value) : val = value;
+    
+    return  val * 2.54;
 }
