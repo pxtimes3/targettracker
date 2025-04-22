@@ -3,3 +3,9 @@
 
 # TargetTracker
 *Track your shooting progression, share your groups with friends and find love in the data...*
+
+
+## Contributing
+
+### Calibers
+Missing a caliber? Edit static/calibers.json and create a PR.

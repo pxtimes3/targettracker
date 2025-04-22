@@ -1,4 +1,4 @@
-// Validates input
+// src/lib/utils/forms.ts
 export function validate(e: Event) {
     if (!e.target) return;
 
@@ -60,4 +60,15 @@ export function validate(e: Event) {
         console.error('Invalid regex pattern:', err);
         return false;
     }
+}
+
+export function convertComma(event: Event)
+{   
+    if (!event.target) return;
+    let target = event.target as HTMLInputElement;
+    
+    const newValue = target.value.replace(',', '.');
+    target.value = newValue;
+
+    validate(event);
 }

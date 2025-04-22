@@ -1,7 +1,16 @@
 import { z } from 'zod';
-import type { Gun, GunType } from '@/server/db/schema';
+import type { Gun, GunType, User } from '@/server/db/schema';
 
 declare global {
+    interface Caliber {
+        id: string;
+        name: string;
+        category: string;
+        mm: string;
+        in: string;
+        aliases: string[];
+    }
+
     interface PageData {
         activated: boolean;
         error: string | null;
@@ -26,11 +35,11 @@ declare global {
     type AnalysisDbType = z.infer<typeof AnalysisSchema>;
     type AnalysisRequest = z.infer<typeof AnalysisRequestSchema>;
 
-    type GunData = Gun | { error: { message: string } };
+    interface GunData extends Gun { error: { message: string } };
     type GunType = import('@/server/db/schema').GunType;
 
     interface GunEditPageServerData {
-        user: any; // Define proper user type
+        user: User;
         gundata: GunData;
         gunTypes: GunType;
     }
