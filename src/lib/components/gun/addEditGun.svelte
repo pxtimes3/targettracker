@@ -1,157 +1,109 @@
 <!-- src/lib/components/gun/addEditGun.svelte -->
 <script lang="ts">
-	import { validate, convertComma } from "@/utils/forms";
+    import { validate, convertComma } from "@/utils/forms";
     import CaliberDropdown from "../caliber/CaliberDropdown.svelte";
     import { UserSettingsStore } from "$src/lib/stores/UserSettingsStore";
-    import { convertCaliberToMm, validateCaliberInput } from "@/utils/caliber";
-    import { sanitizeInput, validatePattern } from "@/utils/security";
-	import { onMount } from "svelte";
-
-    let { data, gunTypes }: { data: GunData, gunTypes: string } = $props();
+    import { Field, Input, Switch, TextField, SelectField, MenuItem } from "svelte-ux";
+    import { cls } from "@layerstack/tailwind";
+    import { 
+      createGunTypeOptions, 
+      handleCaliberInput, 
+      onCaliberSelected, 
+      setupCaliberListener, 
+      fetchCsrfToken, 
+      handleSubmit 
+    } from "./addeditgun";
+  
+    let { data, gunTypes }: { data: GunData, gunTypes: string[] } = $props();
     
     let selectedType = $state(data.type || '');
     let selectedCaliber = $state(data.caliber || '');
     let caliberMm = $state(data.caliberMm || 0);
-    let barrelTwist = $state(data.barrelTwist);
-    let barrelLength = $state(data.barrelLength);
     let note = $state(data.note || '');
-    let csrfToken = '';
-
-    function handleCaliberInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        const input = target.value;
-        
-        if (validateCaliberInput(input)) {
-            // Convert to mm
-            caliberMm = convertCaliberToMm(input);
-            
-            // Update hidden field
-            const mmInput = document.getElementById('caliber_mm') as HTMLInputElement;
-            if (mmInput) {
-                mmInput.value = caliberMm.toString();
-            }
-            
-            target.classList.remove('invalid');
-            target.classList.add('valid');
-        } else {
-            target.classList.remove('valid');
-            target.classList.add('invalid');
-        }
-    }
+    let csrfToken = $state('');
     
-    // Listen for caliber selection from dropdown
-    function onCaliberSelected(caliberId: string) {
-        selectedCaliber = caliberId;
-    }
+    let gunTypeOptions = $derived(createGunTypeOptions(gunTypes));
     
-    // Listen for the custom event from the dropdown
-    onMount(async () => {
-        document.addEventListener('caliber-selected', ((e: CustomEvent) => {
-            caliberMm = e.detail.mm;
-            
-            // Update hidden field
-            const mmInput = document.getElementById('caliber_mm') as HTMLInputElement;
-            if (mmInput) {
-                mmInput.value = caliberMm.toString();
-            }
-        }) as EventListener);
-
-        try {
-            const response = await fetch('/api/csrf-token');
-            const data = await response.json();
-            csrfToken = data.csrfToken;
-        } catch (error) {
-            console.error('Failed to fetch CSRF token:', error);
-        }
-  });
+    $effect(() => {
+      // console.log('Current selectedCaliber:', selectedCaliber);
+      // console.log('Data from props:', data);
+      
+      const cleanup = setupCaliberListener((value) => caliberMm = value);
+      
+      fetchCsrfToken().then(token => csrfToken = token);
+      
+      return cleanup;
+    });
+  </script>
   
-async function handleSubmit(event: Event) {
-    event.preventDefault();
-    if (!event.target) return;
-
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-
-    // Convert FormData to a plain object
-    const formDataObj = Object.fromEntries(formData);
-    formDataObj.userId = data.userId;
-
-    console.log('formDataObj:', formDataObj);
-    
-    try {
-        const response = await fetch('/api/gun/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-csrf-token': csrfToken
-            },
-            body: JSON.stringify(formDataObj)
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-            console.log('success!');
-        } else {
-            console.log('OMG! ERROR!');
-        }
-    } catch (error) {
-        console.error('Form submission error:', error);
-    }
-}
-</script>
-
-<form onsubmit={handleSubmit}>
-    <div 
-        class="grid grid-flow-row gap-2"
-    >
-        <input 
-            type="hidden"
-            id="id"
-            name="id"
-            value={data.id}
+  <form onsubmit={(e) => handleSubmit(e, data, csrfToken)}>
+    <div class="grid grid-flow-row gap-2">
+      <input 
+        type="hidden"
+        id="id"
+        name="id"
+        value={data.id}
+      />
+  
+      <Field label="Name" let:id>
+        <Input 
+          name="name"
+          {id}
+          min={3}
+          max={256}
+          placeholder="Winchester R93 .17 Hornet"
+          on:keyup={validate}
+          value={data.name}
         />
+      </Field>
+  
+      <SelectField
+        label="Type"
+        name="type"
+        options={gunTypeOptions}
+        bind:value={selectedType}
+        placeholder="Select gun type"
+        required
+      >
+        <MenuItem
+          slot="option"
+          let:option
+          let:index
+          let:selected
+          let:highlightIndex
+          class={cls(
+            index === highlightIndex && "bg-surface-content/5",
+            option === selected && "font-semibold"
+          )}
+          scrollIntoView={index === highlightIndex}
+        >
+          {option.label}
+        </MenuItem>
+      </SelectField>
 
-        <label for="name">Name</label>
-        <input 
-            type="text"
-            id="name"
-            name="name"
-            min="3"
-            max="512"
-            value={data.name}
-            onkeyup={validate}
-        />
+        <Field label="Manufacturer" let:id>
+            <Input 
+                {id}
+                name="manufacturer"
+                min={3}
+                max={256}
+                placeholder="Winchester R93 .17 Hornet"
+                on:keyup={validate}
+                value={data.manufacturer || ''}
+            />
+        </Field>
 
-        <label for="type">Type</label>
-        <select bind:value={selectedType} name="type" id="type">
-            <option value="" disabled>Select gun type</option>
-            {#each gunTypes as type}
-                <option value={type}>
-                    {type.replace('-', ' ').toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.substring(1)).join(' ')}
-                </option>
-            {/each}
-        </select>
-
-        <label for="manufacturer">Manufacturer</label>
-        <input 
-            type="text"
-            id="manufacturer"
-            name="manufacturer"
-            max="512"
-            min="3"
-            value={data.manufacturer}
-            onkeyup={validate}
-        />
-
-        <label for="model">Model</label>
-        <input 
-            type="text"
-            id="model"
-            name="model"
-            max="512"
-            min="1"
-            value={data.model}
-        />
+        <Field label="Model" let:id>
+            <Input 
+                {id}
+                name="model"
+                min={3}
+                max={256}
+                placeholder=""
+                on:keyup={validate}
+                value={data.model || ''}
+            />
+        </Field>
 
         <input 
             type="hidden"
@@ -161,13 +113,13 @@ async function handleSubmit(event: Event) {
         />
         
         <!-- Caliber dropdown -->
-        <label for="caliber">Caliber</label>
-        <CaliberDropdown 
-            value={selectedCaliber}
-            onChange={onCaliberSelected}
-            name="caliber"
-        />
-        
+        <Field label="Caliber" let:id>
+            <CaliberDropdown 
+              value={selectedCaliber}
+              onChange={(caliberId: string) => onCaliberSelected(caliberId, (value) => selectedCaliber = value)}
+              name="caliber"
+            />
+        </Field>
         <!-- alt -->
         <!--
         <div class="relative">
@@ -186,62 +138,71 @@ async function handleSubmit(event: Event) {
         </div>
         -->
         
-        <div
-            class="grid grid-flow-col grid-cols-[1fr_auto] grid-rows-2 gap-x-4"
-        >
-            <label class="row-start-1" for="barrellength">Barrel length</label>
-            <input 
-                type="text"
-                id="barrellength"
+        <Field label="Barrel length" let:id>
+            <Input 
+                {id}
                 name="barrellength"
-                max="8"
-                pattern="\d{2}(,|\.)?(\d{2})?"
-                min="3"
-                bind:value={barrelLength}
-                onkeyup={(e) => {if (barrelLength) convertComma(e); validate(e)}}
-                class="row-start-2"
+                min={3}
+                max={256}
+                placeholder='12"'
+                on:keyup={validate}
+                value={data.barrelLength?.toString() || ''}
             />
-            <div class="row-start-2">
-                {#if $UserSettingsStore.isometrics === true}
-                    cm
-                {:else}
-                    in
-                {/if}
+            <div class="grid gap-2 z-10">
+                <label class="flex gap-2 items-center text-sm">
+                    <span class={data.barrelLengthUnit == 'imperial' ? 'font-bold' : ''}>in</span>
+                    <Switch
+                        name="barrelunit" 
+                        checked={data.barrelLengthUnit == 'metric' ? true : false}
+                    />
+                    <span class={data.barrelLengthUnit == 'metric' || undefined ? 'font-bold' : ''}>cm</span>
+                </label>
             </div>
-        </div>
+        </Field>
 
-        <label for="barreltwist">Barrel twist</label>
-        <input 
-            type="text"
-            id="barreltwist"
-            name="barreltwist"
-            max="8"
-            min="3"
-            pattern="1:\d{2}"
-            placeholder="1:nn"
-            bind:value={barrelTwist}
-            onkeyup={(e) => {if (barrelTwist) convertComma(e); validate(e)}}
-        />
+        <Field label="Barrel twist" let:id>
+            <Input 
+                {id}
+                name="barreltwist"
+                min={3}
+                max={256}
+                placeholder='1:nn'
+                on:keyup={validate}
+                value={data.barrelTwist || ''}
+            />
+            <div class="grid gap-2 z-10">
+                <label class="flex gap-2 items-center text-sm">
+                    <span class={data.barrelLengthUnit == 'imperial' ? 'font-bold' : ''}>in</span>
+                    <Switch
+                        name="barreltwistunit" 
+                        checked={data.barrelTwistUnit == 'metric' || undefined ? true : false}
+                    />
+                    <span class={data.barrelLengthUnit == 'metric' || undefined ? 'font-bold' : ''}>cm</span>
+                </label>
+            </div>
+        </Field>
 
-        <label for="stock">Stock</label>
-        <input 
-            type="text"
-            id="stock"
-            name="stock"
-            max="512"
-            min="1"
-            onkeyup={validate}
-        />
+        <Field label="Stock / Chassis" let:id>
+            <Input 
+                {id}
+                name="stock"
+                min={3}
+                max={256}
+                placeholder="Spuhr Bravo"
+                on:keyup={validate}
+                value={data.stock || ''}
+            />
+        </Field>
 
-        <label for="note">Notes</label>
-        <textarea
+        <TextField 
+            label="Note:" 
+            multiline 
+            classes={{ input: "h-[4.55rem]" }} 
             id="note"
             name="note"
             spellcheck="false"
-            style="resize:vertical;min-height:4.55rem;height:4.55rem;"
             bind:value={note}
-            onkeyup={validate}
-        ></textarea>
+        />
     </div>
     <button
         type="submit"

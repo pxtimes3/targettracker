@@ -2,7 +2,7 @@
 import { json } from '@sveltejs/kit';
 import { number, z } from 'zod';
 import { db } from '$lib/server/db';
-import { gun, gunTypeEnum } from '@/server/db/schema.js';
+import { gun, gunTypeEnum, measurementsEnum } from '@/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 
 // Define validation schema using Zod
@@ -16,9 +16,11 @@ const GunSchema = z.object({
     caliber: z.string(),
     caliber_mm: z.coerce.number().positive().optional(),
     barrellength: z.number().max(256).optional().or(z.coerce.number().positive()),
+    barrelunit: z.boolean().default(true),
     barreltwist: z.string().max(256).optional(),
+    barreltwistunit: z.boolean().default(false),
+    stock: z.string().max(512).optional(),
     note: z.string().max(1024).optional(),
-    // Add other fields with appropriate validation
 });
 
 export async function POST({ request }) {
@@ -26,13 +28,12 @@ export async function POST({ request }) {
         const requestData = await request.json();
         if (!requestData.userId) throw new Error('No userId supplied.');
         
-        // Validate request body against schema
+        // Validate against schema
         const validatedData = GunSchema.parse(requestData);
         if (!validatedData.id) throw new Error('No gun id!');
         if (!validatedData.userId) throw new Error('No user id!');
         
-        // If validation passes, proceed with database operation
-        // Use parameterized queries to prevent SQL injection
+        
         const result = await db.update(gun)
             .set({
                 name: validatedData.name,
@@ -42,7 +43,10 @@ export async function POST({ request }) {
                 caliber: validatedData.caliber,
                 caliberMm: validatedData.caliber_mm || null,
                 barrelLength: validatedData.barrellength || null,
+                barrelLengthUnit: requestData.barrel_unit ? 'metric' : 'imperial',
                 barrelTwist: validatedData.barreltwist || null,
+                barrelTwistUnit: requestData.barrel_twist_unit ? 'metric' : 'imperial',
+                stock: validatedData.stock || null,
                 note: validatedData.note || ''
             })
             .where(
