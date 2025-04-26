@@ -6,7 +6,7 @@
     
     const { value = '', onChange = (v: string) => {}, name = 'caliber' } = $props();
     
-    console.log('Initial caliber value:', value);
+    // console.log('Initial caliber value:', value);
     
     // Track if calibers have loaded
     let calibersLoaded = $state(false);
@@ -27,16 +27,16 @@
     $effect(() => {
       if ($calibers.length > 0) {
         calibersLoaded = true;
-        console.log('Calibers loaded, count:', $calibers.length);
+        // console.log('Calibers loaded, count:', $calibers.length);
         
         // Force update selectedValue after calibers load
         if (value) {
           selectedValue = value;
-          console.log('Setting selectedValue after calibers loaded:', selectedValue);
+          // console.log('Setting selectedValue after calibers loaded:', selectedValue);
           
           // Check if the value exists in options
           const valueExists = $calibers.some(cal => cal.id === value);
-          console.log('Value exists in calibers:', valueExists);
+          // console.log('Value exists in calibers:', valueExists);
           
           if (valueExists) {
             const selectedCaliber = $calibers.find(cal => cal.id === value);
@@ -60,13 +60,13 @@
     
     // Update selectedValue when the value prop changes
     $effect(() => {
-      console.log('Value prop changed to:', value);
+      // console.log('Value prop changed to:', value);
       selectedValue = value;
     });
     
     // Handle selection changes
     function handleChange(newValue: string) {
-      console.log('Selection changed to:', newValue);
+      // console.log('Selection changed to:', newValue);
       selectedValue = newValue;
       onChange(newValue);
       
@@ -109,6 +109,7 @@
         }
       }}
       onChange={handleChange}
+      required
     >
       <MenuItem
         slot="option"

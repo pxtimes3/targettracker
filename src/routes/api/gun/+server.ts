@@ -15,7 +15,13 @@ const GunSchema = z.object({
     model: z.string().max(256).optional(),
     caliber: z.string(),
     caliber_mm: z.coerce.number().positive().optional(),
-    barrellength: z.number().max(256).optional().or(z.coerce.number().positive()),
+    barrellength: z.preprocess(
+        val => val === "" ? null : val,
+        z.union([
+            z.number().max(256).nullable(),
+            z.coerce.string().transform(val => val === "" ? null : val)
+        ]).optional()
+    ),
     barrelunit: z.boolean().default(true),
     barreltwist: z.string().max(256).optional(),
     barreltwistunit: z.boolean().default(false),
@@ -26,13 +32,24 @@ const GunSchema = z.object({
 export async function POST({ request }) {
     try {
         const requestData = await request.json();
+        console.log('requestData:', requestData);
         if (!requestData.userId) throw new Error('No userId supplied.');
+
+        // Convert on to true etc.
+        requestData.barreltwistunit === 'on' ? requestData.barreltwistunit = true : requestData.barreltwistunit = false;
+        requestData.barrellengthunit === 'on' ? requestData.barrellengthunit = true : requestData.barrellengthunit = false;
         
         // Validate against schema
         const validatedData = GunSchema.parse(requestData);
-        if (!validatedData.id) throw new Error('No gun id!');
-        if (!validatedData.userId) throw new Error('No user id!');
-        
+        console.log('validatedData:', validatedData)
+        if (!validatedData.id) {
+            console.error(validatedData);
+            throw new Error('No gun id!');
+        }
+        if (!validatedData.userId) {
+            console.error(validatedData);
+            throw new Error('No user id!');  
+        } 
         
         const result = await db.update(gun)
             .set({
@@ -56,7 +73,21 @@ export async function POST({ request }) {
                 )
             );
         
-        return json({ success: true, rows: result.count });
+            const updatedGun = await db.select()
+                .from(gun)
+                .where(
+                    and(
+                        eq(gun.id, validatedData.id),
+                        eq(gun.userId, validatedData.userId)
+                    )
+                )
+                .limit(1);
+            
+            return json({ 
+                success: true, 
+                rows: result.count, 
+                gun: updatedGun[0] || null 
+            });
     } catch (error) {
         if (error instanceof z.ZodError) {
         // Return validation errors

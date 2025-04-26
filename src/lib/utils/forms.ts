@@ -87,3 +87,33 @@ export function convertInchToMm(value: string|number): number
     
     return  val * 2.54;
 }
+
+export function resetForm(form: HTMLFormElement, originalData: GunData) {
+    const resetData = JSON.parse(JSON.stringify(originalData));
+    
+    Object.keys(resetData).forEach(key => {
+        // @ts-ignore
+        const element = form.elements[key];
+        if (element) {
+            element.value = resetData[key] || '';
+            
+            // checkboxes & radio
+            if (element.type === 'checkbox' || element.type === 'radio') {
+            element.checked = !!resetData[key];
+            }
+            
+            // select
+            if (element.tagName === 'SELECT') {
+            for (let i = 0; i < element.options.length; i++) {
+                if (element.options[i].value === resetData[key]) {
+                element.selectedIndex = i;
+                break;
+                }
+            }
+            }
+        }
+    });
+    
+    // publish
+    form.dispatchEvent(new Event('reset', { bubbles: true }));
+}

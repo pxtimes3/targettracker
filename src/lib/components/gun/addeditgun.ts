@@ -2,11 +2,33 @@
 import { derived } from 'svelte/store';
 import { convertCaliberToMm, validateCaliberInput } from "@/utils/caliber";
 import { sanitizeInput } from "@/utils/security";
+import { resetForm } from "@/utils/forms";
 
 export interface AddEditGunProps {
 	data: GunData;
-	gunTypes: string[];
+	gunTypes: GunType;
+	onSuccess?: (id: string) => void;
 }
+
+// @ts-ignore
+export const createEmptyGun = (): GunData => ({
+    id: '',
+    userId: '',
+    name: '',
+    type: '',
+    manufacturer: '',
+    model: '',
+    caliber: '',
+    caliberMm: 0,
+    barrel: '',
+    barrelLength: null,
+    barrelLengthUnit: 'metric',
+    barrelTwist: '',
+    barrelTwistUnit: 'metric',
+    stock: '',
+    note: '',
+    error: { message: '' }
+});
 
 /**
  * Formats a gun type string by replacing hyphens with spaces, 
@@ -29,50 +51,37 @@ export function formatGunType(type: string): string {
  * @param gunTypes - An array of gun type strings.
  * @returns An array of objects containing value and label for each gun type.
  */
-export function createGunTypeOptions(gunTypes: string[]) {
-	return gunTypes.map(type => ({
-		value: type,
-		label: formatGunType(type)
-	}));
-}
-
-/**
- * Handles user input for caliber, validates it, converts it to millimeters, 
- * and updates the corresponding hidden field and input styles.
- * 
- * @param e - The input event.
- * @param setCaliberMm - A callback to set the caliber value in millimeters.
- */
-export function handleCaliberInput(e: Event, setCaliberMm: (value: number) => void): void {
-	const target = e.target as HTMLInputElement;
-	const input = target.value;
-	
-	if (validateCaliberInput(input)) {
-		const mmValue = convertCaliberToMm(input);
-		setCaliberMm(mmValue);
-		
-		const mmInput = document.getElementById('caliber_mm') as HTMLInputElement;
-		if (mmInput) {
-		mmInput.value = mmValue.toString();
-		}
-		
-		target.classList.remove('invalid');
-		target.classList.add('valid');
-	} else {
-		target.classList.remove('valid');
-		target.classList.add('invalid');
-	}
+export function createGunTypeOptions(gunTypes: string[]): { value: string; label: string }[] 
+{
+    return gunTypes.map(type => ({
+        value: type,
+        label: formatGunType(type)
+    }));
 }
 
 /**
  * Handles the selection of a caliber by updating the selected caliber state.
  * 
- * @param caliberId - The ID of the selected caliber.
- * @param setSelectedCaliber - A callback to set the selected caliber.
  */
-export function onCaliberSelected(caliberId: string, setSelectedCaliber: (value: string) => void): void {
-	setSelectedCaliber(caliberId);
+export function onCaliberSelected(
+    caliberId: string, 
+    setSelectedCaliber: (value: string) => void,
+    data?: GunData
+): void {
+    setSelectedCaliber(caliberId);
+    
+    // Update the data object if provided
+    if (data) {
+        data.caliber = caliberId;
+    }
+    
+    // Also update any form field if it exists
+    const caliberInput = document.querySelector('input[name="caliber"]') as HTMLInputElement;
+    if (caliberInput) {
+        caliberInput.value = caliberId;
+    }
 }
+
 
 /**
  * Sets up an event listener for custom "caliber-selected" events, 
@@ -116,52 +125,24 @@ export async function fetchCsrfToken(): Promise<string> {
 }
 
 /**
- * Handles form submission by sending the form data to the server.
+ * Creates a safe copy of data for reset functionality
  * 
- * @param event - The form submission event.
- * @param data - The gun data object containing user and gun details.
- * @param csrfToken - The CSRF token for secure submission.
- * @returns A promise that resolves to an object indicating success or failure.
+ * @param data - The gun data object
+ * @returns A deep copy of the data without reactive proxies
  */
-export async function handleSubmit(
-	event: Event, 
-	data: GunData, 
-	csrfToken: string
-): Promise<{ success: boolean, message?: string }> {
-	event.preventDefault();
-	if (!event.target) return { success: false, message: 'No event target' };
+export function createOriginalDataCopy(data: GunData): GunData {
+    return JSON.parse(JSON.stringify(data));
+}
 
-	const form = event.target as HTMLFormElement;
-	const formData = new FormData(form);
-
-	const formDataObj = Object.fromEntries(formData);
-	formDataObj.userId = data.userId;
-
-	console.log('formDataObj:', formDataObj);
-	
-	try {
-		const response = await fetch('/api/gun/', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'x-csrf-token': csrfToken
-		},
-		body: JSON.stringify(formDataObj)
-		});
-		
-		const result = await response.json();
-		if (result.success) {
-		console.log('success!');
-		return { success: true };
-		} else {
-		console.log('Error:', result.message || 'Unknown error');
-		return { success: false, message: result.message || 'Unknown error' };
-		}
-	} catch (error) {
-		console.error('Form submission error:', error);
-		return { 
-		success: false, 
-		message: error instanceof Error ? error.message : 'Unknown error' 
-		};
-	}
+/**
+ * Handles form reset by restoring original values
+ * 
+ * @param event - The reset event
+ * @param originalData - The original data to reset to
+ */
+export function handleReset(event: Event, originalData: GunData): void {
+    event.preventDefault();
+    if (originalData) {
+        resetForm(event.target as HTMLFormElement, originalData);
+    }
 }

@@ -16,7 +16,7 @@
       // byt färg vid $modechange
 		// $mode === 'light' ? color = light : color = dark;
       $currentTheme.theme == "dark" || $currentTheme.dark == true ? color = dark : color = light;
-      console.log($currentTheme)
+      // console.debug($currentTheme)
 	});
 </script>
 

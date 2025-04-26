@@ -1,9 +1,9 @@
 <!-- src/routes/gun/edit/[uuid]/+page.svelte -->
 <script lang="ts">
-	import AddEditGun from "@/components/gun/addEditGun.svelte";
+	import AddEditGun from "@/components/gun/AddEditGun.svelte";
 	import { onMount } from "svelte";
 
-    let gunData: GunData|undefined|{ error: { message: string } } = $state();
+    let gunData: GunData | undefined | { error: { message: string } } = $state();
 
     let { data } : { data: GunEditPageServerData } = $props();
 
@@ -20,6 +20,7 @@
 {#if gunData}
     {#if gunData.error}
             <div id="Error">{gunData.error.message}</div>
+            
     {:else if gunData.id }
     
         
