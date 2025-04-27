@@ -7,6 +7,7 @@ export const service = pgRole('service', { createRole: true, createDb: true, inh
 
 export const rolesEnum = pgEnum("roles", ["user", "vip", "admin", "service"]);
 export const gunTypeEnum = pgEnum('gunType', ['rifle', 'pistol', 'air-rifle', 'air-pistol']);
+export const ammunitionTypeEnum = pgEnum('ammunitionType', ['centerfire', 'rimfire', 'shotgun', 'airgun'])
 export const measurementsEnum = pgEnum('measurements', ['metric', 'imperial']);
 export const angleUnitEnum = pgEnum('angleunit', ['mil', 'moa']);
 export const sightsEnum = pgEnum('sights', ['iron', 'scope', 'red-dot', 'holographic']);
@@ -164,7 +165,7 @@ export const ammunition = pgTable('ammunition', {
     userId: uuid('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     name: text('name').notNull(),
-    type: gunTypeEnum('type').notNull(),
+    type: ammunitionTypeEnum('type').notNull(),
     manufacturerCase: text('manufacturer_case'),
     manufacturerBullet: text('manufacturer_bullet'),
     manufacturerPrimer: text('manufacturer_primer'),
