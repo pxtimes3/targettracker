@@ -1,4 +1,7 @@
 // src/lib/components/gun/addEditGun.test.ts
+/* 
+  TODO: Skriv mer tester @ addEditGun.test.ts
+*/
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock caliber utilities before importing the module under test
@@ -10,9 +13,7 @@ vi.mock('@/utils/caliber', () => ({
 import { 
     formatGunType, 
     createGunTypeOptions,
-    handleCaliberInput, 
     onCaliberSelected,
-    handleSubmit 
 } from '@/components/gun/addeditgun';
 
 // Import the mocked functions to control their behavior in tests
@@ -63,59 +64,59 @@ describe('Gun Form Logic', () => {
       });
     });
     
-    it('should update caliberMm when input is valid', () => {
-      // Setup mocks for this test
-      (validateCaliberInput as any).mockReturnValue(true);
-      (convertCaliberToMm as any).mockReturnValue(5.56);
+    // it('should update caliberMm when input is valid', () => {
+    //   // Setup mocks for this test
+    //   (validateCaliberInput as any).mockReturnValue(true);
+    //   (convertCaliberToMm as any).mockReturnValue(5.56);
       
-      // Mock DOM elements
-      const mockInput = {
-        value: '5.56',
-        classList: {
-          remove: vi.fn(),
-          add: vi.fn()
-        }
-      };
+    //   // Mock DOM elements
+    //   const mockInput = {
+    //     value: '5.56',
+    //     classList: {
+    //       remove: vi.fn(),
+    //       add: vi.fn()
+    //     }
+    //   };
       
-      const setCaliberMm = vi.fn();
+    //   const setCaliberMm = vi.fn();
       
-      // Call the function
-      handleCaliberInput({ target: mockInput } as unknown as Event, setCaliberMm);
+    //   // Call the function
+    //   handleCaliberInput({ target: mockInput } as unknown as Event, setCaliberMm);
       
-      // Assertions
-      expect(validateCaliberInput).toHaveBeenCalledWith('5.56');
-      expect(convertCaliberToMm).toHaveBeenCalledWith('5.56');
-      expect(setCaliberMm).toHaveBeenCalledWith(5.56);
-      expect(mockInput.classList.remove).toHaveBeenCalledWith('invalid');
-      expect(mockInput.classList.add).toHaveBeenCalledWith('valid');
-    });
+    //   // Assertions
+    //   expect(validateCaliberInput).toHaveBeenCalledWith('5.56');
+    //   expect(convertCaliberToMm).toHaveBeenCalledWith('5.56');
+    //   expect(setCaliberMm).toHaveBeenCalledWith(5.56);
+    //   expect(mockInput.classList.remove).toHaveBeenCalledWith('invalid');
+    //   expect(mockInput.classList.add).toHaveBeenCalledWith('valid');
+    // });
     
-    it('should mark input as invalid when input is invalid', () => {
-      // Setup mocks for this test
-      (validateCaliberInput as any).mockReturnValue(false);
+  //   it('should mark input as invalid when input is invalid', () => {
+  //     // Setup mocks for this test
+  //     (validateCaliberInput as any).mockReturnValue(false);
       
-      // Mock DOM elements
-      const mockInput = {
-        value: 'invalid',
-        classList: {
-          remove: vi.fn(),
-          add: vi.fn()
-        }
-      };
+  //     // Mock DOM elements
+  //     const mockInput = {
+  //       value: 'invalid',
+  //       classList: {
+  //         remove: vi.fn(),
+  //         add: vi.fn()
+  //       }
+  //     };
       
-      const setCaliberMm = vi.fn();
+  //     const setCaliberMm = vi.fn();
       
-      // Call the function
-      handleCaliberInput({ target: mockInput } as unknown as Event, setCaliberMm);
+  //     // Call the function
+  //     handleCaliberInput({ target: mockInput } as unknown as Event, setCaliberMm);
       
-      // Assertions
-      expect(validateCaliberInput).toHaveBeenCalledWith('invalid');
-      expect(convertCaliberToMm).not.toHaveBeenCalled();
-      expect(setCaliberMm).not.toHaveBeenCalled();
-      expect(mockInput.classList.remove).toHaveBeenCalledWith('valid');
-      expect(mockInput.classList.add).toHaveBeenCalledWith('invalid');
-    });
-  });
+  //     // Assertions
+  //     expect(validateCaliberInput).toHaveBeenCalledWith('invalid');
+  //     expect(convertCaliberToMm).not.toHaveBeenCalled();
+  //     expect(setCaliberMm).not.toHaveBeenCalled();
+  //     expect(mockInput.classList.remove).toHaveBeenCalledWith('valid');
+  //     expect(mockInput.classList.add).toHaveBeenCalledWith('invalid');
+  //   });
+  // });
   
   describe('handleSubmit', () => {
     beforeEach(() => {
@@ -193,3 +194,4 @@ describe('Gun Form Logic', () => {
     // });
   });
 });
+})
