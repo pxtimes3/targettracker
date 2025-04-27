@@ -1,46 +1,66 @@
 <script lang="ts">
+	/*
+		TODO: WeatherData som accordion
+	*/
 	import type { PageServerData } from '$types';
-	import { Button } from 'svelte-ux';
+	import { Button, Field, Input, MenuItem, Popover, SelectField, TextField, Toggle, type MenuOption } from 'svelte-ux';
 	import { slide } from 'svelte/transition'
 	import { quadInOut } from 'svelte/easing';
 	import { DateTime } from "luxon";
 	import { EditorStore, activePanel } from '@/stores/EditorStore';
 	import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
-	import { LucideChevronUp, LucideChevronDown, type Icon as IconType } from 'lucide-svelte';
+	import { CircleHelp, PlusSquare } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { cls } from '@layerstack/tailwind';
 
-	type Chevron = {
-		name: string;
-		icon: IconType;
-	}
-
-	const chevronIcon = {
-		'up': {
-			name: 'up',
-			icon: LucideChevronUp
-		},
-		'dn': {
-			name: 'dn',
-			icon: LucideChevronDown
-		}
-	}
-
-	let { data, active } : { data: PageServerData, active: boolean } = $props();
+	let { data, active } : { data: {data: PageServerData, gunsEvents: GunsEvents}, active: boolean } = $props();
 
 	let infoform : HTMLFormElement|undefined = $state();
 	let saved: Boolean = $state(false);
 	let saveTime: string|undefined = $state();
 
-	function toggleSection(e: Event, id: string): void
-	{
-		const section = document.getElementById(id);
-		if (!section) {
-			console.error(`No section with id ${id}.`);
-			return;
+	const targetTypeOptions = [
+		{
+			value: 'one',
+			label: 'oneLabel',
+			description: 'one'
 		}
+	];
 
-		// chevron
+	const distanceOptions: MenuOption[] = [
+		{
+			value: "meters",
+			label: "Meters",
+			description: "Range is in meters."
+		},
+		{
+			value: "yards",
+			label: "Yards",
+			description: "Range is in yards."
+		},
+	]
 
+	// word boundary för capitalcase
+	const re = /(\b[a-z](?!\s))/;
+
+	const firearmsOptions = data.gunsEvents.guns.map(guns => ({
+		value: guns.gun.id,
+		label: guns.gun.name,
+		group: guns.gun.type.replace(re, (l) => {return l.toUpperCase()} ),
+		caliber: guns.gun.caliber
+	}))
+	.sort((a, b) => a.group.localeCompare(b.group));
+
+	const ammunitionOptions = data.gunsEvents.ammunition.map(amm => ({
+		value: amm.id,
+		label: amm.name,
+		group: amm.type,
+	}))
+	.sort((a, b) => a.group.localeCompare(b.group));
+
+	function createNew(type: 'firearm'|'ammunition')
+	{
+		// TODO: open drawer with src/lib/components/gun/AddEditGun.svelte or ammunition/AddEditAmmunition
 	}
 
 	function compareFormWithStore() {
@@ -95,171 +115,313 @@
 		transition:slide={{axis: 'x', duration: 150, easing: quadInOut }}
 	>
 		<form id="infoform" bind:this={infoform} class="w-full">
-			<div class="p-4 mb-8 grid grid-flow-row gap-y-2 justify-self-start place-self-start self-start w-full">
-				<div class="my-2">Target Information</div>
-				<hr/>
-				<div class="text-sm text-primary-950 mt-2">
-					<label for="name">Name</label>
-					<input 
-						type="text" 
-						class="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white" 
-						id="name" 
-						name="name"
-						placeholder="{ DateTime.now().toISODate() }"
-						onkeypress={ () => {saved = false} }
-					/>
-				</div>
-				<div class="text-sm text-primary-950">
-					<label for="type">Target type</label>
-					<select 
-						id="type"
-						class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
-						onchange={ () => {saved = false} }
+			<div class="p-4 grid grid-flow-row gap-y-2 justify-self-start place-self-start self-start w-full">
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field 
+						label="Event"
+						let:id
 					>
-						<option>Target type:</option>
-					</select>
-				</div>
-				<div class="text-sm text-primary-950">
-					<label for="distance">Distance</label>
-					<div
-						id="distance-input-container"
-						class="grid grid-flow-col gap-x-4"
-					>
-						<input 
-							type="text"  
-							id="distance" 
-							name="distance" 
-							pattern="\d{1,5}"
-							title="Distance"
-							maxlength="5"
-							placeholder="#####"
-							class="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white invalid:bg-red-400"
+						<Input 
+							{id} 
+							name="eventName" 
+							value={ DateTime.now().toISODate() }
+							on:keypress={ () => {saved = false} }
+							required
 						/>
-						<select 
-							id="distance-unit"
-							class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									A group of targets or just a single target if you were in a hurry that day.
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
+					</div>
+				</div>
+				<h3 class="my-2 mt-8">Target Information</h3>
+				<hr/>
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field 
+						label="Name"
+						let:id
+					>
+						<Input 
+							{id} 
+							name="targetName" 
+							value={ `Target #1 (${DateTime.now().toISODate()})` }
+							on:keypress={ () => {saved = false} }
+							required
+						/>
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									A friendly name for the target so you can find it later.
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
+					</div>
+				</div>
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field
+						label="Target Type"
+						let:id
+					>
+						<SelectField
+							options={targetTypeOptions}
+							disabled
+							name="type"
+							on:change={ () => {saved = false} }
+						>
+						</SelectField>
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									Used for automatic scoring of your target.
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
+					</div>
+				</div>
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field
+						label="Distance"
+						let:id
+					>
+						<Input 
+							{id} 
+							name="targetName" 
+							placeholder=80
+							type="number"
+							on:keypress={ () => {saved = false} }
+							required
+						/>
+						<SelectField
+							name="distanceUnit"
+							options={distanceOptions}
 							onchange={ () => {saved = false} }
 							bind:value={$TargetStore.target.rangeUnit}
+							class="max-w-36"
 						>
-							<option value="metric">Meters</option>
-							<option value="imperial">Yards</option>
-						</select>
+						</SelectField>
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									Distance to target.
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
 					</div>
 				</div>
-				<div class="text-sm text-primary-950">
-					<label for="firearm">Firearm</label>
-					<select 
-						id="firearm"
-						class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
-						onchange={ () => {saved = false} }
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field
+						label="Firearm"
+						let:id
+						placeholder="Select firearm"
 					>
-						
-						<option>Create new</option>
-					</select>
-				</div>
-				<div class="text-sm text-primary-950">
-					<label for="ammunition">Ammunition</label>
-					<select 
-						id="ammunition"
-						class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
-						onchange={ () => {saved = false} }
-					>
-						<option>Create new</option>
-					</select>
-				</div>
-				<div class="mt-4">
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div 
-						class="my-2 w-full"
-						onclick={(e) => toggleSection(e, 'weatherdata')}
-					>
-						<span>Weather Data</span>
-						<div>{chevronIcon.up.icon}</div>
-					</div>
-					<hr/>
-					<div id="weatherdata" class="text-sm text-primary-950 grid grid-cols-6 grid-rows-[auto_auto] gap-x-4 mt-4 hidden">
-						<div class="grid grid-rows-[auto_1fr] grid-cols-1 row-start-1 col-span-3">
-							<label for="windspeed">Windspeed</label>
-							<input 
-								type="text"
-								class="appearance-none bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white" 
-								id="windspeed"
-								onchange={ () => {saved = false} }
+						<SelectField
+							onchange={ () => {saved = false} }
+							options={firearmsOptions}
+						>
+							<MenuItem
+								slot="option"
+								let:option
+								let:index
+								let:selected
+								let:highlightIndex
+								class={cls(
+									index === highlightIndex && "bg-surface-content/5",
+									option === selected && "font-semibold",
+									option.label ? "px-4" : "px-2",
+								)}
+								scrollIntoView={index === highlightIndex}
 							>
-						</div>
-						<div class="grid grid-rows-[auto_1fr] grid-cols-1 row-start-1 col-span-3">
-							<label for="wind_direction">Wind direction</label>
-							<input 
-								type="text"
-								class="appearance-none bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white" 
-								id="wind_direction"
-								onchange={ () => {saved = false} }
+								<div>
+									<div class="">{option.label}</div>
+									<div class="text-sm text-surface-content/50">
+										{option.group} {option.caliber}
+									</div>
+								</div>
+							</MenuItem>
+						</SelectField>
+						<Button 
+							class="ml-2 p-1"
+							title="Add new firearm"
+							on:click={ () => createNew('firearm') }
+						>
+							<PlusSquare />
+						</Button>
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									Choose a firearm or create a new firearm.
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
 							>
-						</div>
-						<div class="grid grid-rows-[auto_1fr] grid-cols-1 row-start-2 col-span-2">
-							<label for="temperature">Temperature</label>
-							<input 
-								type="text"
-								class="appearance-none bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white" 
-								id="temperature"
-								onchange={ () => {saved = false} }
-							>
-						</div>
-						<div class="grid grid-rows-[auto_1fr] grid-cols-1 row-start-2 col-span-2">
-							<label for="humidity">Humidity</label>
-							<input 
-								type="text"
-								class="appearance-none bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white" 
-								id="humidity"
-								onchange={ () => {saved = false} }
-							>
-						</div>
-						<div class="grid grid-rows-[auto_1fr] grid-cols-1 row-start-2 col-span-2">
-							<label for="altitude">Altitude</label>
-							<input 
-								type="text"
-								class="appearance-none bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white" 
-								id="altitude"
-								onchange={ () => {saved = false} }
-							>
-						</div>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
 					</div>
 				</div>
-				<div class="mt-4">Notes</div>
-				<hr/>
-				<div class="text-sm text-primary-950 mt-4">
-					<textarea 
-						id="note"
-						class="block w-full bg-gray-200 text-gray-700 border rounded py-2 px-2 mb-3 leading-tight focus:outline-none focus:bg-white"
-						rows="4"
-						onchange={ () => {saved = false} }
-					></textarea>
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field
+						label="Ammunition"
+						let:id
+						placeholder="Select firearm"
+					>
+						<SelectField
+							onchange={ () => {saved = false} }
+							options={ammunitionOptions}
+						>
+							<MenuItem
+								slot="option"
+								let:option
+								let:index
+								let:selected
+								let:highlightIndex
+								class={cls(
+									index === highlightIndex && "bg-surface-content/5",
+									option === selected && "font-semibold",
+									option.label ? "px-4" : "px-2",
+								)}
+								scrollIntoView={index === highlightIndex}
+							>
+								<div>
+									<div class="">{option.label}</div>
+									<div class="text-sm text-surface-content/50">
+										{option.group} {option.caliber}
+									</div>
+								</div>
+							</MenuItem>
+						</SelectField>
+						<Button 
+							class="ml-2 p-1"
+							title="Add new ammunition"
+							on:click={ () => createNew('ammunition') }
+						>
+							<PlusSquare />
+						</Button>
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									Choose ammunition or create a new ammuntion entry.
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
+					</div>
 				</div>
-				<div class="mt-4">Visibility</div>
-				<hr/>
-				<div>
-					<label class="inline-flex items-center cursor-pointer">
-						<input type="checkbox" value="" class="sr-only peer">
-						<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
-						<span class="ms-3 text-sm font-medium">Public</span>
-					</label>
+				
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<TextField
+						label="Note"
+						name="note"
+						multiline
+						onchange={ () => {saved = false} }
+						placeholder="Today was a nice day... "
+					></TextField>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									Any useful notes... 
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
+					</div>
+				</div>
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+					<Field
+						label="Visibility"
+						let:id
+					>
+						<SelectField
+							name="visibility"
+							onchange={ () => {saved = false} }
+						>
+							<option value="hidden">Hidden</option>
+							<option value="visible">Visible</option>
+						</SelectField>
+					</Field>
+					<div class="ml-2">
+						<Toggle let:on={open} let:toggle let:toggleOff>
+							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
+								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
+									Display your best targets on your public page (if your profile is set to public).
+								</div>
+							</Popover>
+							<Button
+								on:click={toggle}
+								class="p-1"
+							>
+								<CircleHelp size="16" />
+							</Button>
+						</Toggle>
+					</div>
 				</div>
 			</div>
 		</form>		
-		<div class="w-full px-4 py-4 pb-8 grid grid-cols-[auto_auto] justify-between place-content-center max-h-8">
-			<div class="justify-self-end place-self-center text-xs italic opacity-50">
-				{#if saveTime}
-					<span>Last saved: {saveTime}</span>
-				{/if}
+		<div class="w-full px-4 py-4 pb-8 grid grid-cols-1 items-end place-content-end mr-8">
+			<div class="justify-self-end place-self-end text-xs italic opacity-50">
+				<Button 
+					variant="fill" 
+					color="success"
+					onclick={() => compareFormWithStore()}
+				>
+					{saved ? 'Your info is Saved' : 'Save info'}
+				</Button>
+				
+				<p class="grid place-items-end">{#if saveTime}Last saved: {saveTime} {:else} &nbsp; {/if}</p>
+				
 			</div>
-			<Button 
-				variant="fill" 
-				color="success"
-				onclick={() => compareFormWithStore()}
-			>
-				{saved ? 'Saved' : 'Save'}
-			</Button>
 		</div>
 	</div>
 {/if}
