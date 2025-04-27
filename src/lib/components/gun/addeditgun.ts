@@ -62,18 +62,33 @@ export function onCaliberSelected(
     setSelectedCaliber: (value: string) => void,
     data?: GunData
 ): void {
+	if (!caliberId) {
+		console.debug('No caliberId.');
+		return;
+	}
+
+	console.debug('oncaliberselected called with', caliberId, 'data:', data);
     setSelectedCaliber(caliberId);
     
-    // Update the data object if provided
     if (data) {
         data.caliber = caliberId;
     }
     
-    // Also update any form field if it exists
     const caliberInput = document.querySelector('input[name="caliber"]') as HTMLInputElement;
+	const caliberMmInput = document.querySelector('input[name="caliber_mm"]') as HTMLInputElement;
+	
+	console.debug('caliberInput', caliberInput);
+	console.debug('caliberMmInput', caliberMmInput);
+
     if (caliberInput) {
+		console.debug('caliberinput found. setting to ', caliberId);
         caliberInput.value = caliberId;
     }
+
+	if (caliberMmInput) {
+		console.debug('calibermminput found. setting to ', caliberId);
+        caliberMmInput.value = caliberId;
+	}
 }
 
 /**
@@ -94,10 +109,10 @@ export function setupCaliberListener(setCaliberMm: (value: number) => void): () 
 		}
 	}) as EventListener;
 	
-	document.addEventListener('caliber-selected', handleCaliberEvent);
+	document.addEventListener('caliberSelected', handleCaliberEvent);
 	
 	return () => {
-		document.removeEventListener('caliber-selected', handleCaliberEvent);
+		document.removeEventListener('caliberSelected', handleCaliberEvent);
 	};
 }
 

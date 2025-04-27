@@ -38,7 +38,7 @@ async function fetchGunData(id: UUIDTypes)
 	return returnArray;
 } 
 
-function parseGunData(entry)
+function parseGunData(entry: any)
 {
 	return {
 		[entry.get_user_firearms_data.id]: entry.get_user_firearms_data.gun_data,

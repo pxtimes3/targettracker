@@ -96,8 +96,8 @@
     }
     
     $effect(() => {
-        // console.debug('selectedCaliber changed:', selectedCaliber);
-        // console.debug('data.caliber:', data.caliber);
+        console.debug('selectedCaliber changed:', selectedCaliber);
+        console.debug('data.caliber:', data.caliber);
     
         if (selectedCaliber && selectedCaliber !== data.caliber) {
             data.caliber = selectedCaliber;
@@ -211,6 +211,7 @@
 				value={selectedCaliber}
                 onChange={(caliberId: string) => onCaliberSelected(caliberId, (value) => selectedCaliber = value, data)}
 				name="caliber"
+                id="caliber"
             />
         </Field>
         <!-- alt -->
@@ -290,7 +291,8 @@
         <TextField 
             label="Note:" 
             multiline 
-            classes={{ input: "h-[4.55rem]" }} 
+            classes={{ input: "h-[4.55rem]" }}
+            max={1024}
             id="note"
             name="note"
             spellcheck="false"
