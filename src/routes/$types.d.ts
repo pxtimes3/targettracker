@@ -35,6 +35,12 @@ declare global {
     type AnalysisDbType = z.infer<typeof AnalysisSchema>;
     type AnalysisRequest = z.infer<typeof AnalysisRequestSchema>;
 
+    interface AddEditGunProps {
+        data: GunData;
+        gunTypes: GunType;
+        onSuccess?: (id: string) => void;
+    }
+
     interface GunData extends Gun {
         type: GunData<type>|undefined;
         error: { message: string };

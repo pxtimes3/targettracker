@@ -4,12 +4,6 @@ import { convertCaliberToMm, validateCaliberInput } from "@/utils/caliber";
 import { sanitizeInput } from "@/utils/security";
 import { resetForm } from "@/utils/forms";
 
-export interface AddEditGunProps {
-	data: GunData;
-	gunTypes: GunType;
-	onSuccess?: (id: string) => void;
-}
-
 // @ts-ignore
 export const createEmptyGun = (): GunData => ({
     id: '',
@@ -81,7 +75,6 @@ export function onCaliberSelected(
         caliberInput.value = caliberId;
     }
 }
-
 
 /**
  * Sets up an event listener for custom "caliber-selected" events, 
