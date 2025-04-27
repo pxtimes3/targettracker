@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Gun, User } from '@/server/db/schema';
+import type { Ammunition, Gun, User } from '@/server/db/schema';
 
 declare global {
     interface Caliber {
@@ -48,13 +48,35 @@ declare global {
     type GunType = import('@/server/db/schema').GunType;
 
     interface EventData {};
-
+    interface TargetData {};
     interface AmmunitionData {};
 
     interface GunEditPageServerData {
         user: User;
         gundata: GunData;
         gunTypes: GunType;
+    }
+
+    interface InfoPanelData {
+        data: User;
+        gunsEvents: any;
+    }
+
+    // src/routes/pixi
+    type GunWithTarget = {
+        gun: Gun;
+        target: Targets | null; // null om inga targets -.-
+    }
+    
+    type EventWithTarget = {
+        event: Events;
+        targets: Targets | null;
+    }
+    
+    interface GunsEvents {
+        guns: GunWithTarget[];
+        events: EventWithTarget[];
+        ammunition: Ammunition[];
     }
 }
 
