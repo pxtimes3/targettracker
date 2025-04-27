@@ -21,7 +21,8 @@
 
     let { data }: { data: PageServerData} = $props();
 
-    let editData = $state<GunData | EventData | AmmunitionData | null>(null);
+    // TODO: Sätt rätt type på editData @ src/routes/dashboard/+page.svelte
+    let editData: any = $state<GunData | EventData | AmmunitionData | null>(null);
 
     type DrawerType = 'ammunition' | 'event' | 'gun';
 
@@ -52,18 +53,17 @@
     async function refreshGunData(gunId: string, updatedGun?: GunData) {
         if (updatedGun) {
             // Update the gun in the store
+            // @ts-ignore
             GunStore.updateGun(updatedGun);
             
-            // Also update the local data
             data.gundata = data.gundata.map(gun => 
                 gun.id === gunId ? updatedGun : gun
             );
         } else {
-            // Fallback to invalidation if no updated gun data is provided
             await invalidate('app:dashboard');
         }
         
-        // Close the drawer
+        // Close drawer
         drawerStates.gun = false;
     }
 

@@ -59,7 +59,7 @@ export async function POST({ request }) {
                 model: validatedData.model || null,
                 caliber: validatedData.caliber,
                 caliberMm: validatedData.caliber_mm || null,
-                barrelLength: validatedData.barrellength || null,
+                barrelLength: validatedData.barrellength as unknown as number || null,
                 barrelLengthUnit: requestData.barrel_unit ? 'metric' : 'imperial',
                 barrelTwist: validatedData.barreltwist || null,
                 barrelTwistUnit: requestData.barrel_twist_unit ? 'metric' : 'imperial',

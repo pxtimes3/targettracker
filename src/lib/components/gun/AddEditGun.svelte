@@ -29,7 +29,7 @@
         onSuccess?: (gunId: string, updatedGun?: GunData) => void 
     } = $props();
 
-    console.log('AddEditGun received data:', data);
+    // console.debug('AddEditGun received data:', data);
     
     let selectedType = $state(data.type || '');
     let selectedCaliber = $state(data.caliber || '');
@@ -59,7 +59,7 @@
             const formData = new FormData(form);
             const dataObj = Object.fromEntries(formData);
             
-            console.log(dataObj);
+            // console.debug(dataObj);
 
             const response = await fetch('/api/gun', {
                 headers: {
@@ -73,7 +73,7 @@
             const result = await response.json();
 
             if (result.success) {
-                console.log('success', result);
+                // console.debug('success', result);
                 GunStore.updateGun(result.gun);
                 successMessage = 'Gun saved successfully!';
                 
@@ -82,7 +82,7 @@
                 }
             } else {
                 errorMessage = result.message || 'Failed to save gun';
-                console.error(result.message);
+                // console.error(result.message);
             }
         } catch (error) {
             errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -96,8 +96,8 @@
     }
     
     $effect(() => {
-        // console.log('selectedCaliber changed:', selectedCaliber);
-        // console.log('data.caliber:', data.caliber);
+        // console.debug('selectedCaliber changed:', selectedCaliber);
+        // console.debug('data.caliber:', data.caliber);
     
         if (selectedCaliber && selectedCaliber !== data.caliber) {
             data.caliber = selectedCaliber;
