@@ -3,8 +3,9 @@
     import { SelectField, MenuItem } from 'svelte-ux';
     import { cls } from '@layerstack/tailwind';
     import { sortedCalibers } from '@/stores/CaliberStore';
-    
-    const { value = '', onChange = (v: string) => {}, name = 'caliber' } = $props();
+	  
+    const { id, value = '', onChange = (v: string) => {}, name = 'caliber' }: 
+          { id: string, value: string, onChange: (v: string) => any, name: string } = $props();
     
     // console.log('Initial caliber value:', value);
     
@@ -32,17 +33,17 @@
         // Force update selectedValue after calibers load
         if (value) {
           selectedValue = value;
-          // console.log('Setting selectedValue after calibers loaded:', selectedValue);
+          console.debug('Setting selectedValue after calibers loaded:', selectedValue);
           
           // Check if the value exists in options
           const valueExists = $sortedCalibers.some(cal => cal.id === value);
-          // console.log('Value exists in calibers:', valueExists);
+          console.debug('Value exists in calibers:', valueExists);
           
           if (valueExists) {
             const selectedCaliber = $sortedCalibers.find(cal => cal.id === value);
             if (selectedCaliber) {
               // Dispatch the mm value for the initial selection
-              const event = new CustomEvent('caliber-selected', {
+              const event = new CustomEvent('caliberSelected', {
                 detail: { 
                   id: value,
                   mm: parseFloat(selectedCaliber.mm),
@@ -51,22 +52,30 @@
                 bubbles: true
               });
               
+              console.debug(`Dispatched event:`, event);
               document.dispatchEvent(event);
             }
           }
         }
       }
+
+      console.debug('sortedCalibers length:', $sortedCalibers.length);
+      console.debug('SelectField props:', { name, id, options: options.length, value: selectedValue });
+
+      if (selectedValue) {
+        console.debug('Value prop changed to:', value);
+        selectedValue = value;
+      }
     });
     
-    // Update selectedValue when the value prop changes
-    $effect(() => {
-      // console.log('Value prop changed to:', value);
-      selectedValue = value;
-    });
-    
+    function changeHappened()
+    {
+      console.log(`changeHappened`);
+    }
+
     // Handle selection changes
     function handleChange(newValue: string) {
-      // console.log('Selection changed to:', newValue);
+      console.log('Selection changed to:', newValue);
       selectedValue = newValue;
       onChange(newValue);
       
@@ -74,7 +83,7 @@
       const selectedCaliber = $sortedCalibers.find(cal => cal.id === newValue);
       if (selectedCaliber) {
         // Dispatch event with mm value
-        const event = new CustomEvent('caliber-selected', {
+        const event = new CustomEvent('caliberSelected', {
           detail: { 
             id: newValue,
             mm: parseFloat(selectedCaliber.mm),
@@ -83,14 +92,19 @@
           bubbles: true
         });
         
+        console.debug('dispatched event', event)
         document.dispatchEvent(event);
       }
     }
+
+    console.log('CaliberDropdown component is initializing');
+
   </script>
   
   {#if calibersLoaded}
     <SelectField
       {name}
+      id={id}
       options={options}
       value={selectedValue}
       placeholder="Select caliber"
@@ -108,7 +122,10 @@
           });
         }
       }}
-      onChange={handleChange}
+      on:change={(e) => {
+        console.log('SelectField change event:', e.detail);
+        handleChange(e.detail.value);
+      }}
       required
     >
       <MenuItem
