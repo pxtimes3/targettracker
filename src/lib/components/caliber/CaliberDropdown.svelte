@@ -74,7 +74,10 @@
     }
 
     // Handle selection changes
-    function handleChange(newValue: string) {
+    function handleChange(newValue: string|undefined|null) 
+    {
+      if (!newValue) return;
+
       console.log('Selection changed to:', newValue);
       selectedValue = newValue;
       onChange(newValue);
