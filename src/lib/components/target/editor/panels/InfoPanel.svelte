@@ -1,6 +1,7 @@
 <script lang="ts">
 	/*
-		TODO: WeatherData som accordion
+		TODO: WeatherData som accordion.
+		TODO: Val av firearm i infopanel ska utesluta kalibrar som inte passar.
 	*/
 	import type { PageServerData } from '$types';
 	import { Button, Field, Input, MenuItem, Popover, SelectField, TextField, Toggle, type MenuOption } from 'svelte-ux';
@@ -176,7 +177,7 @@
 						</Toggle>
 					</div>
 				</div>
-				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
+				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto] opacity-40">
 					<Field
 						label="Target Type"
 						let:id
