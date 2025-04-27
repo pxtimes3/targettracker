@@ -9,7 +9,7 @@
 	import SettingsPanel from '@/components/target/editor/panels/SettingsPanel.svelte';
 	import GroupPanel from '@/components/target/editor/panels/GroupPanel.svelte';
 	import ReferencePanel from '@/components/target/editor/panels/ReferencePanel.svelte';
-	import { Target } from '@/utils/editor/target';
+	import { Target } from '@/utils/editor/Target';
 	import { LucideBug, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
 	import type { ContainerChild, Renderer } from 'pixi.js';
 	import { Assets, Container, Sprite } from 'pixi.js';
@@ -107,7 +107,7 @@
 
 		const panel = document.getElementById(`${name}-panel`);
 		if (!panel) {
-			console.error(`${name} couldn't be found!?`);
+			console.warn(`${name}-panel couldn't be found!?`);
 			return;
 		}
 
@@ -239,18 +239,6 @@
 			canvasContainer.style.height = `${chromeArea.y}px`;
 		}
 
-		// if (referencebutton != undefined) {
-		// 	console.log(referencebutton.style.top, referencebutton.style.left);
-		// }
-
-		// if ($UserSettingsStore) {
-		// 	if ($UserSettingsStore.editorcrosshair && crosshairContainer) {
-		// 		crosshairContainer.visible = true;
-		// 	} else if (crosshairContainer) {
-		// 		crosshairContainer.visible = false;
-		// 	}
-		// }
-
 		if ($activeButton) {
 			console.log($activeButton);
 		}
@@ -268,16 +256,17 @@
 <aside
 	class="absolute grid grid-flow-row grid-rows-[auto_auto_auto_1fr] place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
 >
-	<button
-		id="targetTrackerMenu"
-		class="w-16 h-12 p-2 ml-2 my-4 cursor-pointer"
-		onclick={() => showMainMenu = true}
-	>
-		<Logo
-			width=36
-			height=36
-		/>
-	</button>
+	<a href="/">
+		<button
+			id="targetTrackerMenu"
+			class="w-16 h-12 p-2 ml-2 my-4 cursor-pointer"
+		>
+			<Logo
+				width=36
+				height=36
+			/>
+		</button>
+	</a>
 	<div id="tools" class="grid grid-flow-row">
 		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
 		<button
@@ -431,7 +420,6 @@
     </div>
 </div>
 
-{#if target}
 <ReferencePanel
 	data={data}
 	active={false}
@@ -441,7 +429,6 @@
 	}}
 	{target}
 />
-{/if}
 
 <SettingsPanel 
 	data={data}
@@ -468,6 +455,8 @@
 	</div>
 {/if}
 
+<!-- selection -->
+<!--
 <div class="absolute z-50 top-2 right-2 text-black">
 	<div
 		class="grid grid-cols-1 grid-flow-row"
@@ -486,7 +475,7 @@
 					<option value="createNew">Add to new group</option>
 				</select>
 				<button
-					onclick={ () => { assignToGroupSelect?.value ? target?.assignSelectedShotsToGroup(assignToGroupSelect?.value) : '';}}
+					onclick={ /* () => { assignToGroupSelect?.value ? target?.assignSelectedShotsToGroup(assignToGroupSelect?.value) : '';} */ () => console.log('not implemented yet')}
 				>
 					Go
 				</button>
@@ -495,13 +484,13 @@
 		{/if}
 	</div>
 </div>
-
+-->
 
 <div id="debugpanel" style="position: absolute; z-index: 99; right: 5rem; bottom: 5rem; background: #ccc; color: #000" class="hidden">
 	{#each $TargetStore.groups as group}
 		<div>
 		Group: {group.id}
-		Container: {target?.app.stage.getChildByLabel(group.id.toString())}
+		Container: {target?.targetRenderer?.app ? target.targetRenderer.app.stage.getChildByLabel(group.id.toString()) : 'App not ready'}
 		{#if group.shots}
 			{#each group?.shots as shot}
 				<div>ID: {shot.id} Pos: {shot.x.toFixed(0)}:{shot.y.toFixed(0)}</div>

@@ -65,15 +65,22 @@ jobs:
           echo "Coverage summary?:"
           ls -la coverage/coverage-summary.json || echo "No summary file"
 
-      - name: Extract coverage percentage
+      - name: Extract coverage
         id: coverage
         run: |
           echo "Coverage summary:"
           cat coverage/coverage-summary.json | jq '.'
-
+      
           COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
-          echo "Lines coverage: $COVERAGE%"
+          LINECOVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.covered')
+          LINETOTAL=$(cat coverage/coverage-summary.json | jq -r '.total.lines.total')
+          echo "Lines coverage: $COVERAGE% $LINECOVERAGE:$LINETOTAL"
+          
+          # Fix: Add all variables to GITHUB_OUTPUT
           echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+          echo "covered=${LINECOVERAGE}" >> $GITHUB_OUTPUT
+          echo "total=${LINETOTAL}" >> $GITHUB_OUTPUT
+        
 
       # - name: Debug Coverage Output
       #   run: |
@@ -93,13 +100,25 @@ jobs:
 
           # Create the JSON with proper escaping
           JSON_CONTENT=$(jq -n \
-            --arg msg "${COVERAGE}%" \
-            '{
-              schemaVersion: 1,
-              label: "coverage",
-              message: $msg,
-              color: "green"
-            }')
+          --arg pct "${COVERAGE}" \
+          --arg covered "${{ steps.coverage.outputs.covered }}" \
+          --arg total "${{ steps.coverage.outputs.total }}" \
+          --arg color "$(
+            if (( $(echo "$COVERAGE < 30" | bc -l) )); then
+              echo "red"
+            elif (( $(echo "$COVERAGE < 70" | bc -l) )); then
+              echo "yellow"
+            else
+              echo "green"
+            fi
+          )" \
+          '{
+            schemaVersion: 1,
+            label: "coverage",
+            message: ($pct + "% (" + $covered + "/" + $total + ")"),
+            color: $color
+          }')
+
 
           GIST_CONTENT=$(jq -n \
             --arg content "$JSON_CONTENT" \

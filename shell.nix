@@ -7,7 +7,7 @@ let
 
     nodeVersionStr = if packageJson ? "engines" && packageJson.engines ? "node"
                         then packageJson.engines.node
-                        else "20";
+                        else "23";
 
     # Parse node-version from package.json
     getNodejs = versionStr:
@@ -16,11 +16,11 @@ let
         cleanVersion = builtins.match "([0-9]+).*" versionStr;
         majorVersion = if builtins.isList cleanVersion && builtins.length cleanVersion > 0
                        then builtins.head cleanVersion
-                       else "20";
+                       else "23";
     in
         if builtins.hasAttr "nodejs_${majorVersion}" pkgs
         then pkgs."nodejs_${majorVersion}"
-        else pkgs.nodejs_20;  # Default to Node.js 20 if not found
+        else pkgs.nodejs_23;  # Default to Node.js 23 if not found
 
     nodejs = getNodejs nodeVersionStr;
 

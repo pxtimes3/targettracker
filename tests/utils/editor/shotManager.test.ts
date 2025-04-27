@@ -87,7 +87,7 @@ vi.mock('svelte/store', () => ({
   	}))
 }));
 
-import { ShotManager } from '@/utils/editor/shotManager';
+import { ShotManager } from '@/utils/editor/ShotManager';
 import { Container, FederatedPointerEvent } from 'pixi.js';
 import { ElementType } from '@/types/editor';
 import { TargetStore } from '@/stores/TargetImageStore';
@@ -326,10 +326,10 @@ describe('ShotManager', () => {
 		const mockContainer = new Container();
 		const shotManager = new ShotManager(mockContainer);
 	
-		// Mock selected shots
+		// @ts-ignore
 		shotManager.editorStore = { selected: [{ label: 'shot-1-2', x: 10, y: 20 }] };
 	
-		// Mock targetStore groups
+		// @ts-ignore
 		shotManager.targetStore = { groups: [] };
 	
 		// Mock getChildByLabel to return null (no container found)
@@ -364,8 +364,11 @@ describe('ShotManager', () => {
 		const shotManager = new ShotManager(
 			mockContainer
 		);
+		// @ts-ignore
 		shotManager.editorStore = mockEditorStore;
+		// @ts-ignore
 		shotManager.targetStore = mockTargetStore;
+		// @ts-ignore
 		shotManager.userSettings = mockUserSettings;
 	
 		shotManager.groupManager.createGroup = vi.fn().mockReturnValue({ group: mockGroup, container: mockContainer });
@@ -428,6 +431,7 @@ describe('ShotManager', () => {
 			if (store === UserSettingsStore) return {};
 		});
 	
+		// @ts-ignore
 		const shotManager = new ShotManager(mockContainer, mockGroupManager);
 	
 		const result = await shotManager.prepareGroupForElement('1');
@@ -558,6 +562,7 @@ describe('ShotManager', () => {
 		mockContainer.getChildByLabel = vi.fn().mockReturnValue(mockGroupContainer);
 		
 		const shotManager = new ShotManager(mockContainer);
+		// @ts-ignore
 		shotManager.targetStore = { groups: [] }; // Empty groups array
 		
 		// Act

@@ -6,8 +6,8 @@ import { MetricsRenderer } from './MetricsRenderer';
 import type { FederatedPointerEvent } from 'pixi.js';
 import { Container, Sprite, Graphics } from 'pixi.js';
 import { get } from 'svelte/store';
-import { GroupManager } from './groupManager';
-import { getAllChildren } from './editorUtils';
+import { GroupManager } from './GroupManager';
+import { getAllChildren } from './EditorUtils';
 
 export class DragHandler {
     public targetContainer: Container;

@@ -85,7 +85,7 @@ export class MetricsRenderer {
             //     noRefLineLength: !currentStore.reference.linelength,
             //     refLineLength: currentStore.reference.linelength,
             // });
-            console.warn('No reference points set!');
+            // console.warn('No reference points set!');
             return;
         }
         

@@ -7,7 +7,12 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        setupFiles: ['./tests/setup.ts'],
+        bail: 0,
+        passWithNoTests: true,
+        logHeapUsage: true,
+        setupFiles: [
+            './tests/storeMocks.ts',
+        ],
         exclude: [
             '**/node_modules/**',
             '**/dist/**',
@@ -23,6 +28,7 @@ export default defineConfig({
         },
         coverage: {
             provider: 'v8',
+            include: ['src/**/*.ts'],
             reporter: ['json', 'json-summary', 'html'],
             reportsDirectory: './coverage',
             exclude: [

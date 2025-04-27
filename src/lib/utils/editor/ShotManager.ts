@@ -5,9 +5,9 @@ import { UserSettingsStore, type SettingsInterface } from '@/stores/UserSettings
 import { type FederatedPointerEvent, Container, Graphics } from 'pixi.js';
 import { get } from 'svelte/store';
 import { MetricsRenderer } from './MetricsRenderer';
-import { GroupManager } from './groupManager';
-import { DragHandler } from './dragHandler';
-import { getAllChildren } from './editorUtils';
+import { GroupManager } from './GroupManager';
+import { DragHandler } from './DragHandler';
+import { getAllChildren } from './EditorUtils';
 import { type ElementCreationParams, ElementType } from '@/types/editor';
 
 export class ShotManager {

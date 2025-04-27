@@ -71,11 +71,11 @@ vi.mock('svelte/store', () => ({
      }))
 }));
 
-import { DragHandler } from '@/utils/editor/dragHandler';
+import { DragHandler } from '@/utils/editor/DragHandler';
 import { Container } from 'pixi.js';
 import { TargetStore } from '@/stores/TargetImageStore';
 import { UserSettingsStore } from '@/stores/UserSettingsStore';
-import { GroupManager } from '@/utils/editor/groupManager';
+import { GroupManager } from '@/utils/editor/GroupManager';
 import { get } from 'svelte/store';
 import type { GroupInterface } from '../../../src/lib/stores/TargetImageStore';
 

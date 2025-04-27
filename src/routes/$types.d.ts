@@ -1,24 +1,83 @@
 import { z } from 'zod';
+import type { Ammunition, Gun, User } from '@/server/db/schema';
 
-export interface PageData {
-    activated: boolean;
-    error: string | null;
-}
+declare global {
+    interface Caliber {
+        id: string;
+        name: string;
+        category: string;
+        mm: string;
+        in: string;
+        aliases: string[];
+    }
 
-export interface Invites {
-    "id": string,
-    "code": string,
-    "user": string,
-    "invitee_email": string|null,
-    "invite_sent": Date,
-    "accepted": boolean,
-    "active": boolean
-}
+    interface PageData {
+        activated: boolean;
+        error: string | null;
+    }
 
-export interface SendInviteData {
-    recipient: string;
-    inviteCode: string;
-    senderUserName: string;
+    interface Invites {
+        "id": string,
+        "code": string,
+        "user": string,
+        "invitee_email": string|null,
+        "invite_sent": Date,
+        "accepted": boolean,
+        "active": boolean
+    }
+
+    interface SendInviteData {
+        recipient: string;
+        inviteCode: string;
+        senderUserName: string;
+    }
+
+    type AnalysisDbType = z.infer<typeof AnalysisSchema>;
+    type AnalysisRequest = z.infer<typeof AnalysisRequestSchema>;
+
+    interface AddEditGunProps {
+        data: GunData;
+        gunTypes: GunType;
+        onSuccess?: (id: string) => void;
+    }
+
+    interface GunData extends Gun {
+        type: GunData<type>|undefined;
+        error: { message: string };
+    };
+    type GunType = import('@/server/db/schema').GunType;
+
+    interface EventData {};
+    interface TargetData {};
+    interface AmmunitionData {};
+
+    interface GunEditPageServerData {
+        user: User;
+        gundata: GunData;
+        gunTypes: GunType;
+    }
+
+    interface InfoPanelData {
+        data: User;
+        gunsEvents: any;
+    }
+
+    // src/routes/pixi
+    type GunWithTarget = {
+        gun: Gun;
+        target: Targets | null; // null om inga targets -.-
+    }
+    
+    type EventWithTarget = {
+        event: Events;
+        targets: Targets | null;
+    }
+    
+    interface GunsEvents {
+        guns: GunWithTarget[];
+        events: EventWithTarget[];
+        ammunition: Ammunition[];
+    }
 }
 
 const AnalysisSchema = z.object({
@@ -29,11 +88,9 @@ const AnalysisSchema = z.object({
     image_name: z.string().uuid()
 });
 
-export type AnalysisDbType = z.infer<typeof AnalysisSchema>;
-
 const AnalysisRequestSchema = z.object({
     user_id: z.string(),
     imagename: z.string().uuid(),
 });
 
-export type AnalysisRequest = z.infer<typeof AnalysisRequestSchema>;
+export {};

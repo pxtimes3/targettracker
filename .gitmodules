@@ -1,3 +1,6 @@
 [submodule "targettracker.analysis"]
 	path = targettracker.analysis
 	url = git@github.com:pxtimes3/targettracker.analysis.git
+[submodule "static/public"]
+	path = static/public
+	url = git@github.com:pxtimes3/targettracker.external.git
