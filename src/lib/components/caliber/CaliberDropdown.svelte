@@ -2,7 +2,7 @@
 <script lang="ts">
     import { SelectField, MenuItem } from 'svelte-ux';
     import { cls } from '@layerstack/tailwind';
-    import { calibers } from '@/stores/CaliberStore';
+    import { sortedCalibers } from '@/stores/CaliberStore';
     
     const { value = '', onChange = (v: string) => {}, name = 'caliber' } = $props();
     
@@ -15,7 +15,7 @@
     let selectedValue = $state(value);
     
     // Create options when calibers are available
-    let options = $derived($calibers.map(cal => ({
+    let options = $derived($sortedCalibers.map(cal => ({
       value: cal.id,
       label: cal.name,
       group: cal.category,
@@ -25,7 +25,7 @@
     
     // Monitor when calibers load
     $effect(() => {
-      if ($calibers.length > 0) {
+      if ($sortedCalibers.length > 0) {
         calibersLoaded = true;
         // console.log('Calibers loaded, count:', $calibers.length);
         
@@ -35,11 +35,11 @@
           // console.log('Setting selectedValue after calibers loaded:', selectedValue);
           
           // Check if the value exists in options
-          const valueExists = $calibers.some(cal => cal.id === value);
+          const valueExists = $sortedCalibers.some(cal => cal.id === value);
           // console.log('Value exists in calibers:', valueExists);
           
           if (valueExists) {
-            const selectedCaliber = $calibers.find(cal => cal.id === value);
+            const selectedCaliber = $sortedCalibers.find(cal => cal.id === value);
             if (selectedCaliber) {
               // Dispatch the mm value for the initial selection
               const event = new CustomEvent('caliber-selected', {
@@ -71,7 +71,7 @@
       onChange(newValue);
       
       // Find the selected caliber
-      const selectedCaliber = $calibers.find(cal => cal.id === newValue);
+      const selectedCaliber = $sortedCalibers.find(cal => cal.id === newValue);
       if (selectedCaliber) {
         // Dispatch event with mm value
         const event = new CustomEvent('caliber-selected', {
