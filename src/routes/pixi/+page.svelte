@@ -16,8 +16,9 @@
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
 	import { ThemeSwitch } from 'svelte-ux';
+	import SaveButton from '@/components/target/editor/SaveButton.svelte';
 
-	let { data } : { data: PageServerData } = $props();
+	let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
 
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
 	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
@@ -214,9 +215,9 @@
 				}
 			});
 			
-			if (data.user?.id) {
+			if (data.data?.user?.id) {
 				console.log("Initializing analysis");
-				await target.initializeAnalysis(data.user.id);
+				await target.initializeAnalysis(data.data.user.id);
 			}
 		} catch (error) {
 			console.error("Fatal error during initialization:", error);
@@ -424,7 +425,7 @@
 </div>
 
 <ReferencePanel
-	data={data}
+	data={data.data}
 	active={false}
 	position={{
 		top: referencebutton?.offsetTop + 'px',

@@ -42,12 +42,12 @@ const warnings: Writable<WarningInterface[]> = writable([]);
 export const EditorStore: Writable<EditorStoreInterface> = writable({
     warnings: [],
     aIsMoved: false,
-    aIsSet: true,
+    aIsSet: false,
     xIsMoved: false,
-    xIsSet: true,
-    refMeasurement: '7.5',
+    xIsSet: false,
+    refMeasurement: '',
     isRefDirty: false,
-    isRefComplete: true,
+    isRefComplete: false,
     selected: [],
     mode: 'none'
 });
