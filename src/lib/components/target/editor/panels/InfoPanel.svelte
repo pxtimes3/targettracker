@@ -13,6 +13,7 @@
 	import { CircleHelp, PlusSquare } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { cls } from '@layerstack/tailwind';
+	import type { UUIDTypes } from 'uuid';
 
 	let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
 
@@ -60,14 +61,63 @@
 		},
 	];
 
+	/* EVENT */
+	let selectedEvent: string = $state('');
+	let eventInputContainer: HTMLDivElement|undefined = $state();
+	let eventInput: Input|undefined = $state();
+	let eventInputValue: string|undefined = $state();
+	let infoEventElement: HTMLInputElement|undefined = $state();
 	let eventOptions = $state(data.gunsEvents.events.map(event => ({
 		value: event.event.id,
 		label: event.event.name
 	})));
+	
+	eventOptions.push(
+		{
+			value: undefined,
+			label: '---',
+			// @ts-ignore
+			disabled: true
+		},
+		{
+			value: 'createEvent',
+			label: 'Create new Event',
+		}
+	);
+
+	function handleEventSelectChange(event: any): void
+	{
+		console.log('handleEventSelectChange', event);
+		if (!event.detail.value) return;
+		const selectedValue = event.detail.value;
+		console.log('selectedValue:', selectedValue)
+		if (!eventInputContainer) { console.error('No eventInputContainer found!'); return; }
+		if (!infoEventElement) { console.error('No infoEventElement found!'); return; }
+  
+		if (selectedValue === 'createEvent') {
+			event.preventDefault();
+			eventInputContainer.classList.remove('hidden');
+			infoEventElement.value = '';
+		} else {
+			if (!infoEventElement) { console.error('No infoEventElement found!'); return; }
+			console.log('Should change infoEventElement value?')
+			eventInputContainer.classList.add('hidden');
+			infoEventElement.value = '';
+			infoEventElement.value = selectedValue;
+		}
+	}
+
+	function setInfoElementValue(e: Event): void
+	{
+		if (infoEventElement && eventInputValue?.length) {
+			infoEventElement.value = eventInputValue;
+		}
+	}
 
 	// word boundary för capitalcase
 	const re = /(\b[a-z](?!\s))/;
 
+	let selectedFirearm: string = $state('');
 	const firearmsOptions = data.gunsEvents.guns.map(guns => ({
 		value: guns.gun.id,
 		label: guns.gun.name,
@@ -75,6 +125,12 @@
 		caliber: guns.gun.caliber
 	}))
 	.sort((a, b) => a.group.localeCompare(b.group));
+	
+	function firearmChanged(e: Event): void
+	{
+		saved = false;
+		$TargetStore.info.firearm = selectedFirearm;
+	}
 
 	const ammunitionOptions = data.gunsEvents.ammunition.map(amm => ({
 		value: amm.id,
@@ -88,49 +144,130 @@
 		// TODO: open drawer with src/lib/components/gun/AddEditGun.svelte or ammunition/AddEditAmmunition
 	}
 
-	function compareFormWithStore() {
-		if (!infoform) { return; }
+	function compareFormWithStore() // TODO: Hitta en bättre metod för compareFormWithStore
+	{
+		if (!infoform) return;
 		
-		const fields: HTMLFormControlsCollection = infoform.elements;
+		// Helper function to check if a path exists in the interface type
+		const pathExistsInInterface = (path: string): boolean => {
+			// We'll use a type checking approach based on the structure of TargetStoreInterface
+			try {
+				const parts = path.split('.');
+				let currentObj = $TargetStore;
+				
+				for (let i = 0; i < parts.length - 1; i++) {
+					const part = parts[i];
+					
+					// Handle array indices
+					if (!isNaN(Number(part)) && Array.isArray(currentObj[part as keyof typeof currentObj])) {
+						const arrayProp = currentObj[part as keyof typeof currentObj] as any[];
+						// Check if the index exists
+						if (arrayProp.length <= Number(part)) {
+							return false;
+						}
+						currentObj = arrayProp[Number(part)];
+					} else if (currentObj && typeof currentObj === 'object' && part in currentObj) {
+						currentObj = currentObj[part as keyof typeof currentObj];
+					} else {
+						return false;
+					}
+				}
+				
+				// Check if the final property exists
+				const lastPart = parts[parts.length - 1];
+				return currentObj && typeof currentObj === 'object' && lastPart in currentObj;
+			} catch (e) {
+				console.error(`Error checking interface for path ${path}:`, e);
+				return false;
+			}
+		};
 		
-		const fieldsArray = Array.from(fields);
+		// Helper functions for property access
+		const getNestedValue = (obj: any, path: string): any => {
+			return path.split('.').reduce((prev, curr) => 
+				prev && prev[curr] !== undefined ? prev[curr] : undefined, obj);
+		};
 		
-		fieldsArray.forEach(field => {
+		const setNestedValue = (obj: any, path: string, value: any): boolean => {
+			// First check if path exists in interface
+			if (!pathExistsInInterface(path)) {
+				console.warn(`Path ${path} does not exist in TargetStoreInterface, skipping update`);
+				return false;
+			}
+			
+			const parts = path.split('.');
+			const lastKey = parts.pop();
+			if (!lastKey) return false;
+			
+			const target = parts.reduce((prev, curr) => {
+				if (prev && typeof prev === 'object' && curr in prev) {
+					return prev[curr];
+				}
+				return undefined;
+			}, obj);
+			
+			if (target && typeof target === 'object') {
+				target[lastKey] = value;
+				return target[lastKey] === value;
+			}
+			return false;
+		};
+		
+		// Process each field
+		Array.from(infoform.elements).forEach(field => {
+			// Skip non-form elements, submit buttons, and unnamed fields
 			if (!(field instanceof HTMLInputElement || 
-				  field instanceof HTMLTextAreaElement || 
-				  field instanceof HTMLSelectElement)) {
+				field instanceof HTMLTextAreaElement || 
+				field instanceof HTMLSelectElement) || 
+				field.type === 'submit' || 
+				!field.name) {
 				return;
 			}
-
-			if (field.type === 'submit' || !field.name) return;
 			
 			const fieldName = field.name;
 			const fieldValue = field.value;
-
-			const storeValue = $TargetStore[fieldName as keyof TargetStoreInterface];
 			
-			if (fieldValue !== storeValue) {
-				saved = false;
-				($TargetStore as any)[fieldName] = fieldValue;
-
-				if (($TargetStore as any)[fieldName] === fieldValue) {
-					saved = true;
-					saveTime = DateTime.now().toLocaleString(DateTime.TIME_24_WITH_SECONDS);
-				}
-
-				// debug
-				console.log(`Field ${fieldName} differs:`, {
-					form: fieldValue,
-					store: storeValue
-				});
+			// Skip if path doesn't exist in interface
+			if (!pathExistsInInterface(fieldName)) {
+				// console.warn(`Field ${fieldName} does not exist in TargetStoreInterface, skipping update`);
+				return;
 			}
+			
+			const storeValue = getNestedValue($TargetStore, fieldName);
+			
+			// Skip if values are the same
+			if (fieldValue === storeValue) return;
+			
+			// Update the store
+			saved = false;
+			const updateSuccess = fieldName.includes('.') 
+				? setNestedValue($TargetStore, fieldName, fieldValue)
+				: (($TargetStore as any)[fieldName] = fieldValue, 
+				($TargetStore as any)[fieldName] === fieldValue);
+			
+			if (updateSuccess) {
+				saved = true;
+				saveTime = DateTime.now().toLocaleString(DateTime.TIME_24_WITH_SECONDS);
+			}
+			
+			// debug
+			console.log(`Field ${fieldName} differs:`, {
+				form: fieldValue,
+				store: storeValue
+			});
 		});
 	}
 
 	onMount(() => {
-		setInterval(compareFormWithStore, 1500);
+		setInterval(compareFormWithStore, 150);
 		console.log(data)
-	})
+	});
+
+	$effect(() => {
+	if (infoEventElement?.value) {
+		console.log('infoEventElement?.value:', infoEventElement?.value);
+	}
+	});
 	
 </script>
 
@@ -142,30 +279,39 @@
 	>
 		<form id="infoform" bind:this={infoform} class="w-full">
 			<div class="p-4 grid grid-flow-row gap-y-2 justify-self-start place-self-start self-start w-full">
+				<input 
+					type="hidden"
+					name="info.event"
+					bind:this={infoEventElement}
+					value=""
+				/>
 				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
 					<Field
 						label="Choose a previous Event or create a new Event"
 						let:id
-						class="h-full"
 					>
+						<div class="w-full grid grid-flow-row">
 						<SelectField
 							{id}
+							name="eventSelect"
 							options={eventOptions}
-							class="mr-2"
 							placeholder="Existing events"
-							bind:value={eventOptions[0].value}
+							on:change={handleEventSelectChange}
 						>
 						</SelectField>
 
-						<Input 
-							{id} 
-							name="eventName" 
-							placeholder={ DateTime.now().toISODate() }
-							on:keypress={ () => {saved = false} }
-							bind:value={$TargetStore.info.event}
-							required
-							class="border rounded p-2"
-						/>
+						<div class="hidden" id="eventInputContainer" bind:this={eventInputContainer}>
+							<Input 
+								{id} 
+								name="eventInput"
+								placeholder="Your event name."
+								on:keypress={ () => {saved = false} }
+								bind:value={eventInputValue}
+								on:change={(e) => setInfoElementValue(e)}
+								class="border rounded p-2 mt-2"
+							/>
+						</div>
+						</div>
 					</Field>
 					<div class="ml-2">
 						<Toggle let:on={open} let:toggle let:toggleOff>
@@ -183,8 +329,7 @@
 						</Toggle>
 					</div>
 				</div>
-				<h3 class="my-2 mt-8">Target Information</h3>
-				<hr/>
+				<h3 class="mt-4">Target Information</h3>
 				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
 					<Field 
 						label="Name"
@@ -192,7 +337,7 @@
 					>
 						<Input 
 							{id} 
-							name="targetName" 
+							name="info.name" 
 							placeholder={ `Target #1 (${DateTime.now().toISODate()})` }
 							bind:value={$TargetStore.info.name}
 							on:keypress={ () => {saved = false} }
@@ -289,8 +434,9 @@
 						placeholder="Select firearm"
 					>
 						<SelectField
-							onchange={ () => {saved = false} }
+							bind:value={selectedFirearm}
 							options={firearmsOptions}
+							name="info.firearm"
 						>
 							<MenuItem
 								slot="option"
@@ -346,6 +492,7 @@
 						<SelectField
 							onchange={ () => {saved = false} }
 							options={ammunitionOptions}
+							name="info.ammunition"
 						>
 							<MenuItem
 								slot="option"
@@ -396,7 +543,7 @@
 				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
 					<TextField
 						label="Note"
-						name="note"
+						name="info.note"
 						multiline
 						onchange={ () => {saved = false} }
 						placeholder="Today was a nice day... "
@@ -423,7 +570,7 @@
 						let:id
 					>
 						<SelectField
-							name="visibility"
+							name="info.public"
 							options={visibilityOptions}
 							bind:value={visibilitySelectedValue}
 							on:change={handleChange}
@@ -471,6 +618,7 @@
 		</form>		
 		<div class="w-full px-4 py-4 pb-8 grid grid-cols-1 items-end place-content-end mr-8">
 			<div class="justify-self-end place-self-end text-xs italic opacity-50">
+				<!--
 				<Button 
 					variant="fill" 
 					color="success"
@@ -478,6 +626,7 @@
 				>
 					{saved ? 'Your info is Saved' : 'Save info'}
 				</Button>
+				-->
 				
 				<p class="grid place-items-end">{#if saveTime}Last saved: {saveTime} {:else} &nbsp; {/if}</p>
 				
