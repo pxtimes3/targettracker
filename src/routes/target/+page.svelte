@@ -3,8 +3,7 @@
 	import { goto } from '$app/navigation';
 	import PhotoCapture from '@/components/target/photocapture/PhotoCapture.svelte';
 	import { cameraImageDataStore, TargetStore } from '@/stores/TargetImageStore';
-	import { FileUpload, ProgressRing } from '@skeletonlabs/skeleton-svelte';
-	import { CircleCheck, CircleOff } from 'lucide-svelte';
+		import { CircleCheck, CircleOff } from 'lucide-svelte';
 	import IconDropzone from 'lucide-svelte/icons/image-plus';
 	import { onMount } from 'svelte';
 	import type { PageServerData } from './$types';

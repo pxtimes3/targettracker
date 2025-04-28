@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { Accordion } from '@skeletonlabs/skeleton-svelte';
     import { CircleHelp } from 'lucide-svelte';
     import type { PageData } from './$types';
 
