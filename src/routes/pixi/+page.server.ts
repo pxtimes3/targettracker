@@ -2,11 +2,8 @@ import * as table from '$lib/server/db/schema';
 import { db } from "@/server/db";
 import type { Actions } from "@sveltejs/kit";
 import { fail } from '@sveltejs/kit';
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
-import type { UUIDTypes } from 'uuid';
-import type { Gun, Events, Targets } from '$lib/server/db/schema';
-import { events, ammunition } from '../../lib/server/db/schema';
 
 export const load: PageServerLoad = async (event) => {
     if (!event.locals.user) {

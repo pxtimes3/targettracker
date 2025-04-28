@@ -437,7 +437,6 @@
 
 <InfoPanel 
 	data={data}
-	active={false}
 />
 
 <!-- followcursor -->
