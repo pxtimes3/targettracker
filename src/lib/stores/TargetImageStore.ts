@@ -74,6 +74,7 @@ export type GroupInterface = z.infer<typeof GroupSchema>;
 
 const TargetStoreSchema = z.object({
     info: z.object({
+        event: z.string(),
         name: z.string(),
         type: z.string(),
         firearm: z.string(),
@@ -142,6 +143,7 @@ export type TargetStoreInterface = z.infer<typeof TargetStoreSchema>;
 
 export const initialStore: TargetStoreInterface = {
     info: {
+        event: '',
         name: '',
         type: '',
         firearm: '',
