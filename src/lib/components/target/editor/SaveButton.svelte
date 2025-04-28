@@ -16,8 +16,8 @@
             // @ts-ignore
             hasShots = $TargetStore.groups[0]?.shots?.length > 0 || false;
             isRefComplete = $EditorStore.isRefComplete || false;
-            isFirearmSelected = $TargetStore.info.firearm.length == 32 ? true : false;
-            isAmmunitionSelected = $TargetStore.info.ammunition.length == 32 ? true : false;
+            isFirearmSelected = $TargetStore.info.firearm?.length == 36 ? true : false;
+            isAmmunitionSelected = $TargetStore.info.ammunition.length == 36 ? true : false;
             isEventValid = $TargetStore.info.event.length > 2 ? true : false;
             
             enabled = isRefComplete 
@@ -50,7 +50,7 @@
     {#if !enabled}
         <Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
             <div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-fit rounded italic">
-                <p>Cannot save.</p>
+                <p class="not-italic">Cannot save...</p>
                 {#if !isFirearmSelected}<p>&circleddash; No firearm selected.</p>{/if}
                 {#if !isAmmunitionSelected}<p>&circleddash; No ammunition selected.</p>{/if}
                 {#if !isRefComplete}<p>&circleddash; You need to set reference points.</p>{/if}
