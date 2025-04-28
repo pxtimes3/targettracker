@@ -14,11 +14,29 @@
 	import { onMount } from 'svelte';
 	import { cls } from '@layerstack/tailwind';
 
-	let { data, active } : { data: {data: PageServerData, gunsEvents: GunsEvents}, active: boolean } = $props();
+	let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
 
 	let infoform : HTMLFormElement|undefined = $state();
 	let saved: Boolean = $state(false);
 	let saveTime: string|undefined = $state();
+	
+	let visibilitySelectedValue = $state(false);
+	const visibilityOptions: MenuOption[] = [
+		{
+			label: 'Hidden',
+			description: 'Not shown on your public page.',
+			value: false
+		},
+		{
+			label: 'Visible',
+			description: 'Shown on your public page (if its set to public).',
+			value: true
+		},
+	]; // default för visibility
+  	
+	const handleChange = () => {
+    	saved = false;
+  	};
 
 	const targetTypeOptions = [
 		{
@@ -28,6 +46,7 @@
 		}
 	];
 
+	let distanceSelected = $state('meters');
 	const distanceOptions: MenuOption[] = [
 		{
 			value: "meters",
@@ -39,7 +58,12 @@
 			label: "Yards",
 			description: "Range is in yards."
 		},
-	]
+	];
+
+	let eventOptions = $state(data.gunsEvents.events.map(event => ({
+		value: event.event.id,
+		label: event.event.name
+	})));
 
 	// word boundary för capitalcase
 	const re = /(\b[a-z](?!\s))/;
@@ -78,33 +102,34 @@
 				return;
 			}
 
-			if (field.type === 'submit' || !field.id) return;
+			if (field.type === 'submit' || !field.name) return;
 			
-			const fieldId = field.id;
+			const fieldName = field.name;
 			const fieldValue = field.value;
 
-			const storeValue = $TargetStore[fieldId as keyof TargetStoreInterface];
+			const storeValue = $TargetStore[fieldName as keyof TargetStoreInterface];
 			
 			if (fieldValue !== storeValue) {
 				saved = false;
-				($TargetStore as any)[fieldId] = fieldValue;
+				($TargetStore as any)[fieldName] = fieldValue;
 
-				if (($TargetStore as any)[fieldId] === fieldValue) {
+				if (($TargetStore as any)[fieldName] === fieldValue) {
 					saved = true;
 					saveTime = DateTime.now().toLocaleString(DateTime.TIME_24_WITH_SECONDS);
 				}
 
 				// debug
-				// console.log(`Field ${fieldId} differs:`, {
-				//	form: fieldValue,
-				//	store: storeValue
-				// });
+				console.log(`Field ${fieldName} differs:`, {
+					form: fieldValue,
+					store: storeValue
+				});
 			}
 		});
 	}
 
 	onMount(() => {
-		setInterval(compareFormWithStore, 15000);
+		setInterval(compareFormWithStore, 1500);
+		console.log(data)
 	})
 	
 </script>
@@ -118,16 +143,28 @@
 		<form id="infoform" bind:this={infoform} class="w-full">
 			<div class="p-4 grid grid-flow-row gap-y-2 justify-self-start place-self-start self-start w-full">
 				<div class="text-sm text-primary-950 grid grid-flow-col grid-cols-[1fr_auto]">
-					<Field 
-						label="Event"
+					<Field
+						label="Choose a previous Event or create a new Event"
 						let:id
+						class="h-full"
 					>
+						<SelectField
+							{id}
+							options={eventOptions}
+							class="mr-2"
+							placeholder="Existing events"
+							bind:value={eventOptions[0].value}
+						>
+						</SelectField>
+
 						<Input 
 							{id} 
 							name="eventName" 
-							value={ DateTime.now().toISODate() }
+							placeholder={ DateTime.now().toISODate() }
 							on:keypress={ () => {saved = false} }
+							bind:value={$TargetStore.info.event}
 							required
+							class="border rounded p-2"
 						/>
 					</Field>
 					<div class="ml-2">
@@ -156,7 +193,8 @@
 						<Input 
 							{id} 
 							name="targetName" 
-							value={ `Target #1 (${DateTime.now().toISODate()})` }
+							placeholder={ `Target #1 (${DateTime.now().toISODate()})` }
+							bind:value={$TargetStore.info.name}
 							on:keypress={ () => {saved = false} }
 							required
 						/>
@@ -194,7 +232,7 @@
 						<Toggle let:on={open} let:toggle let:toggleOff>
 							<Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
 								<div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
-									Used for automatic scoring of your target.
+									Used for automatic scoring of your target. (Coming Soon&trade;)
 								</div>
 							</Popover>
 							<Button
@@ -222,8 +260,8 @@
 						<SelectField
 							name="distanceUnit"
 							options={distanceOptions}
+							bind:value={distanceSelected}
 							onchange={ () => {saved = false} }
-							bind:value={$TargetStore.target.rangeUnit}
 							class="max-w-36"
 						>
 						</SelectField>
@@ -386,11 +424,32 @@
 					>
 						<SelectField
 							name="visibility"
-							onchange={ () => {saved = false} }
+							options={visibilityOptions}
+							bind:value={visibilitySelectedValue}
+							on:change={handleChange}
 						>
-							<option value="hidden">Hidden</option>
-							<option value="visible">Visible</option>
-						</SelectField>
+						<MenuItem
+							slot="option"
+							let:option
+							let:index
+							let:selected
+							let:highlightIndex
+							class={cls(
+								index === highlightIndex && "bg-surface-content/5",
+								option === selected && "font-semibold",
+								option.label ? "px-4" : "px-2",
+							)}
+							scrollIntoView={index === highlightIndex}
+						>
+							<div>
+								<div class="">{option.label}</div>
+								<div class="text-sm text-surface-content/50">
+									{option.group} {option.caliber}
+								</div>
+							</div>
+						</MenuItem>
+					</SelectField>
+
 					</Field>
 					<div class="ml-2">
 						<Toggle let:on={open} let:toggle let:toggleOff>
