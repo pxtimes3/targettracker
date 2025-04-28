@@ -2,7 +2,7 @@ import * as table from '$lib/server/db/schema';
 import { db } from "@/server/db";
 import type { Actions } from "@sveltejs/kit";
 import { fail } from '@sveltejs/kit';
-import { and, eq } from "drizzle-orm";
+import { and, eq, asc, desc } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -43,6 +43,13 @@ export const actions: Actions = {
             return fail(500, { error: String(error) });
         }
     },
+    saveTarget: async ({ request }) => {
+        try {
+            console.debug(request);
+        } catch (err) {
+            
+        }
+    }
 }
 
 async function fetchData(userId: string): Promise<GunsEvents|boolean> {
@@ -83,11 +90,9 @@ async function fetchData(userId: string): Promise<GunsEvents|boolean> {
                 eq(table.events.id, table.targets.eventId)
             )
             .where(
-                and(
-                    eq(table.events.userId, userId),
-                    eq(table.targets.userId, userId),
-                )
-            );
+                eq(table.events.userId, userId),
+            )
+            .orderBy(desc(table.events.createdAt));
 
         const ammunitionResult = await db
             .select()
