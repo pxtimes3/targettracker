@@ -348,18 +348,7 @@
 			/>
 		</button>
 
-		<button
-			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
-			title="Save"
-			id="save-button"
-			onclick={ (e) => { showPanel(e, "save"); $activePanel='save-panel' }}
-		>
-			<LucideSave
-				size="20"
-
-				class="pointer-events-none"
-			/>
-		</button>
+		<SaveButton />
 	</div>
 
 	<button
