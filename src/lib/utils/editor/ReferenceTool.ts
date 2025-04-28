@@ -27,9 +27,10 @@ export class ReferenceTool {
     private userSettings!: SettingsInterface;
     private targetStore!: TargetStoreInterface;
     private editorStore!: EditorStoreInterface;
+    public  editorStoreUnsubscribe: () => void;
     private refLine: Graphics;
     private isDrawingReferenceLine: boolean = false;
-    public aIsSet: boolean = false;
+    public  aIsSet: boolean = false;
     private xIsSet: boolean = false;
     private aIsMoved: boolean = true;
     public  xIsMoved: boolean = true;
@@ -45,10 +46,12 @@ export class ReferenceTool {
         this.targetContainer = targetContainer;
         this.userSettings = get(UserSettingsStore);
         this.targetStore = get(TargetStore);
-        EditorStore.subscribe(value => {
-            this.editorStore = value;
-        });
         this.referenceContainer = new Container();
+        this.editorStoreUnsubscribe = EditorStore.subscribe((values) => {
+            this.editorStore = values;
+            this.setVisible(this.editorStore.mode === 'reference');
+        });
+        this.referenceContainer.visible = this.editorStore.mode === 'reference' ? true : false;
         this.refLine = new Graphics();
         this.initialize();
     }
@@ -69,7 +72,8 @@ export class ReferenceTool {
         this.targetContainer.on('pointermove', this.updateReferenceLine.bind(this));
     }
 
-    private updateReferenceLine(event?: FederatedPointerEvent): void {
+    private updateReferenceLine(event?: FederatedPointerEvent): void 
+    {
         if (!this.isDrawingReferenceLine || !this.refLine) return;
     
         const startPoint = this.referenceContainer.getChildByLabel('ref-a');
@@ -550,5 +554,8 @@ export class ReferenceTool {
     {
         this.targetContainer.off('pointermove', this.updateReferenceLine);
         this.referenceContainer.destroy();
+        if (this.editorStoreUnsubscribe) {
+            this.editorStoreUnsubscribe();
+        }
     }
 }

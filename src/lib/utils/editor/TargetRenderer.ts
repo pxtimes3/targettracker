@@ -47,13 +47,13 @@ export class TargetRenderer {
     ): Promise<void> {
         try {
             setApplicationState('Initializing application...');
+            console.warn('Lost WebGL-context is normal, esp. in Firefox. Nothing to worry about');
         
             // get window dimensions
             const width = window.innerWidth;
             const height = window.innerHeight;
             
-            // Create custom WebGL context
-            const canvas = this.createWebGLContext();
+            const canvas = this.createContext();
             
             // init PIXI with custom canvas
             this.app = new Application();
@@ -66,7 +66,8 @@ export class TargetRenderer {
                     antialias: true,
                     resolution: 1,
                     hello: true,
-                    preference: "webgl",
+                    preference: "webgpu",
+                    powerPreference: 'high-performance',
                     canvas: canvas // Use our custom canvas
                 });
     
@@ -115,21 +116,20 @@ export class TargetRenderer {
         }
     }
 
-    public createWebGLContext(): HTMLCanvasElement 
+    public createContext(): HTMLCanvasElement 
     {
         const canvas = document.createElement('canvas');
-        
-        const gl = canvas.getContext('webgl2', {
+        canvas.getContext('webgpu', {
             alpha: true,
             antialias: true,
             premultipliedAlpha: false, // This is key for the alpha-premult warning
             preserveDrawingBuffer: true
         });
         
-        if (gl) {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-        }
+        // if (gl) {
+        //     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        //     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+        // }
         
         return canvas;
     }

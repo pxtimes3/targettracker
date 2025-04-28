@@ -1,4 +1,4 @@
-import { Assets } from "pixi.js";
+import { Assets, Cache, Resolver, resolveTextureUrl } from "pixi.js";
 import { type TargetStoreInterface } from '../../stores/TargetImageStore';
 
 export class TargetAssetManager {
@@ -45,7 +45,8 @@ export class TargetAssetManager {
         }
         
         // Register target with options if not already registered
-        if (!Assets.cache.has(targetPath)) {
+        console.debug('TargetPath?:', resolveTextureUrl.parse(targetPath));
+        if (!resolveTextureUrl.parse(targetPath)) {
             console.log("Registering target asset:", targetPath);
             Assets.add({
                 src: targetPath,
