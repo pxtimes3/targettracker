@@ -165,7 +165,7 @@
 		console.log(`Mode: ${$EditorStore.mode}`);
 		console.log(`Chromarea: ${chromeArea.x}:${chromeArea.y}`)
 		console.log('---');
-		showChildren(target?.app.stage);
+		// showChildren(target?.app.stage);
 	}
 
 	function showChildren(parent: Container|undefined, indent = 0) {
@@ -363,7 +363,9 @@
 			/>
 		</button>
 
-		<SaveButton />
+		<SaveButton 
+			on:click={(e) => console.log($TargetStore)}
+		/>
 	</div>
 
 	<button
