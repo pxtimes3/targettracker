@@ -87,6 +87,20 @@
 		console.log("Loading UI hidden");
 	}
 
+	function closeAll(): number
+	{
+		let count: number = 0;
+		const panels = document.querySelectorAll(`div[id$='-panel']`);
+		panels.forEach((el) => {
+			if(!el.classList.contains('hidden')) {
+				el.classList.add('hidden');
+				count++;
+			}
+		});
+
+		return count;
+	}
+
     function showPanel(e: Event, name: string): void
 	{
 		if (e.type != 'load' && !e.target) return;
@@ -309,7 +323,7 @@
 			id="shots-button"
 			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Place shots' }
 
-			onclick={() => { $EditorStore.mode === 'shots' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'shots'; }}
+			onclick={(e) => { $EditorStore.mode === 'shots' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'shots'; closeAll() }}
 			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 		>
 			<LucideLocate
