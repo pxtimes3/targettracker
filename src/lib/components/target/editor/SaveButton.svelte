@@ -7,12 +7,24 @@
     let enabled = $state(false);
     let hasShots = $state(false);
     let isRefComplete = $state(false);
+    let isFirearmSelected: string|boolean = $state(false);
+    let isAmmunitionSelected: string|boolean = $state(false);
+    let isEventValid: string|boolean = $state(false);
     
     $effect(() => {
         if ($EditorStore || $TargetStore) {
+            // @ts-ignore
             hasShots = $TargetStore.groups[0]?.shots?.length > 0 || false;
             isRefComplete = $EditorStore.isRefComplete || false;
-            enabled = isRefComplete && hasShots;
+            isFirearmSelected = $TargetStore.info.firearm.length == 32 ? true : false;
+            isAmmunitionSelected = $TargetStore.info.ammunition.length == 32 ? true : false;
+            isEventValid = $TargetStore.info.event.length > 2 ? true : false;
+            
+            enabled = isRefComplete 
+                && hasShots
+                && isFirearmSelected
+                && isAmmunitionSelected 
+                // && isEventValid;
         }
     });
 </script>
@@ -37,9 +49,12 @@
     
     {#if !enabled}
         <Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
-            <div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-48 rounded italic">
-                {#if !hasShots}<p>No shots recorded.</p>{/if}
-                {#if !isRefComplete}<p>You need to set the reference points.</p>{/if}
+            <div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-fit rounded italic">
+                <p>Cannot save.</p>
+                {#if !isFirearmSelected}<p>&circleddash; No firearm selected.</p>{/if}
+                {#if !isAmmunitionSelected}<p>&circleddash; No ammunition selected.</p>{/if}
+                {#if !isRefComplete}<p>&circleddash; You need to set reference points.</p>{/if}
+                {#if !hasShots}<p>&circleddash; No shots recorded.</p>{/if}
             </div>
         </Popover>
     {/if}
