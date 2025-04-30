@@ -444,3 +444,9 @@ function createTargetStore()
 }
 
 export const TargetStore = createTargetStore();
+
+
+// Så komponenter kan prata med varandra
+import type { Target } from '@/utils/editor/Target';
+
+export const targetInstance = writable<Target | undefined>(undefined);

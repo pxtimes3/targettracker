@@ -16,9 +16,12 @@
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
 	import { ThemeSwitch } from 'svelte-ux';
-	import SaveButton from '@/components/target/editor/SaveButton.svelte';
+	import AppBar from '@/components/target/editor/AppBar.svelte';
+	import { targetInstance } from '@/stores/TargetImageStore';
 
 	let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
+
+	let target: Target | undefined = $state();
 
 	let mode: undefined|string|"shots"|"reference"|"poa"|"move" = $state();
 	let mouse: {[key: string]: number; x: number, y:number} = $state({x:0, y:0});
@@ -33,21 +36,11 @@
 		'/cursors/shot.svg'
 	]);
 
-
-	let showMainMenu: boolean = $state(false);
-
-	let slider: number = $state(0);
-
-	
-	let selected: Array<Sprite | Container<ContainerChild>> = $state($EditorStore.selected);
-	let assignToGroupSelect: HTMLSelectElement|undefined = $state();
-
 	let canvasContainer: HTMLDivElement;
     let loader: HTMLDivElement;
     let applicationState: string = $state('Loading...');
-    let target: Target|undefined = $state();
     let chromeArea: {x: number, y: number} = $state({x: 0, y: 0});
-	let referencebutton: HTMLButtonElement|undefined = $state();
+	
 
 	function mousePosition(e: MouseEvent): void
     {
@@ -71,10 +64,13 @@
 		} else if (!e) {
 			chromeArea.x = window.innerWidth;
 			chromeArea.y = window.innerHeight;
+			console.log("loader:", loader);
+			
+			canvasContainer.classList.remove('opacity-35');
+			loader.classList.add('hidden');
+			
+			console.log("Loading UI hidden");
 		}
-		
-		// Reset the application state after getting dimensions
-		applicationState = "Loading...";
 	}
 
 	function loadingDone(): void {
@@ -101,45 +97,6 @@
 
 		return count;
 	}
-
-    function showPanel(e: Event, name: string): void
-	{
-		if (e.type != 'load' && !e.target) return;
-
-		let button;
-		let target;
-
-		if (e.type === 'load') {
-			button = document.getElementById(`${name}-button`) as HTMLButtonElement;
-		} else {
-			target = e.target as Element;
-			button = target.tagName === "BUTTON"
-				? target as HTMLButtonElement
-				: document.getElementById(`${name}-button`) as HTMLButtonElement;
-
-			if (!button) return;
-		}
-
-		const panel = document.getElementById(`${name}-panel`);
-		if (!panel) {
-			console.warn(`${name}-panel couldn't be found!?`);
-			return;
-		}
-
-		panel.classList.toggle('hidden');
-		panel.style.top = `${button.offsetTop}px`;
-		panel.style.left = `${button.offsetWidth + 4}px`;
-
-		// Hide other panels
-		if (!panel.classList.contains('hidden')) {
-			document.querySelectorAll("div[id$='-panel']").forEach((p) => {
-				if (p.id != panel.id) {
-					p.classList.add('hidden');
-				}
-			});
-		}
-	}
-
 
 	function handleResize(e?: Event): void
 	{
@@ -186,14 +143,6 @@
 		}
 	}
 
-	function togglePanels(name: string)
-	{
-		if (!name) return;
-
-		$activePanel === name ? $activePanel = undefined : $activePanel = name;
-		$activeButton === name ? $activeButton = undefined : $activeButton = name;
-	}
-
 	onMount(async () => {
 		try {
 			await getChromeArea();
@@ -201,6 +150,7 @@
 			
 			console.log("Creating Target instance");
 			target = new Target(chromeArea, staticAssets);
+			targetInstance.set(target);
 			
 			console.log("Starting Target initialization");
 			await target.initialize(canvasContainer, (state) => {
@@ -239,7 +189,8 @@
 
 	onDestroy(async () => {
 		if (target) {
-			await Assets.unload(staticAssets)
+			await Assets.unload(staticAssets);
+			targetInstance.set(undefined);
 		}
 
 		if (browser) {
@@ -253,14 +204,6 @@
 			canvasContainer.style.width  = `${chromeArea.x}px`;
 			canvasContainer.style.height = `${chromeArea.y}px`;
 		}
-
-		if ($activeButton) {
-			console.log($activeButton);
-		}
-
-		if ($activePanel) {
-			console.log($activePanel);
-		}
 	});
 </script>
 
@@ -268,182 +211,10 @@
 	onload={getChromeArea}
 	onresize={handleResize}
 />
-<aside
-	class="absolute grid grid-flow-row grid-rows-[auto_auto_auto_1fr] place-content-start justify-items-start z-50 top-0 left-0 h-[100vh] w-16 border-r-2 border-surface-400 bg-surface-300 "
->
-	<a href="/">
-		<button
-			id="targetTrackerMenu"
-			class="w-16 h-12 p-2 ml-2 my-4 cursor-pointer"
-		>
-			<Logo
-				width=36
-				height=36
-			/>
-		</button>
-	</a>
-	<div id="tools" class="grid grid-flow-row">
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
-		<button
-			title="Target information"
-			id="info-button"
-			onclick={ () => togglePanels('info-panel') }
-			class="w-16 h-12 mt-2 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center {$activePanel === 'info-panel' ? 'active' : ''} place-items-center"
-		>
-			<LucideTarget
-
-				class="pointer-events-none"
-			/>
-		</button>
-
-		<button
-			title="Set reference"
-			id="reference-button"
-			bind:this={referencebutton}
-			onclick={(e) => { $EditorStore.mode === 'reference' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'reference'; showPanel(e, "reference"); $activePanel = "reference-panel"; }}
-			class="w-16 h-12 cursor-pointer hover:bg-gradient-radial from-white/20 grid justify-items-center place-items-center items-center"
-		>
-			<LucideRuler
-				class="pointer-events-none"
-			/>
-		</button>
-		<!--disabled={ refMeasurementDirty ? true : false }-->
-		<button
-			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Set point of aim' }
-			id="poa-button"
-			onclick={() => { $EditorStore.mode === 'poa' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'poa'; }}
-			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
-		>
-			<LucideLocateFixed
-
-				class="pointer-events-none"
-			/>
-		</button>
-		<!--disabled={ refMeasurementDirty ? true : false }-->
-		<button
-			id="shots-button"
-			title={ $EditorStore.isRefDirty ? 'Set reference points first' : 'Place shots' }
-
-			onclick={(e) => { $EditorStore.mode === 'shots' ? $EditorStore.mode = 'none' : $EditorStore.mode = 'shots'; closeAll() }}
-			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
-		>
-			<LucideLocate
-
-				class="pointer-events-none"
-			/>
-		</button>
-
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
-
-		<button
-			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
-			title="Rotate target"
-			id="rotate-button"
-			onclick={ (e) => { showPanel(e, "rotate"); $activePanel="rotate-panel"; }}
-		>
-			<LucideRefreshCcw
-				size="20"
-
-				class="pointer-events-none"
-			/>
-		</button>
-
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
-
-		<button
-			class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
-			title="Settings"
-			id="settings-button"
-			onclick={ () => togglePanels('settings-panel') }
-		>
-			<SlidersHorizontal
-				size="20"
-
-				class="pointer-events-none"
-			/>
-		</button>
-
-		<SaveButton 
-			on:click={(e) => console.log($TargetStore)}
-		/>
-	</div>
-
-	<button
-		class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
-		title="Debug"
-		id="debug-button"
-		onclick={(e) => { /*showPanel(e, "settings")*/ logDebug() }}
-	>
-		<LucideBug
-			size="20"
-
-			class="pointer-events-none"
-		/>
-	</button>
-	<div class="grid place-self-end justify-self-start max-w-16 w-16 justify-items-center pb-4">
-		<ThemeSwitch classes={{
-			icon: "text-current",
-			switch: "",
-			toggle: "",
-		}} />
-	</div>
-</aside>
-
-<!-- panels -->
-<div id="rotate-panel" class="absolute z-50 {$activePanel === 'rotate-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
-    <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
-        <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
-        <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={ (e) => $activePanel = '' } />
-        </p>
-    </div>
-    <div class="pt-4">
-        <button id="rotate-left" class="btn ml-4 preset-filled align-middle" onclick={() => target?.rotateTarget(-90)}>
-            <LucideRotateCcwSquare color="#000" />
-        </button>
-
-        <input
-            type="text"
-            size="3"
-            placeholder={`${$TargetStore.target.rotation?.toString()}`}
-            value={`${$TargetStore.target.rotation?.toFixed(0).toString()}`}
-            class="w-[8ch] text-center rounded bg-white/80 border-0 text-black text-sm mx-2 pl-4 p-2 align-middle justify-self-center"
-			onkeyup={
-				(e) => {
-					setTimeout(() => {
-						let t = e.target as HTMLInputElement; target?.rotateTarget(parseFloat(t.value), {absolute: true})
-					}, 500)
-				}
-			}
-        />
-
-        <button id="rotate-left" class="btn preset-filled align-middle mr-4" onclick={() => target?.rotateTarget(90)}>
-            <LucideRotateCwSquare color="#000" />
-        </button>
-    </div>
-    <div class="pt-2 w-full mt-2 px-4 pb-2 place-self-start">
-        <input type="range" step="1" min="-45" max="45" bind:value={slider} oninput={() => target?.rotateTarget(0, {slider: slider})} class="slider w-full" id="rotationslider">
-    </div>
-</div>
-
-<ReferencePanel
-	data={data.data}
-	active={false}
-	position={{
-		top: referencebutton?.offsetTop + 'px',
-		left: referencebutton?.offsetLeft + 68 + 'px',
-	}}
-	{target}
-/>
-
-<SettingsPanel 
-	data={data}
-	active={false}
-/>
-
-<InfoPanel 
+<AppBar 
 	data={data}
 />
+
 
 <!-- followcursor -->
 {#if mode === "reference" && $UserSettingsStore.cursortips}

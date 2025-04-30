@@ -167,6 +167,7 @@
 						}
 						currentObj = arrayProp[Number(part)];
 					} else if (currentObj && typeof currentObj === 'object' && part in currentObj) {
+						// @ts-ignore
 						currentObj = currentObj[part as keyof typeof currentObj];
 					} else {
 						return false;

@@ -30,7 +30,7 @@
 </script>
 
 <Toggle let:on={open} let:toggle let:toggleOff>
-    <button
+    <Button
         class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
         title="Save"
         id="save-button"
@@ -45,7 +45,7 @@
             size="20"
             class="pointer-events-none"
         />
-    </button>
+    </Button>
     
     {#if !enabled}
         <Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">

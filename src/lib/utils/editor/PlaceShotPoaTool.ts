@@ -13,8 +13,8 @@ import { initialize } from '@/utils/target';
 
 export class ShotPoaTool {
     private targetContainer: Container;
-    private editorStore: EditorStoreInterface;
     private targetStore: TargetStoreInterface;
+    private editorStore: EditorStoreInterface;
     private userSettings: SettingsInterface;
     private metricsRenderer: MetricsRenderer;
     private groupManager: GroupManager;
@@ -24,6 +24,7 @@ export class ShotPoaTool {
     private isSelected: boolean = false;
     private userSettingsUnsubscribe: () => void;
     private targetStoreUnsubscribe: () => void;
+    private editorStoreUnsubscribe: () => void;
 
     constructor(targetContainer: Container) {
         this.targetContainer = targetContainer;
@@ -40,6 +41,10 @@ export class ShotPoaTool {
         type Point = {x: number, y: number};
 
         this.targetStoreUnsubscribe = TargetStore.subscribe((store) => {
+            this.targetStore = store;
+        });
+
+        this.editorStoreUnsubscribe = TargetStore.subscribe((store) => {
             this.targetStore = store;
         });
 
@@ -68,14 +73,18 @@ export class ShotPoaTool {
 
     public async addShot(x: number, y: number, group: string): Promise<void>
     {
-        const shot = await this.shotManager.addShot(x, y, group);
-        this.metricsRenderer.drawAllMetrics(parseInt(group));
+        if(this.editorStore.mode == 'shots') {
+            const shot = await this.shotManager.addShot(x, y, group);
+            this.metricsRenderer.drawAllMetrics(parseInt(group));
+        }
     }
 
     public async addPoa(x: number, y: number, group: string): Promise<void>
     {
-        const poa = await this.shotManager.addPoa(x, y, group);
-        this.metricsRenderer.drawAllMetrics(parseInt(group));
+        if(this.editorStore.mode == 'poa') {
+            const poa = await this.shotManager.addPoa(x, y, group);
+            this.metricsRenderer.drawAllMetrics(parseInt(group));
+        }
     }
 
     public async drawAllMetrics(group?: GroupInterface): Promise<void>

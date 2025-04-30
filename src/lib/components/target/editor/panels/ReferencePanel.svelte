@@ -2,27 +2,25 @@
 <script lang="ts">
     import { type PageServerData } from "$types";
     import { LucideX, LucideCheck } from "lucide-svelte";
-    import { EditorStore, activePanel } from '@/stores/EditorStore';
-    import { TargetStore, type TargetStoreInterface } from "@/stores/TargetImageStore";
+    import { EditorStore } from '@/stores/EditorStore';
+    import { TargetStore } from "@/stores/TargetImageStore";
+    import { targetInstance } from "@/stores/TargetImageStore";
     import { UserSettingsStore } from "@/stores/UserSettingsStore";
     import { Button } from "svelte-ux";
 	import { Target } from "@/utils/editor/Target";
-    import { onMount } from "svelte";
+	import type { Writable } from "svelte/store";
 
     let { data, active, position, target } : { 
         data: PageServerData, 
         active: boolean, 
-        position: {top: string, left: string},
-        target: Target | undefined
+        position?: {top: string, left: string},
+        target: Writable<Target | undefined>
     } = $props();
 
     let atoxInput = $state();
     let setRefDisabled: boolean = $state(true);
-
-    // console.log('Initial store state:', $TargetStore.reference);
         
     $effect(() => {
-        // Check if both coordinates exist for both points
         const hasPointA = $TargetStore.reference.a?.[0] !== undefined && 
                          $TargetStore.reference.a?.[1] !== undefined;
         const hasPointX = $TargetStore.reference.x?.[0] !== undefined && 
@@ -30,7 +28,7 @@
         
         setRefDisabled = !(hasPointA && hasPointX);
         
-        // console.log('Reference state:', {
+        // console.debug('Reference state:', {
         //     pointA: $TargetStore.reference.a,
         //     pointX: $TargetStore.reference.x,
         //     hasPointA,
@@ -38,18 +36,30 @@
         //     disabled: setRefDisabled
         // });
     });
-    
-    // onMount(() => {
-    //     console.log('Component mounted, store state:', $TargetStore.reference);
-    // });
 </script>
 
 
-<div id="reference-panel" class="absolute z-50 grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 shadow-md w-64 max-w-64 hidden" style="top: {position.top}; left: {position.left};">
+<div 
+    id="reference-panel" 
+    class="
+        absolute 
+        z-50 
+        grid-rows-[auto_1fr_auto] 
+        grid-flow-row 
+        pb-0 
+        space-y-0 
+        bg-slate-400 
+        shadow-md 
+        w-64 
+        max-w-64 
+        { $EditorStore.mode == 'reference' ? 'grid' : 'hidden' }
+    " 
+>
+<!--style="top: {position?.top}; left: {position?.left};"-->
     <div id="header" class="w-full bg-slate-600 py-2 px-4 text-xs h-10 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start whitespace-nowrap">Reference points</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={(e) => { $activePanel = ''; }} />
+            <LucideX size="14" class="cursor-pointer" onclick={(e) => { $EditorStore.mode = 'none'; }} />
         </p>
     </div>
     <div class="p-4">
@@ -75,7 +85,7 @@
                 variant="fill-outline" 
                 size="sm" 
                 disabled={setRefDisabled} 
-                onclick={() => target?.setRefMeasurement()}
+                onclick={() => $targetInstance?.setRefMeasurement()}
             >
                 Set
             </Button>

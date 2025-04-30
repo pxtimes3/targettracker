@@ -12,7 +12,7 @@ const WarningSchema = z.object({
 
 export type WarningInterface = z.infer<typeof WarningSchema>;
 
-const modeSchema = z.enum(['drag', 'shots', 'poa', 'reference', 'none']);
+const modeSchema = z.enum(['drag', 'shots', 'poa', 'reference', 'settings', 'none']);
 export type Mode = z.infer<typeof modeSchema>
 
 const EditorStoreSchema = z.object({
@@ -24,6 +24,7 @@ const EditorStoreSchema = z.object({
     refMeasurement: z.string(),
     isRefDirty: z.boolean(),
     isRefComplete: z.boolean(),
+    isInfoComplete: z.boolean(),
     selected: z.array(z.any()),
     mode: modeSchema
 })
@@ -48,6 +49,7 @@ export const EditorStore: Writable<EditorStoreInterface> = writable({
     refMeasurement: '',
     isRefDirty: false,
     isRefComplete: false,
+    isInfoComplete: false,
     selected: [],
     mode: 'none'
 });
