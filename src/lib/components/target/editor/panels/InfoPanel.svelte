@@ -8,7 +8,7 @@
 	import { slide } from 'svelte/transition'
 	import { quadInOut } from 'svelte/easing';
 	import { DateTime } from "luxon";
-	import { EditorStore, activePanel } from '@/stores/EditorStore';
+	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
 	import { CircleHelp, PlusSquare } from 'lucide-svelte';
 	import { onMount } from 'svelte';
@@ -272,7 +272,7 @@
 	
 </script>
 
-{#if $activePanel === 'info-panel'}
+{#if $EditorStore.mode === 'info'}
 	<div 
 		id="info-panel" 
 		class="absolute justify-items-end z-50 left-16 grid grid-flow-row pb-0 px-2 py-4 space-y-0 bg-slate-400 dark:bg-slate-800 w-[36rem] h-full overflow-y-auto overflow-x-hidden"

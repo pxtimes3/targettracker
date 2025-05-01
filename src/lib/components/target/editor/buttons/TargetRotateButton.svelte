@@ -1,15 +1,17 @@
 <script lang="ts">
-    import { togglePanels } from "@/utils/editor/PanelSwitcher";
-    import { activePanel, EditorStore } from "@/stores/EditorStore";
-    import { LucideRefreshCcw, SlidersHorizontal } from "lucide-svelte";
+    import { EditorStore } from "@/stores/EditorStore";
+    import { LucideRefreshCcw } from "lucide-svelte";
+    import RotatePanel from "../panels/RotatePanel.svelte";
 	import { Button } from "svelte-ux";
-	import { checkIfModeCanBeActivated } from "@/utils/editor/ModeSwitcher";
+	import { setMode } from "@/utils/editor/ModeSwitcher";
+
+    let position: {x: number, y: number} = $state({x:0, y:0});
 </script>
 
 <Button
     title="Rotate Target"
     id="rotate-button"
-    onclick={ () => togglePanels('rotate-panel') }
+    onclick={ () => setMode('rotate') }
     class="
         w-16 
         h-12 
@@ -20,10 +22,15 @@
         justify-items-center 
         place-items-center 
         items-center
-        {$activePanel === 'rotate' ? 'editorButtonActive' : ''}
     "
 >
     <LucideRefreshCcw
         class="pointer-events-none"
     />
 </Button>
+
+{#if $EditorStore.mode == 'rotate'}
+<RotatePanel 
+    {position}
+/>
+{/if}

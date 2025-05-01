@@ -1,21 +1,14 @@
 <!-- src/routes/pixi/+page.svelte -->
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import Logo from '@/components/logo/logo.svelte';
-	import { EditorStore, activePanel, activeButton } from '@/stores/EditorStore';
+	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore } from '@/stores/TargetImageStore';
 	import { UserSettingsStore } from '@/stores/UserSettingsStore';
-	import InfoPanel from '@/components/target/editor/panels/InfoPanel.svelte';
-	import SettingsPanel from '@/components/target/editor/panels/SettingsPanel.svelte';
 	import GroupPanel from '@/components/target/editor/panels/GroupPanel.svelte';
-	import ReferencePanel from '@/components/target/editor/panels/ReferencePanel.svelte';
 	import { Target } from '@/utils/editor/Target';
-	import { LucideBug, LucideLocate, LucideLocateFixed, LucideSave, LucideRefreshCcw, LucideRotateCcwSquare, LucideRotateCwSquare, LucideRuler, LucideTarget, LucideX, SlidersHorizontal } from 'lucide-svelte';
-	import type { ContainerChild, Renderer } from 'pixi.js';
 	import { Assets, Container, Sprite } from 'pixi.js';
 	import { onDestroy, onMount } from 'svelte';
 	import type { PageServerData } from './$types';
-	import { ThemeSwitch } from 'svelte-ux';
 	import AppBar from '@/components/target/editor/AppBar.svelte';
 	import { targetInstance } from '@/stores/TargetImageStore';
 

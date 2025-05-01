@@ -1,6 +1,6 @@
 <!-- src/lib/components/target/editor/panels/SettingsPanel.svelte  -->
 <script lang="ts">
-    import type { PageServerData } from './$types';
+    import type { PageServerData } from '$types';
     import { UserSettingsStore, type SettingsInterface } from '@/stores/UserSettingsStore';
 	import { Button } from 'svelte-ux';
     import { Switch } from 'svelte-ux';
@@ -8,7 +8,7 @@
 	import { slide } from 'svelte/transition'
 	import { quadInOut } from 'svelte/easing';
 	import { DateTime } from "luxon";
-	import { EditorStore, activePanel } from '@/stores/EditorStore';
+	import { EditorStore } from '@/stores/EditorStore';
 	import { TargetStore, type TargetStoreInterface } from '@/stores/TargetImageStore';
 	import { LucideX, LucideChevronDown, type Icon as IconType } from 'lucide-svelte';
 	import { onMount } from 'svelte';
@@ -27,13 +27,12 @@
     })
 </script>
 
-{#if $activePanel === 'settings-panel'}
+{#if $EditorStore.mode === 'settings'}
 	<div 
 		id="settings-panel" 
 		class="absolute justify-items-end z-50 left-16 grid grid-flow-row pb-0 px-2 py-4 space-y-0 bg-slate-400 dark:bg-slate-800 min-w-16 w-[24rem] h-full overflow-y-auto overflow-x-hidden"
 		transition:slide={{axis: 'x', duration: 150, easing: quadInOut }}
 	>
-<!--<div id="settings-panel" class="absolute z-50 {$activePanel === 'settings-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">-->
         <form id="settingsForm" bind:this={settingsForm} class="w-full h-full">
                 <div class="p-4 mb-8 grid grid-flow-row gap-y-2 w-full overflow-x-hidden min-w-48 h-full place-content-start">
                     <div class="text-md font-bold border-b-2 border-text mt-2 mb-2">Editor</div>

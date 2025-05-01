@@ -16,8 +16,7 @@
 	import TargetRotateButton from "./buttons/TargetRotateButton.svelte";
 	// Panels
     import RotatePanel from "./panels/RotatePanel.svelte";
-	import ReferencePanel from "./panels/ReferencePanel.svelte";
-	import SettingsPanel from "./panels/SettingsPanel.svelte";
+    import SettingsPanel from "./panels/SettingsPanel.svelte";
 	import InfoPanel from "./panels/InfoPanel.svelte";
 
     let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
@@ -42,7 +41,9 @@
 	<div id="tools" class="grid grid-flow-row">
 		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
         <TargetInfoButton />
-		<TargetReferenceButton />
+		<TargetReferenceButton
+            {data}
+        />
         <TargetPointOfAimButton />
         <TargetShotsButton />
 		
@@ -82,16 +83,10 @@
 </aside>
 
 <!-- panels -->
-<RotatePanel />
 
-<ReferencePanel
-	data={data.data}
-	active={false}
-	target={target}
-/>
 
 <SettingsPanel 
-	data={data}
+	data={data.data}
 	active={false}
 />
 

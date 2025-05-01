@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { togglePanels } from "@/utils/editor/PanelSwitcher";
     import { EditorStore } from "@/stores/EditorStore";
+	import { setMode } from "@/utils/editor/ModeSwitcher";
     import { SlidersHorizontal } from "lucide-svelte";
 	import { Button } from "svelte-ux";
 </script>
@@ -8,7 +8,7 @@
 <Button
     title="Editor Settings"
     id="settings-button"
-    onclick={ () => togglePanels('settings-panel') }
+    onclick={ () => setMode('settings') }
     class="
         w-16 
         h-12 

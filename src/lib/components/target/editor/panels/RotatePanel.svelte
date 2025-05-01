@@ -1,17 +1,20 @@
 <script lang="ts">
-    import { activePanel } from "@/stores/EditorStore";
     import { TargetStore } from "@/stores/TargetImageStore";
+    import { EditorStore } from "@/stores/EditorStore";
     import { targetInstance } from "@/stores/TargetImageStore";
 	import { LucideX, LucideRotateCcwSquare, LucideRotateCwSquare } from "lucide-svelte";
+	import { setMode } from "@/utils/editor/ModeSwitcher";
+
+    let { position }: { position: { x: number, y: number }|undefined } = $props();
 
     let slider: number = $state(0);
 </script>
 
-<div id="rotate-panel" class="absolute z-50 {$activePanel === 'rotate-panel' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
+<div id="rotate-panel" class="absolute z-50 {$EditorStore.mode === 'rotate' ? 'grid' : 'hidden' }  grid-rows-[auto_1fr_auto] grid-flow-row pb-0 space-y-0 bg-slate-400 w-64 max-w-64">
     <div id="header" class="w-full py-2 px-4 text-xs text-black h-8 place-items-center leading-0 uppercase grid grid-cols-2">
         <p class="tracking-widest pointer-events-none justify-self-start">Rotation</p>
         <p class="justify-self-end">
-            <LucideX size="14" class="cursor-pointer" onclick={ (e) => $activePanel = '' } />
+            <LucideX size="14" class="cursor-pointer" onclick={ (e) => setMode('none') } />
         </p>
     </div>
     <div class="pt-4">

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { TargetStore } from "@/stores/TargetImageStore";
     import { EditorStore } from "@/stores/EditorStore";
-	import { LucideAirVent, LucideSave } from "lucide-svelte";
+	import { LucideSave } from "lucide-svelte";
 	import { Button, Toggle, Popover } from "svelte-ux";
 
     let enabled = $state(false);
@@ -45,11 +45,9 @@
             size="20"
             class="pointer-events-none"
         />
-    </Button>
-    
-    {#if !enabled}
-        <Popover {open} on:close={toggleOff} placement="bottom-end" class="mt-[-1rem]">
-            <div class="px-3 py-3 bg-surface-100 border shadow text-sm max-w-fit rounded italic">
+        {#if !enabled}
+        <Popover {open} on:close={toggleOff} placement="right-start">
+            <div class="px-3 py-3 border shadow text-sm text-slate-800 max-w-fit rounded italic bg-yellow-100 dark:bg-yellow-100">
                 <p class="not-italic">Cannot save...</p>
                 {#if !isFirearmSelected}<p>&circleddash; No firearm selected.</p>{/if}
                 {#if !isAmmunitionSelected}<p>&circleddash; No ammunition selected.</p>{/if}
@@ -58,6 +56,6 @@
             </div>
         </Popover>
     {/if}
+    </Button>
 </Toggle>
-    <!--onclick={ (e) => { showPanel(e, "save"); $activePanel='save-panel' }}-->
     
