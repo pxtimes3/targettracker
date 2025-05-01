@@ -73,9 +73,11 @@ export class ShotPoaTool {
 
     public async addShot(x: number, y: number, group: string): Promise<void>
     {
-        if(this.editorStore.mode == 'shots') {
+        if(get(EditorStore).mode == 'shots') {
             const shot = await this.shotManager.addShot(x, y, group);
             this.metricsRenderer.drawAllMetrics(parseInt(group));
+        } else {
+            console.warn(`this.editorStore.mode is: ${get(EditorStore).mode}`);
         }
     }
 
