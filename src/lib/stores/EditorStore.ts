@@ -12,7 +12,7 @@ const WarningSchema = z.object({
 
 export type WarningInterface = z.infer<typeof WarningSchema>;
 
-const modeSchema = z.enum(['drag', 'shots', 'poa', 'reference', 'settings', 'none']);
+const modeSchema = z.enum(['drag', 'info', 'shots', 'poa', 'reference', 'rotate', 'settings', 'none']);
 export type Mode = z.infer<typeof modeSchema>
 
 const EditorStoreSchema = z.object({
@@ -22,6 +22,7 @@ const EditorStoreSchema = z.object({
     xIsMoved: z.boolean(),
     xIsSet: z.boolean(),
     refMeasurement: z.string(),
+    refMeasurementUnit: z.string(),
     isRefDirty: z.boolean(),
     isRefComplete: z.boolean(),
     isInfoComplete: z.boolean(),
@@ -30,9 +31,6 @@ const EditorStoreSchema = z.object({
 })
 
 export type EditorStoreInterface = z.infer<typeof EditorStoreSchema>;
-
-export const activeButton:      Writable<string|undefined> = writable();
-export const activePanel:       Writable<string|undefined> = writable();
 
 export const showAddFirearm:    Writable<boolean> = writable(false);
 export const showAddAmmunition: Writable<boolean> = writable(false);
@@ -47,7 +45,8 @@ export const EditorStore: Writable<EditorStoreInterface> = writable({
     xIsMoved: false,
     xIsSet: false,
     refMeasurement: '',
-    isRefDirty: false,
+    refMeasurementUnit: 'cm',
+    isRefDirty: true,
     isRefComplete: false,
     isInfoComplete: false,
     selected: [],
