@@ -112,13 +112,14 @@ const TargetStoreSchema = z.object({
         }),
     }),
     reference: z.object({
-        a: z.tuple([z.number(), z.number()]).optional(), // [x,y]
-        x: z.tuple([z.number(), z.number()]).optional(), // [x,y]
+        a: z.tuple([z.number(), z.number()]), // [x,y]
+        x: z.tuple([z.number(), z.number()]), // [x,y]
         y: z.tuple([z.number(), z.number()]).optional(), // [x,y]
-        linelength: z.number().optional(),
-        measurement: z.number().optional(),    // User supplied;
-        cm: z.number().optional(),             // 1 cm === px
-        px: z.number().optional()              // 100px == mm
+        linelength: z.number(),
+        measurement: z.number(),    // User supplied;
+        measurementUnit: z.union([z.literal('cm'), z.literal('in')]),
+        cm: z.number(),             // 1 cm === px
+        px: z.number()              // 100px == mm
     }),
     analysisFetched: z.boolean().default(false),
     activeGroup: z.number().default(0),
