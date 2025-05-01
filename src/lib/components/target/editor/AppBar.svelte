@@ -18,6 +18,7 @@
     import RotatePanel from "./panels/RotatePanel.svelte";
     import SettingsPanel from "./panels/SettingsPanel.svelte";
 	import InfoPanel from "./panels/InfoPanel.svelte";
+	import { EditorStore } from "@/stores/EditorStore";
 
     let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
 
@@ -61,18 +62,21 @@
 
     <!-- 
     TODO: Bättre funktionalitet för debug button.
+	-->
 	<button
 		class="w-16 h-12 grid cursor-pointer hover:bg-gradient-radial from-white/20 justify-items-center place-items-center"
 		title="Debug"
 		id="debug-button"
+		onclick={() => {
+			console.log($TargetStore);
+			console.log($EditorStore);
+		}}
 	>
 		<LucideBug
 			size="20"
-
 			class="pointer-events-none"
 		/>
 	</button>
-    -->
 	<div class="grid place-self-end justify-self-start max-w-16 w-16 justify-items-center pb-4">
 		<ThemeSwitch classes={{
 			icon: "text-current",
