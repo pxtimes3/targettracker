@@ -30,8 +30,6 @@
     <Button
         title="Set point of aim"
         id="poa-button"
-        onclick={ () => { setMode('shots') }}
-        disabled={checkIfModeCanBeActivated('shots') ? false : true }
         class="
             w-16 
             h-12 
@@ -44,6 +42,12 @@
             items-center
             {$EditorStore.mode === 'shots' ? 'editorButtonActive' : ''}
         "
+        onclick={ () => { setMode('shots') }}
+        onmouseover={enabled ? undefined : toggle}
+        onfocus={enabled ? undefined : toggle}
+        onmouseout={enabled ? undefined : toggle}
+        onblur={enabled ? undefined : toggle}
+        style={enabled ? "" : "opacity: 0.5;"}
     >
         <LucideLocate
             class="pointer-events-none"
@@ -51,7 +55,7 @@
         {#if !enabled}
             <Popover {open} on:close={toggleOff} placement="right-start">
                 <div class="px-3 py-3 border shadow text-sm text-slate-800 max-w-fit rounded italic bg-yellow-100 dark:bg-yellow-100">
-                    <p class="not-italic font-bold">Cannot set POA...</p>
+                    <p class="not-italic font-bold">Cannot place shots...</p>
                     {#if !isFirearmSelected}<p>&circleddash; No firearm selected.</p>{/if}
                     {#if !isAmmunitionSelected}<p>&circleddash; No ammunition selected.</p>{/if}
                     {#if !isRefComplete}<p>&circleddash; You need to set reference points.</p>{/if}

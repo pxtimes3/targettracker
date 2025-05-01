@@ -4,14 +4,33 @@
     import RotatePanel from "../panels/RotatePanel.svelte";
 	import { Button } from "svelte-ux";
 	import { setMode } from "@/utils/editor/ModeSwitcher";
+    import { getElementPosition } from "@/utils/editor/EditorUtils";
 
-    let position: {x: number, y: number} = $state({x:0, y:0});
+    // let target: Writable<Target|undefined>= $state(targetInstance);
+    let button: Button|undefined = $state();
+    let position: {x: number, y: number} = $state({x: 0, y: 0});
+
+    $effect(() => {
+        if(button) {
+            let actualbutton = getElementPosition(document.getElementById('rotate-button'));
+            if (actualbutton) position = actualbutton;
+        }
+    })
+
+    function getButtonPosition(button: HTMLElement | null)
+    {
+        if(!button) return;
+        position.x = button.offsetWidth;
+        position.y = button.offsetTop;
+        console.log(button)
+    }
 </script>
 
 <Button
     title="Rotate Target"
     id="rotate-button"
-    onclick={ () => setMode('rotate') }
+    onclick={ () => {setMode('rotate'); console.log(position)} }
+    bind:this={button}
     class="
         w-16 
         h-12 
@@ -32,5 +51,6 @@
 {#if $EditorStore.mode == 'rotate'}
 <RotatePanel 
     {position}
+    classes="bg-white dark:bg-slate-800 border shadow rounded-lg absolute z-50 max-w-fit min-w-72 text-sm"
 />
 {/if}

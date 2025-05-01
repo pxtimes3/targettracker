@@ -7,9 +7,9 @@
     import type { PageServerData } from "$types";
     import type { Writable } from "svelte/store";
     import { LucideRuler } from "lucide-svelte";
-	import { Button, Toggle, Popover } from "svelte-ux";
+	import { Button } from "svelte-ux";
 	import ReferencePanel from "../panels/ReferencePanel.svelte";
-	import { onMount } from "svelte";
+    import { getElementPosition } from "@/utils/editor/EditorUtils";
 	
     let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
     let target: Writable<Target|undefined>= $state(targetInstance);
@@ -18,17 +18,10 @@
 
     $effect(() => {
         if(button) {
-            getButtonPosition(document.getElementById('reference-button'));
+            const actualbutton = (document.getElementById('reference-button'));
+            position = getElementPosition(actualbutton);
         }
-    })
-
-    function getButtonPosition(button: HTMLElement | null)
-    {
-        if(!button) return;
-        position.x = button.offsetWidth;
-        position.y = button.offsetTop;
-        console.log(button)
-    }
+    });
 </script>
 
 

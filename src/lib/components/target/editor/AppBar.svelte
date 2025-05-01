@@ -39,7 +39,7 @@
 		</button>
 	</a>
 	<div id="tools" class="grid grid-flow-row">
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
+		<hr class="max-w-[70%] ml-[15%] opacity-40 border-t-1 border-current"/>
         <TargetInfoButton />
 		<TargetReferenceButton
             {data}
@@ -47,12 +47,12 @@
         <TargetPointOfAimButton />
         <TargetShotsButton />
 		
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
+		<hr class="max-w-[70%] ml-[15%] opacity-40 my-2 border-t-1 border-current"/>
 
         <TargetSettingsButton />
         <TargetRotateButton />
 
-		<hr class="max-w-[70%] ml-[15%] opacity-40 mt-3 border-t-1 border-current"/>
+		<hr class="max-w-[70%] ml-[15%] opacity-40 my-2 border-t-1 border-current"/>
 
 		<SaveButton 
 			on:click={(e) => console.log($TargetStore)}
