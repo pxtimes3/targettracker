@@ -144,75 +144,76 @@
 		// TODO: open drawer with src/lib/components/gun/AddEditGun.svelte or ammunition/AddEditAmmunition
 	}
 
-	function compareFormWithStore() // TODO: Hitta en bättre metod för compareFormWithStore
-	{
-		if (!infoform) return;
-		
-		// Helper function to check if a path exists in the interface type
-		const pathExistsInInterface = (path: string): boolean => {
-			// We'll use a type checking approach based on the structure of TargetStoreInterface
-			try {
-				const parts = path.split('.');
-				let currentObj = $TargetStore;
+	const pathExistsInInterface = (path: string): boolean => {
+		// We'll use a type checking approach based on the structure of TargetStoreInterface
+		try {
+			const parts = path.split('.');
+			let currentObj = $TargetStore;
+			
+			for (let i = 0; i < parts.length - 1; i++) {
+				const part = parts[i];
 				
-				for (let i = 0; i < parts.length - 1; i++) {
-					const part = parts[i];
-					
-					// Handle array indices
-					if (!isNaN(Number(part)) && Array.isArray(currentObj[part as keyof typeof currentObj])) {
-						const arrayProp = currentObj[part as keyof typeof currentObj] as any[];
-						// Check if the index exists
-						if (arrayProp.length <= Number(part)) {
-							return false;
-						}
-						currentObj = arrayProp[Number(part)];
-					} else if (currentObj && typeof currentObj === 'object' && part in currentObj) {
-						// @ts-ignore
-						currentObj = currentObj[part as keyof typeof currentObj];
-					} else {
+				// Handle array indices
+				if (!isNaN(Number(part)) && Array.isArray(currentObj[part as keyof typeof currentObj])) {
+					const arrayProp = currentObj[part as keyof typeof currentObj] as any[];
+					// Check if the index exists
+					if (arrayProp.length <= Number(part)) {
 						return false;
 					}
+					currentObj = arrayProp[Number(part)];
+				} else if (currentObj && typeof currentObj === 'object' && part in currentObj) {
+					// @ts-ignore
+					currentObj = currentObj[part as keyof typeof currentObj];
+				} else {
+					return false;
 				}
-				
-				// Check if the final property exists
-				const lastPart = parts[parts.length - 1];
-				return currentObj && typeof currentObj === 'object' && lastPart in currentObj;
-			} catch (e) {
-				console.error(`Error checking interface for path ${path}:`, e);
-				return false;
-			}
-		};
-		
-		// Helper functions for property access
-		const getNestedValue = (obj: any, path: string): any => {
-			return path.split('.').reduce((prev, curr) => 
-				prev && prev[curr] !== undefined ? prev[curr] : undefined, obj);
-		};
-		
-		const setNestedValue = (obj: any, path: string, value: any): boolean => {
-			// First check if path exists in interface
-			if (!pathExistsInInterface(path)) {
-				console.warn(`Path ${path} does not exist in TargetStoreInterface, skipping update`);
-				return false;
 			}
 			
-			const parts = path.split('.');
-			const lastKey = parts.pop();
-			if (!lastKey) return false;
-			
-			const target = parts.reduce((prev, curr) => {
-				if (prev && typeof prev === 'object' && curr in prev) {
-					return prev[curr];
-				}
-				return undefined;
-			}, obj);
-			
-			if (target && typeof target === 'object') {
-				target[lastKey] = value;
-				return target[lastKey] === value;
-			}
+			// Check if the final property exists
+			const lastPart = parts[parts.length - 1];
+			return currentObj && typeof currentObj === 'object' && lastPart in currentObj;
+		} catch (e) {
+			console.error(`Error checking interface for path ${path}:`, e);
 			return false;
-		};
+		}
+	};
+
+	const getNestedValue = (obj: any, path: string): any => {
+		return path.split('.').reduce((prev, curr) => 
+			prev && prev[curr] !== undefined ? prev[curr] : undefined, obj);
+	};
+	
+	// const setNestedValue = (obj: any, path: string, value: any): boolean => {
+	// 	// First check if path exists in interface
+	// 	if (!pathExistsInInterface(path)) {
+	// 		console.warn(`Path ${path} does not exist in TargetStoreInterface, skipping update`);
+	// 		return false;
+	// 	}
+		
+	// 	const parts = path.split('.');
+	// 	const lastKey = parts.pop();
+	// 	if (!lastKey) return false;
+		
+	// 	const target = parts.reduce((prev, curr) => {
+	// 		if (prev && typeof prev === 'object' && curr in prev) {
+	// 			return prev[curr];
+	// 		}
+	// 		return undefined;
+	// 	}, obj);
+		
+	// 	if (target && typeof target === 'object') {
+	// 		target[lastKey] = value;
+	// 		return target[lastKey] === value;
+	// 	}
+	// 	return false;
+	// };
+
+	function compareFormWithStore() {
+		if (!infoform) return;
+		
+		// Create a copy of the current store
+		const updatedStore = structuredClone($TargetStore);
+		let hasChanges = false;
 		
 		// Process each field
 		Array.from(infoform.elements).forEach(field => {
@@ -230,7 +231,6 @@
 			
 			// Skip if path doesn't exist in interface
 			if (!pathExistsInInterface(fieldName)) {
-				// console.warn(`Field ${fieldName} does not exist in TargetStoreInterface, skipping update`);
 				return;
 			}
 			
@@ -239,17 +239,17 @@
 			// Skip if values are the same
 			if (fieldValue === storeValue) return;
 			
-			// Update the store
-			saved = false;
-			const updateSuccess = fieldName.includes('.') 
-				? setNestedValue($TargetStore, fieldName, fieldValue)
-				: (($TargetStore as any)[fieldName] = fieldValue, 
-				($TargetStore as any)[fieldName] === fieldValue);
+			// Update the cloned store
+			const parts = fieldName.split('.');
+			let current = updatedStore;
 			
-			if (updateSuccess) {
-				saved = true;
-				saveTime = DateTime.now().toLocaleString(DateTime.TIME_24_WITH_SECONDS);
+			for (let i = 0; i < parts.length - 1; i++) {
+				current = current[parts[i]];
 			}
+			
+			const lastPart = parts[parts.length - 1];
+			current[lastPart] = fieldValue;
+			hasChanges = true;
 			
 			// debug
 			console.log(`Field ${fieldName} differs:`, {
@@ -257,17 +257,24 @@
 				store: storeValue
 			});
 		});
+		
+		// Only update the store if there were changes
+		if (hasChanges) {
+			$TargetStore = updatedStore;
+			saved = true;
+			saveTime = DateTime.now().toLocaleString(DateTime.TIME_24_WITH_SECONDS);
+		}
 	}
 
 	onMount(() => {
 		setInterval(compareFormWithStore, 150);
-		console.log(data)
+		console.log(data);
 	});
 
 	$effect(() => {
-	if (infoEventElement?.value) {
-		console.log('infoEventElement?.value:', infoEventElement?.value);
-	}
+		if (infoEventElement?.value) {
+			console.log('infoEventElement?.value:', infoEventElement?.value);
+		}
 	});
 	
 </script>
@@ -397,14 +404,14 @@
 					>
 						<Input 
 							{id} 
-							name="targetName" 
+							name="target.range" 
 							placeholder=80
 							type="number"
 							on:keypress={ () => {saved = false} }
 							required
 						/>
 						<SelectField
-							name="distanceUnit"
+							name="target.rangeUnit"
 							options={distanceOptions}
 							bind:value={distanceSelected}
 							onchange={ () => {saved = false} }
