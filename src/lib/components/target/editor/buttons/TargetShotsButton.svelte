@@ -1,28 +1,49 @@
+<!-- src/lib/components/target/editor/buttons/TargetShotsButton.svelte -->
 <script lang="ts">
-    import { checkIfModeCanBeActivated, setMode } from "@/utils/editor/ModeSwitcher";
+    import { setMode } from "@/utils/editor/ModeSwitcher";
+    import { canWeActivateMode } from "@/utils/editor/EditorUtils";
     import { EditorStore } from "@/stores/EditorStore";
     import { TargetStore } from "@/stores/TargetImageStore";
     import { Button, Toggle, Popover } from "svelte-ux";
     import { LucideLocate } from "lucide-svelte";
+	import { onMount } from "svelte";
 	
-    let enabled = $state(false);
-    let hasShots = $state(false);
-    let isRefComplete = $state(false);
-    let isFirearmSelected = $state(false);
-    let isAmmunitionSelected = $state(false);
-    let isEventValid = $state(false);
+    let enabled: { status: boolean, missing: string[]} = $state({ status: false, missing: []});
+
+    let targetInfoState = $derived({
+        firearm: $TargetStore.info.firearm,
+        ammunition: $TargetStore.info.ammunition,
+        event: $TargetStore.info.event,
+        range: $TargetStore.target.range,
+        isRefComplete: $EditorStore.isRefComplete
+    });
+    
+    function updateEnabled() {
+        enabled = canWeActivateMode('shots');
+        console.log('Checking mode activation, enabled:', $state.snapshot(enabled));
+    }
 
     $effect(() => {
-        if ($EditorStore || $TargetStore) {
-            // @ts-ignore
-            hasShots = $TargetStore.groups[0]?.shots?.length > 0 || false;
-            isRefComplete = $EditorStore.isRefComplete || false;
-            isFirearmSelected = $TargetStore.info.firearm?.length == 36 ? true : false;
-            isAmmunitionSelected = $TargetStore.info.ammunition.length == 36 ? true : false;
-            isEventValid = $TargetStore.info.event.length > 2 ? true : false;
+        // This should now react to changes in the store
+        const firearm = $TargetStore.info.firearm;
+        const ammunition = $TargetStore.info.ammunition;
+        const event = $TargetStore.info.event;
+        const isRefComplete = $EditorStore.isRefComplete;
+        const range = $TargetStore.target.range;
+        
+        console.log('Store values changed:', { 
+            firearm, 
+            ammunition, 
+            event, 
+            isRefComplete,
+            range
+        });
+        
+        enabled = canWeActivateMode('shots');
+    });
 
-            enabled = checkIfModeCanBeActivated('shots');
-        }
+    onMount(() => {
+        enabled = canWeActivateMode('shots');
     });
 </script>
 
@@ -47,18 +68,18 @@
         onfocus={enabled ? undefined : toggle}
         onmouseout={enabled ? undefined : toggle}
         onblur={enabled ? undefined : toggle}
-        style={enabled ? "" : "opacity: 0.5;"}
+        style={enabled.status ? "" : "opacity: 0.5;"}
     >
         <LucideLocate
             class="pointer-events-none"
         />
-        {#if !enabled}
+        {#if !enabled.status}
             <Popover {open} on:close={toggleOff} placement="right-start">
                 <div class="px-3 py-3 border shadow text-sm text-slate-800 max-w-fit rounded italic bg-yellow-100 dark:bg-yellow-100">
                     <p class="not-italic font-bold">Cannot place shots...</p>
-                    {#if !isFirearmSelected}<p>&circleddash; No firearm selected.</p>{/if}
-                    {#if !isAmmunitionSelected}<p>&circleddash; No ammunition selected.</p>{/if}
-                    {#if !isRefComplete}<p>&circleddash; You need to set reference points.</p>{/if}
+                    {#each enabled.missing as value}
+                        <p>{value}</p>
+                    {/each}
                 </div>
             </Popover>
         {/if}

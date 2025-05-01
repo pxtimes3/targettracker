@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { checkIfModeCanBeActivated, setMode } from "@/utils/editor/ModeSwitcher";
+    import { setMode } from "@/utils/editor/ModeSwitcher";
     import { EditorStore } from "@/stores/EditorStore";
     import { LucideLocateFixed } from "lucide-svelte";
 	import { Button, Toggle, Popover } from "svelte-ux";
 	import { TargetStore } from "@/stores/TargetImageStore";
+	import { canWeActivateMode } from "@/utils/editor/EditorUtils";
 
-    let enabled = $state(false);
+    let enabled: { status: boolean, missing: string[]} = $state({ status: false, missing: []});
     let hasShots = $state(false);
     let isRefComplete = $state(false);
     let isFirearmSelected = $state(false);
@@ -21,7 +22,7 @@
             isAmmunitionSelected = $TargetStore.info.ammunition.length == 36 ? true : false;
             isEventValid = $TargetStore.info.event.length > 2 ? true : false;
 
-            enabled = checkIfModeCanBeActivated('poa');
+            enabled = canWeActivateMode('poa');
         }
     });
 </script>
@@ -43,17 +44,17 @@
             items-center
             {$EditorStore.mode === 'poa' ? 'editorButtonActive' : ''}
         "
-        onclick={ () => enabled ? setMode('poa') : toggle}
-        onmouseover={enabled ? undefined : toggle}
-        onfocus={enabled ? undefined : toggle}
-        onmouseout={enabled ? undefined : toggle}
-        onblur={enabled ? undefined : toggle}
-        style={enabled ? "" : "opacity: 0.5;"}
+        onclick={ () => enabled.status ? setMode('poa') : toggle}
+        onmouseover={enabled.status ? undefined : toggle}
+        onfocus={enabled.status ? undefined : toggle}
+        onmouseout={enabled.status ? undefined : toggle}
+        onblur={enabled.status ? undefined : toggle}
+        style={enabled.status ? "" : "opacity: 0.5;"}
     >
         <LucideLocateFixed
             class="pointer-events-none"
         />
-        {#if !enabled}
+        {#if !enabled.status}
             <Popover {open} on:close={toggleOff} placement="right-start">
                 <div class="px-3 py-3 border shadow text-sm text-slate-800 max-w-fit rounded italic bg-yellow-100 dark:bg-yellow-100">
                     <p class="not-italic font-bold">Cannot set POA...</p>
