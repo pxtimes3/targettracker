@@ -99,7 +99,7 @@ export async function POST({ request }) {
                 
             updatedGun = result;
         }
-        
+                
         return json({ 
             success: true, 
             rows: result.length || result.count || 0, 

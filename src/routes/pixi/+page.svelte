@@ -11,6 +11,7 @@
 	import type { PageServerData } from './$types';
 	import AppBar from '@/components/target/editor/AppBar.svelte';
 	import { targetInstance } from '@/stores/TargetImageStore';
+	import { GunStore } from '@/stores/GunStore';
 
 	let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
 
@@ -67,14 +68,14 @@
 	}
 
 	function loadingDone(): void {
-		console.log("loadingDone called");
-		console.log("canvasContainer:", canvasContainer);
-		console.log("loader:", loader);
+		// console.debug("loadingDone called");
+		// console.debug("canvasContainer:", canvasContainer);
+		// console.debug("loader:", loader);
 		
 		canvasContainer.classList.remove('opacity-35');
 		loader.classList.add('hidden');
 		
-		console.log("Loading UI hidden");
+		// console.debug("Loading UI hidden");
 	}
 
 	function closeAll(): number
@@ -137,17 +138,27 @@
 	}
 
 	onMount(async () => {
+		if (data) {
+			console.log('data', data)
+			GunStore.set({
+				loading: false,
+				error: null,
+				guns: data.gunsEvents.guns
+			});
+		} else {
+			console.log('nodata')
+		}
 		try {
 			await getChromeArea();
 			applicationState = "Initializing target...";
 			
-			console.log("Creating Target instance");
+			// console.debug("Creating Target instance");
 			target = new Target(chromeArea, staticAssets);
 			targetInstance.set(target);
 			
-			console.log("Starting Target initialization");
+			// console.debug("Starting Target initialization");
 			await target.initialize(canvasContainer, (state) => {
-				console.log(`Target state update: ${state}`);
+				// console.debug(`Target state update: ${state}`);
 				applicationState = state;
 				
 				// If we get to "Done!" state, call loadingDone
@@ -159,7 +170,7 @@
 			});
 			
 			if (data.data?.user?.id) {
-				console.log("Initializing analysis");
+				// console.debug("Initializing analysis");
 				await target.initializeAnalysis(data.data.user.id);
 			}
 		} catch (error) {
@@ -204,6 +215,7 @@
 	onload={getChromeArea}
 	onresize={handleResize}
 />
+
 <AppBar 
 	data={data}
 />

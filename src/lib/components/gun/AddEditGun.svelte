@@ -16,17 +16,18 @@
     } from "./addeditgun";
 	import type { UUIDTypes } from "uuid";
 	import { GunStore } from "@/stores/GunStore";
+    import { invalidate } from '$app/navigation';
 
     const gunTypes: GunType[] = ['rifle', 'pistol', 'air-rifle', 'air-pistol'];
     
     let { 
         data = createEmptyGun(), // Default to empty gun if not provided
         userId,
-        onSuccess
+        onSuccess,
     }: { 
         data?: GunData, 
-        userId: UUIDTypes
-        onSuccess?: (gunId: string, updatedGun?: GunData) => void 
+        userId: UUIDTypes,
+        onSuccess?: (gunId: string, updatedGun?: GunData) => void,
     } = $props();
 
     // console.debug('AddEditGun received data:', data);
@@ -46,6 +47,7 @@
         originalData = createOriginalDataCopy(data);
     }
 
+    // TODO: Använd de metoder som finns i utils/forms.ts
     async function handleFormSubmit(e: Event) {
         e.preventDefault();
         if (!e.target) return;
@@ -73,16 +75,14 @@
             const result = await response.json();
 
             if (result.success) {
-                // console.debug('success', result);
                 GunStore.updateGun(result.gun);
                 successMessage = 'Gun saved successfully!';
+                invalidate('pixi');
                 
                 if (onSuccess) {
                     onSuccess(result.gun.id, result.gun);
+                    console.log('success!', result.gun.id)
                 }
-            } else {
-                errorMessage = result.message || 'Failed to save gun';
-                // console.error(result.message);
             }
         } catch (error) {
             errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -139,14 +139,14 @@
   
 		<Field label="Name" let:id>
 			<Input 
-			name="name"
-			{id}
-			min={3}
-			max={256}
-			placeholder="Winchester R93 .17 Hornet"
-			on:keyup={validate}
-			value={data.name}
-			required
+                name="name"
+                {id}
+                min={3}
+                max={256}
+                placeholder="Winchester R93 .17 Hornet"
+                on:keyup={validate}
+                value={data.name}
+                required
 			/>
 		</Field>
 	
@@ -170,7 +170,7 @@
 			)}
 			scrollIntoView={index === highlightIndex}
 			>
-			{option.label}
+			    {option.label}
 			</MenuItem>
 		</SelectField>
 

@@ -4,13 +4,19 @@ import type { Actions } from "@sveltejs/kit";
 import { fail } from '@sveltejs/kit';
 import { and, eq, asc, desc } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
+import { GunStore } from '../../lib/stores/GunStore';
+import { get } from 'svelte/store';
 
-export const load: PageServerLoad = async (event) => {
-    if (!event.locals.user) {
+export const load = async ({locals, depends}) => {
+    depends('pixi');
+
+    if (!locals.user) {
 		return;
 	}
 
-    return { user: event.locals.user, gunsEvents: await fetchData(event.locals.user.id) };
+    // console.debug('Hello from pixis +page.server.ts load method!');
+
+    return { user: locals.user, gunsEvents: await fetchData(locals.user.id) };
 };
 
 export const actions: Actions = {
@@ -59,36 +65,33 @@ async function fetchData(userId: string): Promise<GunsEvents|boolean> {
         if (!userId) { 
             console.error(`No userId supplied!`); 
             throw new Error(`No userId supplied!`); 
-        } else {
-            console.debug(`UserID: ${userId}`);
-        }
+        } 
+        // else {
+        //     console.debug(`UserID: ${userId}`);
+        // }
 
-        console.log('Trying to fetch from db...');
+        // console.log('Trying to fetch from db...');
         const gunsResult = await db
-            .select({
-                gun: table.gun,
-                target: table.targets
-            })
+            .select()
             .from(table.gun)
-            .leftJoin(
-                table.targets,
-                eq(table.gun.id, table.targets.gunId),
-            )
             .where(
                 eq(table.gun.userId, userId),
             )
             .orderBy(table.gun.name);
         
+        //console.debug('gunsResult:',gunsResult.length)
+        
+        GunStore.set({
+            loading: false,
+            error: null,
+            guns: gunsResult
+        });
+
+        // console.debug('gunStore:', get(GunStore))
+        
         const eventsResult = await db
-            .select({
-                event: table.events,
-                targets: table.targets
-            })
+            .select()
             .from(table.events)
-            .leftJoin(
-                table.targets,
-                eq(table.events.id, table.targets.eventId)
-            )
             .where(
                 eq(table.events.userId, userId),
             )
@@ -101,7 +104,7 @@ async function fetchData(userId: string): Promise<GunsEvents|boolean> {
                 eq(table.ammunition.userId, userId)
             );
         
-        console.debug('guns:', gunsResult, 'events:', eventsResult, 'ammunition:', ammunitionResult);
+        // console.debug('guns:', gunsResult, 'events:', eventsResult, 'ammunition:', ammunitionResult);
         return {guns: gunsResult, events: eventsResult, ammunition: ammunitionResult};
     } catch (error) {
         console.error(`Something failed!`, error);
