@@ -4,7 +4,8 @@ import { db } from '$lib/server/db';
 import { gun } from '@/server/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 
-export async function GET({ params, locals }) {
+export async function GET({ params, locals }): Promise<Response>
+{
     try {
         if (!locals.user) {
             return json({ success: false, message: 'Not authenticated' }, { status: 401 });
