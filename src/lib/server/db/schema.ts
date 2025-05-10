@@ -11,6 +11,8 @@ export const ammunitionTypeEnum = pgEnum('ammunitionType', ['centerfire', 'rimfi
 export const measurementsEnum = pgEnum('measurements', ['metric', 'imperial']);
 export const angleUnitEnum = pgEnum('angleunit', ['mil', 'moa']);
 export const sightsEnum = pgEnum('sights', ['iron', 'scope', 'red-dot', 'holographic']);
+export const weightEnum = pgEnum('weight', ['gr', 'g']);
+export const primerTypeEnum = pgEnum('primertype', ['small rifle', 'small rifle magnum', 'large rifle', 'large rifle magnum', 'small pistol', 'small pistol magnum', 'large pistol', 'large pistol magnum', 'shotgun'])
 
 export const user = pgTable('user', {
     id: uuid('id').primaryKey(),
@@ -170,11 +172,13 @@ export const ammunition = pgTable('ammunition', {
     manufacturerBullet: text('manufacturer_bullet'),
     manufacturerPrimer: text('manufacturer_primer'),
     manufacturerPropellant: text('manufacturer_propellant'),
+    propellantName: text('propellant_name'),
     propellantCharge: doublePrecision('propellant_charge'),
     bulletName: text('bullet_name'),
     caliber: text('caliber'),
     bulletWeight: doublePrecision('bullet_weight'),
-    primerType: text('primer_type'),
+    primerType: primerTypeEnum('primer_type'),
+    primerName: text('primerName'),
     bulletBc: doublePrecision('bullet_bc'),
     bulletBcModel: text('bullet_bc_model'),
     manufacturerBrand: text('manufacturer_brand'),
@@ -182,6 +186,8 @@ export const ammunition = pgTable('ammunition', {
     propellantWeightUnit: text('propellant_weight_unit'),
     manufacturerName: text('manufacturer_name'),
     caliberMm: doublePrecision('caliber_mm'),
+    date: timestamp('date', { withTimezone: true }).defaultNow(),
+    note: text('note'),
 });
 
 export const events = pgTable('events', {
@@ -284,6 +290,8 @@ export type Analysis = typeof analysis.$inferSelect;
 export type Gun = typeof gun.$inferSelect;
 export type GunType = (typeof gunTypeEnum.enumValues)[number];
 export type Ammunition = typeof ammunition.$inferSelect;
+export type AmmunitionType = (typeof ammunitionTypeEnum.enumValues)[number];
+export type PrimerType = (typeof primerTypeEnum.enumValues)[number];
 export type Events = typeof events.$inferSelect;
 export type Groups = typeof groups.$inferSelect;
 export type Manufacturers = typeof manufacturers.$inferSelect;
