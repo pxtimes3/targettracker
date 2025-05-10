@@ -184,6 +184,7 @@ export const initialStore: TargetStoreInterface = {
         y: undefined,
         linelength: 1410.175353247501,
         measurement: 7.5,    // User supplied, converted to mm
+        measurementUnit: 'cm',
         cm: 201.7503077426864,             // 10 mm === px
         px: 5.318487507761503,             // 100px == mm
     },
