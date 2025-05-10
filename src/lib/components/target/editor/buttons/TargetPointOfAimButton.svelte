@@ -19,7 +19,7 @@
             hasShots = $TargetStore.groups[0]?.shots?.length > 0 || false;
             isRefComplete = $EditorStore.isRefComplete || false;
             isFirearmSelected = $TargetStore.info.firearm?.length == 36 ? true : false;
-            isAmmunitionSelected = $TargetStore.info.ammunition.length == 36 ? true : false;
+            isAmmunitionSelected = $TargetStore.info.ammunition?.length == 36 ? true : false;
             isEventValid = $TargetStore.info.event.length > 2 ? true : false;
 
             enabled = canWeActivateMode('poa');
