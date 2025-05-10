@@ -79,6 +79,11 @@ export function convertComma(event: Event)
     validate(event);
 }
 
+export function convertCommaString(string: string): number
+{
+    return parseFloat(string.replace(/,/,'.'));
+}
+
 export function convertInchToMm(value: string|number): number
 {
     const inch: number = 2.54;
@@ -116,4 +121,44 @@ export function resetForm(form: HTMLFormElement, originalData: GunData) {
     
     // publish
     form.dispatchEvent(new Event('reset', { bubbles: true }));
+}
+
+/**
+ * Creates a safe copy of data for reset functionality
+ * 
+ * @param data - The gun data object
+ * @returns A deep copy of the data without reactive proxies
+ */
+export function createOriginalDataCopy(data: any)
+{
+    return JSON.parse(JSON.stringify(data));
+}
+
+/**
+ * Handles form reset by restoring original values
+ * 
+ * @param event - The reset event
+ * @param originalData - The original data to reset to
+ */
+export function handleReset(event: Event, originalData: any): void 
+{
+    event.preventDefault();
+    if (originalData) {
+        resetForm(event.target as HTMLFormElement, originalData);
+    }
+}
+
+/**
+ * Formats a string by replacing hyphens with spaces, 
+ * converting to lowercase, and capitalizing the first letter of each word.
+ * 
+ * @param type - The string to format.
+ * @returns The formatted string.
+ */
+export function hyphensToSpaces(type: string): string {
+	return type.replace('-', ' ')
+		.toLowerCase()
+		.split(' ')
+		.map(word => word.charAt(0).toUpperCase() + word.substring(1))
+		.join(' ');
 }
