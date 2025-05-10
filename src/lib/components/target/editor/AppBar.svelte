@@ -18,11 +18,14 @@
     import RotatePanel from "./panels/RotatePanel.svelte";
     import SettingsPanel from "./panels/SettingsPanel.svelte";
 	import InfoPanel from "./panels/InfoPanel.svelte";
+	// Stores
 	import { EditorStore } from "@/stores/EditorStore";
+	import { GunStore } from "@/stores/GunStore";
 
     let { data } : { data: {data: PageServerData, gunsEvents: GunsEvents} } = $props();
 
     let target: Writable<Target|undefined>= $state(targetInstance);
+	let gunStore = $state($GunStore);
 </script>
 
 <aside
@@ -69,6 +72,7 @@
 		id="debug-button"
 		onclick={() => {
 			console.log($TargetStore);
+			console.log($GunStore);
 			console.log($EditorStore);
 		}}
 	>
