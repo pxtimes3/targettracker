@@ -46,3 +46,62 @@ function parseGunData(entry: any)
 		averages: entry.get_user_firearms_data.averages
 	};
 }
+
+/*
+async function fetchData(userId: string): Promise<GunsEvents|boolean> {
+	console.debug(`Fetching data... `);
+
+	try {
+		if (!userId) { 
+			console.error(`No userId supplied!`); 
+			throw new Error(`No userId supplied!`); 
+		} else {
+			console.debug(`UserID: ${userId}`);
+		}
+
+		console.log('Trying to fetch from db...');
+		const gunsResult = await db
+			.select({
+				gun: table.gun,
+				target: table.targets
+			})
+			.from(table.gun)
+			.leftJoin(
+				table.targets,
+				eq(table.gun.id, table.targets.gunId),
+			)
+			.where(
+				eq(table.gun.userId, userId),
+			)
+			.orderBy(table.gun.name);
+		
+		const eventsResult = await db
+			.select({
+				event: table.events,
+				targets: table.targets
+			})
+			.from(table.events)
+			.leftJoin(
+				table.targets,
+				eq(table.events.id, table.targets.eventId)
+			)
+			.where(
+				eq(table.events.userId, userId),
+			)
+			.orderBy(desc(table.events.createdAt));
+
+		const ammunitionResult = await db
+			.select()
+			.from(table.ammunition)
+			.where(
+				eq(table.ammunition.userId, userId)
+			);
+		
+		console.debug('guns:', gunsResult, 'events:', eventsResult, 'ammunition:', ammunitionResult);
+		return {guns: gunsResult, events: eventsResult, ammunition: ammunitionResult};
+	} catch (error) {
+		console.error(`Something failed!`, error);
+		return false;
+	}
+}
+*/
