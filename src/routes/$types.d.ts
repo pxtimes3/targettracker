@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Ammunition, Gun, User } from '@/server/db/schema';
+import { ammunitionTypeEnum } from '../lib/server/db/schema';
 
 declare global {
     interface Caliber {
@@ -49,7 +50,13 @@ declare global {
 
     interface EventData {};
     interface TargetData {};
-    interface AmmunitionData {};
+    interface AmmunitionData extends Ammunition {
+        type: GunData<type>|undefined;
+        error: { message: string };
+    };
+    type AmmunitionType = import('@/server/db/schema').ammunitionType;
+
+    type PrimerType = import('@/server/db/schema').PrimerType;
 
     interface GunEditPageServerData {
         user: User;
@@ -74,8 +81,8 @@ declare global {
     }
     
     interface GunsEvents {
-        guns: GunWithTarget[];
-        events: EventWithTarget[];
+        guns: Gun[];
+        events: Events[];
         ammunition: Ammunition[];
     }
 }
