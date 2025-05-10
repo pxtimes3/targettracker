@@ -32,3 +32,19 @@ export function escapeSql(input: string): string {
     .replace(/'/g, "''")
     .replace(/\\/g, "\\\\");
 }
+
+/**
+ * Fetches a CSRF token from the server.
+ * 
+ * @returns A promise that resolves to the CSRF token string.
+ */
+export async function fetchCsrfToken(): Promise<string> {
+	try {
+		const response = await fetch('/api/csrf-token');
+		const data = await response.json();
+		return data.csrfToken;
+	} catch (error) {
+		console.error('Failed to fetch CSRF token:', error);
+		return '';
+	}
+}
