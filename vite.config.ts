@@ -18,7 +18,10 @@ export default defineConfig({
 		proxy: {},
 		// port: 443,
 		fs: {
-			allow: ['temp/']
+			allow: [
+				'temp/',
+				'static/public'
+			]
 		}
 	},
 	resolve: {
@@ -28,6 +31,9 @@ export default defineConfig({
 	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}'],
-		exclude: ['**/targettracker.analysis/**']
+		exclude: [
+			'**/targettracker.analysis/**',
+			'**/static/public/**'
+		]
 	}
 });

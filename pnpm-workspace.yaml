@@ -1,2 +1,3 @@
 packages:
   - '!targettracker.analysis'
+  - 'static/public'
