@@ -1,21 +1,26 @@
-name: Validate Ammunition Data
+name: Validate Data
 
 on:
   push:
     paths:
       - 'ammunition.json'
-      - 'schemas/ammunition-schema.ts'
-      - 'tests/ammunition.test.ts'
+      - 'calibers.json'
+      - 'schemas/**'
+      - 'tests/**'
   pull_request:
     paths:
       - 'ammunition.json'
-      - 'schemas/ammunition-schema.ts'
-      - 'tests/ammunition.test.ts'
+      - 'calibers.json'
+      - 'schemas/**'
+      - 'tests/**'
   workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./static/public
     steps:
       - uses: actions/checkout@v3
       
@@ -24,13 +29,16 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: './package.json'
           
       - name: Install dependencies
         run: npm ci
         
-      - name: Run tests
-        run: npm test -- tests/ammunition.test.ts
+      - name: Validate calibers schema
+        run: npm run validate-calibers
         
-      - name: Validate JSON schema
-        run: |
-          npx ajv-cli validate -s schemas/ammunition-schema.ts -d ammunition.json
+      - name: Validate ammunition schema
+        run: npm run validate-ammunition
+        
+      - name: Run consistency tests
+        run: npm test

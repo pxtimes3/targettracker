@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "mm", "in"],
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Unique identifier for the caliber, used for references",
+                "pattern": "^[a-z0-9-.]+$"
+            },
+            "name": {
+                "type": "string",
+                "description": "Primary name of the caliber",
+                "minLength": 2
+            },
+            "category": {
+                "type": "string",
+                "description": "Category of the caliber",
+                "enum": ["Rimfire", "Rifle", "Handgun", "Airgun", "Shotgun"]
+            },
+            "mm": {
+                "type": "string",
+                "description": "Caliber diameter in millimeters",
+                "pattern": "^\\d+(\\.\\d+)?$"
+            },
+            "in": {
+                "type": "string",
+                "description": "Caliber diameter in inches",
+                "pattern": "^\\.[0-9]+$|^[0-9]+\\.[0-9]+$"
+            },
+            "aliases": {
+                "type": "array",
+                "description": "Alternative names for the caliber",
+                "items": {
+                    "type": "string"
+                },
+                "uniqueItems": true
+            }
+        },
+        "additionalProperties": false
+    }
+  }
