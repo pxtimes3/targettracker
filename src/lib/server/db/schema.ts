@@ -182,12 +182,15 @@ export const ammunition = pgTable('ammunition', {
     bulletBc: doublePrecision('bullet_bc'),
     bulletBcModel: text('bullet_bc_model'),
     manufacturerBrand: text('manufacturer_brand'),
-    bulletWeightUnit: text('bullet_weight_unit'),
-    propellantWeightUnit: text('propellant_weight_unit'),
+    bulletWeightUnit: weightEnum('bullet_weight_unit'),
+    propellantWeightUnit: weightEnum('propellant_weight_unit'),
     manufacturerName: text('manufacturer_name'),
     caliberMm: doublePrecision('caliber_mm'),
     date: timestamp('date', { withTimezone: true }).defaultNow(),
     note: text('note'),
+    //--
+    cartridgeOverallLength: doublePrecision('cartridge_oal'),
+    cartridgeOverallLengthUnit: measurementsEnum('cartridge_oal_unit'),
 });
 
 export const events = pgTable('events', {
