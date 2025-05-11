@@ -1,0 +1,36 @@
+name: Validate Ammunition Data
+
+on:
+  push:
+    paths:
+      - 'ammunition.json'
+      - 'schemas/ammunition-schema.ts'
+      - 'tests/ammunition.test.ts'
+  pull_request:
+    paths:
+      - 'ammunition.json'
+      - 'schemas/ammunition-schema.ts'
+      - 'tests/ammunition.test.ts'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run tests
+        run: npm test -- tests/ammunition.test.ts
+        
+      - name: Validate JSON schema
+        run: |
+          npx ajv-cli validate -s schemas/ammunition-schema.ts -d ammunition.json
