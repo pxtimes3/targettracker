@@ -29,10 +29,11 @@ const GunSchema = z.object({
     note: z.string().max(2048).optional(),
 });
 
-export async function POST({ request }) {
+export async function POST({ request }) 
+{
     try {
         const requestData = await request.json();
-        console.log('requestData:', requestData);
+        // console.log('requestData:', requestData);
         if (!requestData.userId) throw new Error('No userId supplied.');
 
         // Convert on to true etc.
@@ -41,7 +42,7 @@ export async function POST({ request }) {
         
         // Validate against schema
         const validatedData = GunSchema.parse(requestData);
-        console.log('validatedData:', validatedData)
+        // console.log('validatedData:', validatedData)
         
         if (!validatedData.userId) {
             console.error(validatedData);

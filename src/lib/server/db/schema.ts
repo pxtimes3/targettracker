@@ -188,7 +188,6 @@ export const ammunition = pgTable('ammunition', {
     caliberMm: doublePrecision('caliber_mm'),
     date: timestamp('date', { withTimezone: true }).defaultNow(),
     note: text('note'),
-    //--
     cartridgeOverallLength: doublePrecision('cartridge_oal'),
     cartridgeOverallLengthUnit: measurementsEnum('cartridge_oal_unit'),
 });
