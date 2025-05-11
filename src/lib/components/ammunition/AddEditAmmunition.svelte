@@ -1,12 +1,13 @@
 <!-- src/lib/components/ammunition/AddEditAmmunition.svelte -->
 <script lang="ts">
-    import { handleReset, validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
+    import { validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
     import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption } from "svelte-ux";
     import { cls } from "@layerstack/tailwind";
     import { createEmptyAmmunition, createTypeOptions } from "./addeditammunition";
 	import type { UUIDTypes } from "uuid";
-	import { GunStore } from "@/stores/GunStore";
+	import { AmmunitionStore } from "@/stores/AmmunitionStore";
     import { invalidate } from '$app/navigation';
+	import { fetchCsrfToken } from "@/utils/security";
 
     const ammunitionTypes: AmmunitionType[] = ['centerfire', 'rimfire', 'shotgun', 'airgun'];
     const primerTypes: PrimerType[] = [
@@ -22,7 +23,7 @@
     ];
     
     let { 
-        data = createEmptyAmmunition(),
+        data: initialData = createEmptyAmmunition(),
         userId,
         onSuccess,
     }: { 
@@ -31,19 +32,26 @@
         onSuccess?: (ammunitionId: string, updatedAmmunition?: AmmunitionData) => void,
     } = $props();
 
-    let selectedType = $state(data.type || '');
-    let selectedPrimerType = $state(data.primerType || '');
-    let caliberMm = $state(data.caliberMm || 0);
+    let data = $state(initialData);
+
+    let selectedType = $derived(data.type || '');
+    let selectedPrimerType = $derived(data.primerType || undefined);
+    let caliberMm = $derived(data.caliberMm || 0);
     let csrfToken = $state('');
-    let originalData = $state(createOriginalDataCopy(data));
+    let originalData = $derived(createOriginalDataCopy(data));
     let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
     let primerTypeOptions: MenuOption[] = $derived(createTypeOptions(primerTypes));
     let submitting = $state(false);
     let errorMessage = $state('');
     let successMessage = $state('');
+    let predefinedAmmunition = $state<AmmunitionData[]>([]);
+    let selectedPredefinedAmmunition = $state<string | null>(null);
+    let loadingAmmunition = $state(false);
+    let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedAmmunition));
 
     async function handleFormSubmit(e: Event): Promise<void>
     {
+        // console.debug('ammunition handleFormSubmit');
         e.preventDefault();
         if (!e.target) return;
 
@@ -58,7 +66,7 @@
             
             // console.debug(dataObj);
 
-            const response = await fetch('/api/gun', {
+            const response = await fetch('/api/ammunition', {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-csrf-token': csrfToken
@@ -70,13 +78,13 @@
             const result = await response.json();
 
             if (result.success) {
-                GunStore.updateGun(result.gun);
-                successMessage = 'Gun saved successfully!';
+                AmmunitionStore.updateAmmunition(result.ammunition);
+                successMessage = 'Ammunition saved successfully!';
                 invalidate('pixi');
                 
                 if (onSuccess) {
-                    onSuccess(result.gun.id, result.gun);
-                    console.log('success!', result.gun.id)
+                    onSuccess(result.ammunition.id, result.ammunition);
+                    // console.log('success!', result.ammunition.id)
                 }
             }
         } catch (error) {
@@ -88,7 +96,7 @@
     
     function handleFormReset(e: Event):void
     {
-        handleReset(e, originalData);
+        // handleReset(e, originalData);
     }
 
     function setCaliberMm(): void
@@ -107,6 +115,82 @@
             caliberMm = parseFloat(value);
         }
     }
+
+    async function fetchPredefinedAmmunition(): Promise<AmmunitionData[]> {
+        loadingAmmunition = true;
+        try {
+            // console.debug('Fetching ammunition data...');
+            const response = await fetch('/public/ammunition.json');
+            if (!response.ok) {
+                console.error(`Failed to load ammunition data: ${response.status} ${response.statusText}`);
+                throw new Error('Failed to load predefined ammunition data');
+            }
+            const data = await response.json();
+            // console.debug('Ammunition data loaded:', data);
+            return data;
+        } catch (error) {
+            console.error('Error loading predefined ammunition:', error);
+            return [];
+        } finally {
+            loadingAmmunition = false;
+        }
+    }
+
+    function handlePredefinedAmmunitionSelect(selectedId: MenuOption): void 
+    {
+        // console.debug(`handlePredefinedAmmunitionSelect`, selectedId)
+        if (!selectedId) return;
+        
+        const selected = predefinedAmmunition.find(ammo => ammo.id === selectedId.value);
+        if (selected) {
+            // console.debug('Selected ammunition:', selected);
+            
+            // Create a new object to ensure reactivity
+            data = { ...createEmptyAmmunition(), ...selected };
+            
+            // Update reactive variables
+            selectedType = data.type || '';
+            selectedPrimerType = data.primerType || undefined;
+            caliberMm = data.caliberMm || 0;
+            
+            // Reset the dropdown after selection
+            selectedPredefinedAmmunition = null;
+            
+            // Force a UI update
+            data = { ...data };
+            
+            // console.debug('Updated data:', data);
+        }
+    }
+
+    function createAmmunitionOptions(ammunition: AmmunitionData[]): MenuOption[] {
+        // console.log('Creating options from ammunition:', ammunition);
+        if (!ammunition || ammunition.length === 0) {
+            // console.log('No ammunition data available');
+            return [];
+        }
+        
+        return ammunition.map(ammo => ({
+            value: ammo.id,
+            label: `${ammo.manufacturerBullet || ''} ${ammo.name} - ${ammo.caliber || ''}`.trim()
+        }));
+    }
+
+    $effect(() => {
+        fetchCsrfToken().then(token => csrfToken = token);
+        fetchPredefinedAmmunition()
+            .then(ammunitionData => {
+                // console.debug('Setting predefined ammunition:', ammunitionData);
+                predefinedAmmunition = ammunitionData;
+            })
+            .catch(err => {
+                console.error('Failed to load ammunition data:', err);
+                errorMessage = 'Failed to load predefined ammunition data';
+            });
+        
+        // console.debug('Current ammunition data:', data);
+        // console.debug('Data changed:', data);
+    })
 </script>
 
 <form onsubmit={handleFormSubmit} onreset={handleFormReset} class="min-w-96 max-w-[36rem]">
@@ -123,6 +207,34 @@
     {/if}
 
     <div class="grid grid-flow-row gap-2">
+        <div class="mb-4">
+            <SelectField
+                label="Select Manufacturer Ammunition"
+                options={ammunitionOptions}
+                bind:value={selectedPredefinedAmmunition}
+                on:change={(e) => handlePredefinedAmmunitionSelect(e.detail as unknown as string)}
+                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
+                searchable
+                disabled={loadingAmmunition}
+            >
+                <MenuItem
+                    slot="option"
+                    let:option
+                    let:index
+                    let:selected
+                    let:highlightIndex
+                    class={cls(
+                        index === highlightIndex && "bg-surface-content/5",
+                        option === selected && "font-semibold"
+                    )}
+                    scrollIntoView={index === highlightIndex}
+                >
+                    {option.label}
+                </MenuItem>
+            </SelectField>
+          </div>
+          
+          
 		<input 
 			type="hidden"
 			id="id"
@@ -316,7 +428,7 @@
         <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
             <SelectField
                 label="Type"
-                name="type"
+                name="primerType"
                 options={primerTypeOptions}
                 bind:value={selectedPrimerType}
                 placeholder="Select primer type"
@@ -411,6 +523,7 @@
             <Button
                 variant='fill'
                 color='success'
+                type='submit'
                 class={cls(
                     'mt-4 w-fit px-8 place-self-end'
                 )}
@@ -418,10 +531,3 @@
         </div>
     </div>
 </form>
-
-<style lang="css">
-/* :global(div.items-stretch) {
-    min-height: 100%;
-    background-color: red;
-} */
-</style>
