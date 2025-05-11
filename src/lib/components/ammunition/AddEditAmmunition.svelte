@@ -1,16 +1,12 @@
 <!-- src/lib/components/ammunition/AddEditAmmunition.svelte -->
 <script lang="ts">
     import { handleReset, validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
-    import CaliberDropdown from "../caliber/CaliberDropdown.svelte";
-    import { UserSettingsStore } from "$src/lib/stores/UserSettingsStore";
     import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption } from "svelte-ux";
     import { cls } from "@layerstack/tailwind";
     import { createEmptyAmmunition, createTypeOptions } from "./addeditammunition";
-    import {  } from "@/utils/forms";
 	import type { UUIDTypes } from "uuid";
 	import { GunStore } from "@/stores/GunStore";
     import { invalidate } from '$app/navigation';
-	import { string } from "zod";
 
     const ammunitionTypes: AmmunitionType[] = ['centerfire', 'rimfire', 'shotgun', 'airgun'];
     const primerTypes: PrimerType[] = [
@@ -37,9 +33,7 @@
 
     let selectedType = $state(data.type || '');
     let selectedPrimerType = $state(data.primerType || '');
-    let selectedCaliber = $state(data.caliber || '');
     let caliberMm = $state(data.caliberMm || 0);
-    let note = $state(data.note || '');
     let csrfToken = $state('');
     let originalData = $state(createOriginalDataCopy(data));
     let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
@@ -182,7 +176,7 @@
 
         <p class="mt-2">Bullet</p>
 
-        <div class="grid grid-cols-2 gap-x-2 items-stretch">
+        <div class="grid grid-cols-2 gap-x-2 items-stretch children-h-full">
             <Field label="Manufacturer" let:id>
                 <Input 
                     {id}
@@ -206,7 +200,7 @@
             </Field>
         </div>
         
-        <div class="grid grid-cols-3 gap-x-2 items-stretch">
+        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
             <Field label="Bullet weight" let:id>
                 <Input 
                     {id}
@@ -272,7 +266,7 @@
 
         <p class="mt-2">Propellant</p>
 
-        <div class="grid grid-cols-3 gap-x-2 items-stretch">
+        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
             <Field label="Manufacturer" let:id class={cls('StretchHeight')}>
                 <Input 
                     {id}
@@ -295,9 +289,7 @@
                 />
             </Field>
 
-            <Field label="Charge weight" let:id class={cls(
-                'Monkey','p-0'
-            )}>
+            <Field label="Charge weight" let:id>
                 <Input 
                     {id}
                     name="propellantCharge"
@@ -307,10 +299,9 @@
                     value={data.propellantCharge?.toString() || ''}
                 />
                 <div class="grid gap-2 z-10 p-0 m-0">
-                    <label class="flex gap-2 items-center text-xs">
+                    <label class="flex gap-2 items-center text-sm">
                         <span class={data.propellantWeightUnit == 'g' ? 'font-bold' : ''}>g</span>
                         <Switch
-                            class="scale-50"
                             name="barrelunit" 
                             checked={data.propellantWeightUnit == 'gr' ? true : false}
                         />
@@ -322,7 +313,7 @@
 
         <p class="mt-2">Primer</p>
 
-        <div class="grid grid-cols-3 gap-x-2 items-stretch">
+        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
             <SelectField
                 label="Type"
                 name="type"
@@ -369,12 +360,68 @@
                 />
             </Field>
         </div>
+
+        <p class="mt-2">Case & Cartridge</p>
+
+        <div class="grid grid-cols-2 gap-x-2 items-stretch children-h-full">
+            <Field label="Manufacturer" let:id>
+                <Input 
+                    {id}
+                    name="manufacturerCase"
+                    min={3}
+                    max={256}
+                    on:keyup={validate}
+                    value={data.manufacturerCase || ''}
+                />
+            </Field>
+
+            <Field label="Cartridge Overall Length" let:id>
+                <Input 
+                    {id}
+                    name="cartridgeOverallLength"
+                    min={3}
+                    max={256}
+                    on:keyup={validate}
+                    value={data.cartridgeOverallLength?.toString() || ''}
+                />
+                <div class="grid gap-2 z-10 p-0 m-0">
+                    <label class="flex gap-2 items-center text-sm">
+                        <span class={data.cartridgeOverallLengthUnit == 'imperial' ? 'font-bold' : ''}>cm</span>
+                        <Switch
+                            name="cartridgeOverallLengthUnit" 
+                            checked={data.cartridgeOverallLengthUnit == 'metric' ? true : false}
+                        />
+                        <span class={data.cartridgeOverallLengthUnit == 'metric' || undefined ? 'font-bold' : ''}>in</span>
+                    </label>
+                </div>
+            </Field>
+        </div>
+
+        <div class="grid children-h-full mt-4">
+            <TextField
+                name="note"
+                value={data.note || ''}
+                multiline
+                placeholder="Notes... " 
+                classes={{ input: "h-[5rem]" }}
+            />
+        </div>
+
+        <div class="grid">
+            <Button
+                variant='fill'
+                color='success'
+                class={cls(
+                    'mt-4 w-fit px-8 place-self-end'
+                )}
+            >Save</Button>
+        </div>
     </div>
 </form>
 
 <style lang="css">
-:global(.StretchHeight > div:nth-child(1) > div:nth-child(1)) {
+/* :global(div.items-stretch) {
     min-height: 100%;
-    /* background-color: red; */
-}
+    background-color: red;
+} */
 </style>
