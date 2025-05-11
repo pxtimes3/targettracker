@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 
+ * matchar höjden med (SvelteUX) inputs som har en switch i sig 
+ * t.ex. addEditAmmunition med weight/measurement-unit
+ */
+div.grid.children-h-full > label > div:nth-child(1) > div:nth-child(1) {
+    min-height: 100%;
+}
