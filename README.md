@@ -7,4 +7,4 @@ You can validate any changes with `npm validate-calibers`.
 
 ### Ammunition
 
-Add to the correct file (norma.json, hornady.json etc.) and run `npm run build`.
+Add your entries to the correct file (norma.json, hornady.json etc. Create one if it doesn't exist) and run `npm run build`.
