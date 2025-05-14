@@ -1,5 +1,10 @@
 ## Contributing
 
-Clone the repo, install `npm install` and add to calibers.json or ammunition.json (or both!!!) and create a pull request!
+### Calibers
 
-Validate any changes with `npm validate-all`
+Add directly to calibers.json and open a PR.
+You can validate any changes with `npm validate-calibers`.
+
+### Ammunition
+
+Add to the correct file (norma.json, hornady.json etc.) and run `npm run build`.
