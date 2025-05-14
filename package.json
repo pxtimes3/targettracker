@@ -4,8 +4,8 @@
 	"description": "Data files for Target Tracker",
 	"scripts": {
 		"test": "jest",
-		"validate-calibers": "ajv validate -s schemas/caliber-schema.json -d calibers.json",
-		"validate-ammunition": "ajv validate -s schemas/ammunition-schema.json -d ammunition.json",
+		"validate-calibers": "ajv validate -s schemas/caliber.json -d calibers.json",
+		"validate-ammunition": "ajv validate -s schemas/ammunition.json -d ammunition.json",
 		"validate-all": "npm run validate-calibers && npm run validate-ammunition && npm test"
 	},
 	"devDependencies": {
