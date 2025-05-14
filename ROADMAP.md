@@ -9,9 +9,8 @@
 - [ ] Lista m. vapen
 - [ ] Lista m. ammunition
 - [ ] Lista m. events & targets
-
-- [ ] Add/edit vapen, ammunition
-- [ ] Delete target/event
+- [ ] Add/edit vapen, ammunition, events
+- [ ] Delete vapen, ammunition, events, targets
 
 ## *v0.2*
 
