@@ -40,6 +40,14 @@
       "aliases": ["17 Winchester Super Magnum"]
     },
     {
+      "id": "32swl",
+      "name": ".32 S&W Long",
+      "category": "Handgun",
+      "mm": "7.9",
+      "in": ".312",
+      "aliases": [".32 Long", ".32 S&W", "7.62x23"]
+    },
+    {
       "id": "9mm",
       "name": "9mm Luger",
       "category": "Handgun",
@@ -128,12 +136,36 @@
       "aliases": ["500 S&W", "500 Magnum", ".500 Mag"]
     },
     {
+      "id": "22ppc",
+      "name": ".22 PPC",
+      "category": "Rifle",
+      "mm": "5.7",
+      "in": ".224",
+      "aliases": ["22 PPC", "5.7x38"]
+    },
+    {
+      "id": "222rem",
+      "name": ".222 Remington",
+      "category": "Rifle",
+      "mm": "5.7",
+      "in": ".224",
+      "aliases": ["222", ".222", "5.7x43mm"]
+    },
+    {
       "id": "223rem",
       "name": ".223 Remington",
       "category": "Rifle",
       "mm": "5.56",
       "in": ".223",
       "aliases": ["5.56 NATO", "5.56x45mm", "223 Rem", "5.56", ".223"]
+    },
+    {
+      "id": "32wsl",
+      "name": ".32 Winchester Self-Loading",
+      "category": "Rifle",
+      "mm": "8.2",
+      "in": ".321",
+      "aliases": [".32SL", ".32SLR", ".32WSL"]
     },
     {
       "id": "243win",
@@ -352,6 +384,14 @@
       "aliases": ["6.5mm Precision Rifle Cartridge", "6.5 Precision Rifle Cartridge"]
     },
     {
+      "id": "6.5x47",
+      "name": "6.5x47 Lapua",
+      "category": "Rifle",
+      "mm": "6.71",
+      "in": ".264",
+      "aliases": ["6.5x47", "6.5x47mm"]
+    },
+    {
       "id": "6.5grendel",
       "name": "6.5 Grendel",
       "category": "Rifle",
@@ -360,12 +400,20 @@
       "aliases": ["6.5mm Grendel"]
     },
     {
+      "id": "6mmbr",
+      "name": "6mm BR",
+      "category": "Rifle",
+      "mm": "6.2",
+      "in": ".243",
+      "aliases": ["6 Creedmoor", "6mm CM"]
+    },
+    {
       "id": "6mmcreedmoor",
       "name": "6mm Creedmoor",
       "category": "Rifle",
       "mm": "6",
       "in": ".243",
-      "aliases": ["6 Creedmoor", "6mm CM"]
+      "aliases": ["6mm BR"]
     },
     {
       "id": "224valkyrie",
