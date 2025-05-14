@@ -2,17 +2,22 @@
 	"name": "targettracker-data",
 	"version": "1.0.0",
 	"description": "Data files for Target Tracker",
+	"type": "module",
 	"scripts": {
 		"test": "jest",
-		"validate-calibers": "ajv validate -s schemas/caliber.json -d calibers.json",
-		"validate-ammunition": "ajv validate -s schemas/ammunition.json -d ammunition.json",
+		"build": "npx ts-node scripts/concatenate.ts src && npm run validate-all",
+		"validate-calibers": "ajv validate --verbose -s schemas/caliber.json -d calibers.json",
+		"validate-ammunition": "ajv validate --verbose -s schemas/ammunition.json -d ammunition.json",
 		"validate-all": "npm run validate-calibers && npm run validate-ammunition && npm test"
 	},
 	"devDependencies": {
+		"@types/jest": "^29.5.14",
 		"ajv": "^8.17.1",
 		"ajv-cli": "^5.0.0",
 		"jest": "^29.7.0",
-		"ts-jest": "^29.3.2",
-		"@types/jest": "^29.5.14"
+		"ts-jest": "^29.3.2"
+	},
+	"dependencies": {
+		"chalk": "^5.4.1"
 	}
-  }
+}
