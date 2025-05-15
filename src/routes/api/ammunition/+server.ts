@@ -18,11 +18,13 @@ const AmmunitionSchema = z.object({
     propellantCharge: z.number().nullable().optional(),
     bulletName: z.string().nullable().optional(),
     caliber: z.string().nullable().optional(),
+    caliberUnit: z.enum(measurementsEnum.enumValues),
     bulletWeight: z.number().nullable().optional(),
     primerType: z.enum(primerTypeEnum.enumValues).nullable().optional(),
     primerName: z.string().nullable().optional(),
-    bulletBc: z.number().nullable().optional(),
-    bulletBcModel: z.string().nullable().optional(),
+    bulletBcG1: z.number().nullable().optional(),
+    bulletBcG7: z.number().nullable().optional(),
+    bulletSD: z.number().nullable().optional(),
     manufacturerBrand: z.string().nullable().optional(),
     bulletWeightUnit: z.enum(weightEnum.enumValues).nullable().optional(),
     propellantWeightUnit: z.enum(weightEnum.enumValues).nullable().optional(),
@@ -38,7 +40,6 @@ export async function POST({ request }): Promise<Response>
 {
     try {
         let result;
-        let returning;
         let updatedAmmunition;
 
         const requestData = await request.json();
@@ -48,9 +49,16 @@ export async function POST({ request }): Promise<Response>
             // parse string => number
             requestData.bulletWeight = parseFloat(requestData.bulletWeight) || 0;
             requestData.propellantCharge = parseFloat(requestData.propellantCharge) || 0;
-            requestData.bulletBc = parseFloat(requestData.bulletBc) || 0;
+            requestData.bulletBcG1 = parseFloat(requestData.bulletBcG1) || 0;
+            requestData.bulletBcG7 = parseFloat(requestData.bulletBcG7) || 0;
+            requestData.bulletSD = parseFloat(requestData.bulletSD) || 0;
             requestData.caliberMm = parseFloat(requestData.caliberMm) || 0;
             requestData.cartridgeOverallLength = parseFloat(requestData.cartridgeOverallLength) || 0;
+            
+            // switches
+            requestData.caliberUnit = requestData.caliberUnit === 'on' ? 
+                requestData.caliberUnit = 'metric' : 
+                requestData.caliberUnit = 'imperial';
         }
 
         const validatedData = AmmunitionSchema.parse(requestData);
@@ -71,11 +79,12 @@ export async function POST({ request }): Promise<Response>
             propellantCharge: validatedData.propellantCharge || null,
             bulletName: validatedData.bulletName || null,
             caliber: validatedData.caliber || null,
+            caliberUnit: validatedData.caliberUnit || null,
             bulletWeight: validatedData.bulletWeight || null,
             primerType: validatedData.primerType || null,
             primerName: validatedData.primerName || null,
-            bulletBc: validatedData.bulletBc || null,
-            bulletBcModel: validatedData.bulletBcModel || null,
+            bulletBcG1: validatedData.bulletBcG1 || null,
+            bulletBcG7: validatedData.bulletBcG1 || null,
             manufacturerBrand: validatedData.manufacturerBrand || null,
             bulletWeightUnit: validatedData.bulletWeightUnit || null,
             propellantWeightUnit: validatedData.propellantWeightUnit || null,

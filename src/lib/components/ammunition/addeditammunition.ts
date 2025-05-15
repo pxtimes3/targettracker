@@ -1,6 +1,5 @@
 // src/lib/components/ammunition/addeditammunition.ts
 import { hyphensToSpaces, createOriginalDataCopy, resetForm } from "@/utils/forms";
-import { fetchCsrfToken } from "@/utils/security";
 
 export const createEmptyAmmunition = (): AmmunitionData => ({
     id: '',
@@ -15,13 +14,15 @@ export const createEmptyAmmunition = (): AmmunitionData => ({
     propellantCharge: null,
     bulletName: '',
     caliber: '',
+    caliberUnit: 'metric',
     bulletWeight: null,
     primerType: undefined,
     propellantName: '',
     primerName: '',
     note: '',
-    bulletBc: null,
-    bulletBcModel: 'g7',
+    bulletBcG7: null,
+    bulletBcG1: null,
+    bulletSD: null,
     manufacturerBrand: '',
     bulletWeightUnit: 'gr',
     propellantWeightUnit: 'gr',
