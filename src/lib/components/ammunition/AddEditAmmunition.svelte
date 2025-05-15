@@ -24,10 +24,12 @@
     
     let { 
         data: initialData = createEmptyAmmunition(),
+        userData: initialUserData = createEmptyAmmunition(),
         userId,
         onSuccess,
     }: { 
         data?: AmmunitionData, 
+        userData?: AmmunitionData, 
         userId: UUIDTypes,
         onSuccess?: (ammunitionId: string, updatedAmmunition?: AmmunitionData) => void,
     } = $props();
@@ -38,16 +40,19 @@
     let selectedPrimerType = $derived(data.primerType || undefined);
     let caliberMm = $derived(data.caliberMm || 0);
     let csrfToken = $state('');
-    let originalData = $derived(createOriginalDataCopy(data));
     let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
     let primerTypeOptions: MenuOption[] = $derived(createTypeOptions(primerTypes));
     let submitting = $state(false);
     let errorMessage = $state('');
     let successMessage = $state('');
     let predefinedAmmunition = $state<AmmunitionData[]>([]);
+    let predefinedUserAmmunition = $state<AmmunitionData[]>([]);
     let selectedPredefinedAmmunition = $state<string | null>(null);
+    let selectedUserPredefinedAmmunition = $state<string | null>(null);
     let loadingAmmunition = $state(false);
+    let loadingUserAmmunition = $state(false);
     let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedAmmunition));
+    let userAmmunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedUserAmmunition));
 
     async function handleFormSubmit(e: Event): Promise<void>
     {
@@ -136,6 +141,30 @@
         }
     }
 
+    async function fetchUserPredefinedAmmunition(): Promise<AmmunitionData[]> {
+        loadingUserAmmunition = true;
+        try {
+            // console.debug('Fetching ammunition data...');
+            const response = await fetch(`/api/ammunition/`, {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+            if (!response.ok) {
+                console.error(`Failed to load user ammunition data: ${response.status} ${response.statusText}`);
+                throw new Error('Failed to load user predefined ammunition data');
+            }
+            const userData = await response.json();
+            // console.debug('Ammunition data loaded:', data);
+            return userData;
+        } catch (error) {
+            console.error('Error loading users predefined ammunition:', error);
+            return [];
+        } finally {
+            loadingUserAmmunition = false;
+        }
+    }
+
     function handlePredefinedAmmunitionSelect(selectedId: HTMLOptionElement): void 
     {
         // console.debug(`handlePredefinedAmmunitionSelect`, selectedId)
@@ -163,10 +192,37 @@
         }
     }
 
+    function handleUserPredefinedAmmunitionSelect(selectedId: HTMLOptionElement): void 
+    {
+        // console.debug(`handlePredefinedAmmunitionSelect`, selectedId)
+        if (!selectedId) return;
+        
+        const selected = predefinedUserAmmunition.find(ammo => ammo.id === selectedId.value);
+        if (selected) {
+            // console.debug('Selected ammunition:', selected);
+            
+            // Create a new object to ensure reactivity
+            data = { ...createEmptyAmmunition(), ...selected };
+            
+            // Update reactive variables
+            selectedType = data.type || '';
+            selectedPrimerType = data.primerType || undefined;
+            caliberMm = data.caliberMm || 0;
+            
+            // Reset the dropdown after selection
+            selectedUserPredefinedAmmunition = null;
+            
+            // Force a UI update
+            data = { ...data };
+            
+            console.debug('Updated data:', data);
+        }
+    }
+
     function createAmmunitionOptions(ammunition: AmmunitionData[]): MenuOption[] {
-        // console.log('Creating options from ammunition:', ammunition);
+        console.debug('Creating user options from ammunition:', ammunition);
         if (!ammunition || ammunition.length === 0) {
-            // console.log('No ammunition data available');
+            console.debug('No ammunition data available');
             return [];
         }
         
@@ -186,6 +242,15 @@
             .catch(err => {
                 console.error('Failed to load ammunition data:', err);
                 errorMessage = 'Failed to load predefined ammunition data';
+            });
+        fetchUserPredefinedAmmunition()
+            .then(ammunitionData => {
+                // console.debug('Setting predefined ammunition:', ammunitionData);
+                predefinedUserAmmunition = ammunitionData;
+            })
+            .catch(err => {
+                console.error('Failed to load user ammunition data:', err);
+                errorMessage = 'Failed to load user predefined ammunition data';
             });
         
         // console.debug('Current ammunition data:', data);
@@ -237,9 +302,9 @@
           <div class="mb-4">
             <SelectField
                 label="Select Manufacturer Ammunition"
-                options={ammunitionOptions}
-                bind:value={selectedPredefinedAmmunition}
-                on:change={(e) => handlePredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
+                options={userAmmunitionOptions}
+                bind:value={selectedUserPredefinedAmmunition}
+                on:change={(e) => handleUserPredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
                 placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
                 searchable
                 disabled={loadingAmmunition}
