@@ -107,9 +107,9 @@
         const input: HTMLInputElement = caliberInput[0] as unknown as HTMLInputElement;
         let value = input.value;
         
-        if (value.match(/\d+,\d+/)) {
+        if (value.match(/^\d+,\d+$/)) {
             caliberMm = convertCommaString(value);
-        } else if (value.match(/\.\d+/)) {
+        } else if (value.match(/^\.\d+$/)) {
             caliberMm = convertInchToMm(parseFloat(value) * 10);
         } else {
             caliberMm = parseFloat(value);
@@ -136,7 +136,7 @@
         }
     }
 
-    function handlePredefinedAmmunitionSelect(selectedId: MenuOption): void 
+    function handlePredefinedAmmunitionSelect(selectedId: HTMLOptionElement): void 
     {
         // console.debug(`handlePredefinedAmmunitionSelect`, selectedId)
         if (!selectedId) return;
@@ -212,7 +212,34 @@
                 label="Select Manufacturer Ammunition"
                 options={ammunitionOptions}
                 bind:value={selectedPredefinedAmmunition}
-                on:change={(e) => handlePredefinedAmmunitionSelect(e.detail as unknown as string)}
+                on:change={(e) => handlePredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
+                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
+                searchable
+                disabled={loadingAmmunition}
+            >
+                <MenuItem
+                    slot="option"
+                    let:option
+                    let:index
+                    let:selected
+                    let:highlightIndex
+                    class={cls(
+                        index === highlightIndex && "bg-surface-content/5",
+                        option === selected && "font-semibold"
+                    )}
+                    scrollIntoView={index === highlightIndex}
+                >
+                    {option.label}
+                </MenuItem>
+            </SelectField>
+          </div>
+
+          <div class="mb-4">
+            <SelectField
+                label="Select Manufacturer Ammunition"
+                options={ammunitionOptions}
+                bind:value={selectedPredefinedAmmunition}
+                on:change={(e) => handlePredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
                 placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
                 searchable
                 disabled={loadingAmmunition}
@@ -312,7 +339,7 @@
             </Field>
         </div>
         
-        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
+        <div class="grid grid-cols-2 gap-x-2 items-stretch children-h-full">
             <Field label="Bullet weight" let:id>
                 <Input 
                     {id}
@@ -321,6 +348,7 @@
                     max={256}
                     on:keyup={validate}
                     value={data.bulletWeight?.toString() || ''}
+                    class="min-w-[8ch]"
                 />
                 <div class="grid gap-2 z-10">
                     <label class="flex gap-2 items-center text-sm">
@@ -334,27 +362,6 @@
                 </div>
             </Field>
                 
-            <Field label="Ballistic Coefficient" let:id>
-                <Input 
-                    {id}
-                    name="bulletBc"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.bulletBc?.toString() || ''}
-                />
-                <div class="grid gap-2 z-10">
-                    <label class="flex gap-2 items-center text-sm">
-                        <span class={data.bulletBcModel == 'g1' ? 'font-bold' : ''}>G1</span>
-                        <Switch
-                            name="barrelunit" 
-                            checked={data.bulletBcModel == 'g7' ? true : false}
-                        />
-                        <span class={data.bulletBcModel == 'g7' || undefined ? 'font-bold' : ''}>G7</span>
-                    </label>
-                </div>
-            </Field>
-
             <input type="hidden"
                 name="caliberMm"
                 value={caliberMm}
@@ -371,7 +378,52 @@
                     max={256}
                     on:keyup={() => { validate; setCaliberMm() }}
                     value={data.caliber || ''}
-                    class="self-stretch min-h-full m-0"
+                    class="w-16ch"
+                />
+                <div class="grid gap-2 z-10">
+                    <label class="flex gap-2 items-center text-sm">
+                        <span class={data.caliberUnit == 'imperial' ? 'font-bold' : ''}>in</span>
+                        <Switch
+                            name="caliberUnit" 
+                            checked={data.caliberUnit == 'metric' || undefined ? true : false}
+                        />
+                        <span class={data.caliberUnit == 'metric' || undefined ? 'font-bold' : ''}>mm</span>
+                    </label>
+                </div>
+            </Field>
+        </div>
+        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
+            <Field label="BC (G1)" let:id>
+                <Input 
+                    {id}
+                    name="bulletBcG1"
+                    min={3}
+                    max={256}
+                    on:keyup={validate}
+                    class="min-w-[8ch]"
+                    value={data.bulletBcG1?.toString() || ''}
+                />
+            </Field>
+            <Field label="BC (G7)" let:id>
+                <Input 
+                    {id}
+                    name="bulletBcG7"
+                    min={3}
+                    max={256}
+                    on:keyup={validate}
+                    class="min-w-[8ch]"
+                    value={data.bulletBcG7?.toString() || ''}
+                />
+            </Field>
+            <Field label="Sectional Density" let:id>
+                <Input 
+                    {id}
+                    name="bulletSD"
+                    min={3}
+                    max={256}
+                    on:keyup={validate}
+                    class="min-w-[8ch]"
+                    value={data.bulletSD?.toString() || ''}
                 />
             </Field>
         </div>
