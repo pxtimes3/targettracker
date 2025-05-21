@@ -35,6 +35,7 @@
     } = $props();
 
     let data = $state(initialData);
+    let userData = $state(initialUserData);
 
     let selectedType = $derived(data.type || '');
     let selectedPrimerType = $derived(data.primerType || undefined);
@@ -141,7 +142,8 @@
         }
     }
 
-    async function fetchUserPredefinedAmmunition(): Promise<AmmunitionData[]> {
+    async function fetchUserPredefinedAmmunition(): Promise<AmmunitionData[]> 
+    {
         loadingUserAmmunition = true;
         try {
             // console.debug('Fetching ammunition data...');
@@ -154,9 +156,13 @@
                 console.error(`Failed to load user ammunition data: ${response.status} ${response.statusText}`);
                 throw new Error('Failed to load user predefined ammunition data');
             }
-            const userData = await response.json();
-            // console.debug('Ammunition data loaded:', data);
-            return userData;
+            const result = await response.json();
+            console.debug('Ammunition data fetched:', result);
+            if (result.ammunition.length) {
+                return result.ammunition;
+            } else {
+                return [];
+            }
         } catch (error) {
             console.error('Error loading users predefined ammunition:', error);
             return [];
@@ -172,23 +178,15 @@
         
         const selected = predefinedAmmunition.find(ammo => ammo.id === selectedId.value);
         if (selected) {
-            // console.debug('Selected ammunition:', selected);
-            
-            // Create a new object to ensure reactivity
             data = { ...createEmptyAmmunition(), ...selected };
             
-            // Update reactive variables
             selectedType = data.type || '';
             selectedPrimerType = data.primerType || undefined;
             caliberMm = data.caliberMm || 0;
             
-            // Reset the dropdown after selection
             selectedPredefinedAmmunition = null;
             
-            // Force a UI update
             data = { ...data };
-            
-            // console.debug('Updated data:', data);
         }
     }
 
@@ -199,28 +197,21 @@
         
         const selected = predefinedUserAmmunition.find(ammo => ammo.id === selectedId.value);
         if (selected) {
-            // console.debug('Selected ammunition:', selected);
-            
-            // Create a new object to ensure reactivity
             data = { ...createEmptyAmmunition(), ...selected };
             
-            // Update reactive variables
             selectedType = data.type || '';
             selectedPrimerType = data.primerType || undefined;
             caliberMm = data.caliberMm || 0;
             
-            // Reset the dropdown after selection
             selectedUserPredefinedAmmunition = null;
             
-            // Force a UI update
             data = { ...data };
-            
-            console.debug('Updated data:', data);
         }
     }
 
-    function createAmmunitionOptions(ammunition: AmmunitionData[]): MenuOption[] {
-        console.debug('Creating user options from ammunition:', ammunition);
+    function createAmmunitionOptions(ammunition: AmmunitionData[]): MenuOption[] 
+    {
+        $inspect(ammunition);
         if (!ammunition || ammunition.length === 0) {
             console.debug('No ammunition data available');
             return [];
@@ -281,6 +272,7 @@
                 placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
                 searchable
                 disabled={loadingAmmunition}
+                loading={loadingAmmunition}
             >
                 <MenuItem
                     slot="option"
@@ -301,11 +293,11 @@
 
           <div class="mb-4">
             <SelectField
-                label="Select Manufacturer Ammunition"
+                label="Your Ammunition"
                 options={userAmmunitionOptions}
                 bind:value={selectedUserPredefinedAmmunition}
                 on:change={(e) => handleUserPredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
-                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
+                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for ammunition..."}
                 searchable
                 disabled={loadingAmmunition}
             >
