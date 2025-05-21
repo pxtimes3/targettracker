@@ -2,7 +2,7 @@
 
 #### Editor
 - [ ] Fungerande upload - desktop.
-- [ ] Grupper visas med dropdown för "avancerad data".
+- [ ] Grupper visas med dropdown frör "avancerad data".
 - [ ] Save
 
 #### Dashboard
@@ -23,6 +23,11 @@
 
 - [ ] Grafer
 - [ ] Mobil dashboard
+
+#### Ammunition
+- [ ] Rework till parent-child. Recept som parent: kula, hylsa, tändhatt, krut, noter.
+- [ ] Child: Parent, laddvikt, COL, Batch/Lot, Prod. datum, noter.
+
 
 ## *v0.3*
 
