@@ -72,6 +72,20 @@ declare global {
         gunTypes: GunType;
     }
 
+    interface BulletData {
+        "id": string,
+        "manufacturer": string,
+        "name": string,
+        "caliber": number,
+        "caliberMm": number,
+        "weight": number,
+        "weightMetric": number,
+        "sd": number,
+        "bc1": number,
+        "bc7": number,
+        "type": string
+    }
+
     interface InfoPanelData {
         data: User;
         gunsEvents: any;
