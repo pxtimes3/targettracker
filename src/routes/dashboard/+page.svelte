@@ -14,7 +14,7 @@
     import { Drawer, Button } from "svelte-ux";
 	import GunCard from "@/components/gun/GunCard.svelte";
 	import AddEditGun from "@/components/gun/AddEditGun.svelte";
-	import { invalidate } from "$app/navigation";
+	import { goto, invalidate } from "$app/navigation";
 	import { GunStore } from "@/stores/GunStore";
 
     const guns = $derived($GunStore.guns);
@@ -144,7 +144,17 @@
         <div
             id="load-data"
         >
-            Your ammunition:
+        <Button 
+            on:click={() => (goto('/ammunition/add/'))}
+            class="grid bg-slate-400/10 border-slate-200/10 border-[1px] rounded-xl p-8 min-h-12 place-content-center items-center w-full"
+        >
+            <center>
+                <Plus 
+                    
+                />
+            </center>
+            <div>Add new handload</div>
+        </Button>
         </div>
     </div>
 </div>

@@ -19,7 +19,7 @@
     });
 </script>
 
-{#if gun}
+{#if gun?.gun_data}
 <div class="grid grid-flow-row text-lg bg-slate-400/10 border-slate-200/10 border-[1px] rounded-xl p-8 min-h-12 w-full">
     <div class="grid grid-flow-col grid-cols-2 min-w-full w-full items-start">
         <h2 class="place-self-start">{gun.gun_data.name}</h2>

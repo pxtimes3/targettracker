@@ -1,13 +1,14 @@
 <!-- src/lib/components/ammunition/AddEditAmmunition.svelte -->
 <script lang="ts">
     import { validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
-    import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption } from "svelte-ux";
+    import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption, Collapse, Card } from "svelte-ux";
     import { cls } from "@layerstack/tailwind";
-    import { createEmptyAmmunition, createTypeOptions } from "./addeditammunition";
+    import { createEmptyAmmunition, createTypeOptions, createAmmunitionOptions } from "./addeditammunition";
 	import type { UUIDTypes } from "uuid";
 	import { AmmunitionStore } from "@/stores/AmmunitionStore";
     import { invalidate } from '$app/navigation';
 	import { fetchCsrfToken } from "@/utils/security";
+	import AdvancedDataBullet from "./AdvancedDataBullet.svelte";
 
     const ammunitionTypes: AmmunitionType[] = ['centerfire', 'rimfire', 'shotgun', 'airgun'];
     const primerTypes: PrimerType[] = [
@@ -34,26 +35,36 @@
         onSuccess?: (ammunitionId: string, updatedAmmunition?: AmmunitionData) => void,
     } = $props();
 
-    let data = $state(initialData);
-    let userData = $state(initialUserData);
+    let data: AmmunitionData = $state(initialData);
+    let userData: AmmunitionData = $state(initialUserData);
 
-    let selectedType = $derived(data.type || '');
-    let selectedPrimerType = $derived(data.primerType || undefined);
-    let caliberMm = $derived(data.caliberMm || 0);
-    let csrfToken = $state('');
+    let selectedType: AmmunitionType|string = $derived(data.type || '');
+    let selectedPrimerType: PrimerType|undefined = $derived(data.primerType || undefined);
+    let caliberMm: number|null = $derived(data.caliberMm || 0);
+    let csrfToken: string = $state('');
     let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
     let primerTypeOptions: MenuOption[] = $derived(createTypeOptions(primerTypes));
-    let submitting = $state(false);
-    let errorMessage = $state('');
-    let successMessage = $state('');
-    let predefinedAmmunition = $state<AmmunitionData[]>([]);
-    let predefinedUserAmmunition = $state<AmmunitionData[]>([]);
-    let selectedPredefinedAmmunition = $state<string | null>(null);
-    let selectedUserPredefinedAmmunition = $state<string | null>(null);
-    let loadingAmmunition = $state(false);
-    let loadingUserAmmunition = $state(false);
-    let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedAmmunition));
-    let userAmmunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedUserAmmunition));
+    let submitting: boolean = $state(false);
+    let errorMessage: string = $state('');
+    let successMessage: string = $state('');
+    let predefinedManufacturerAmmunition: AmmunitionData[] = $state<AmmunitionData[]>([]);
+    let predefinedUserAmmunition: AmmunitionData[] = $state<AmmunitionData[]>([]);
+    let predefinedAmmunition: AmmunitionData[] = $state<AmmunitionData[]>([]);
+    let selectedPredefinedAmmunition: string|null = $state<string | null>(null);
+    let selectedUserPredefinedAmmunition: string|null = $state<string | null>(null);
+    let isFactory: boolean = $derived(data.isFactory || false);
+    let loadingAmmunition: boolean = $state(false);
+    let loadingUserAmmunition: boolean = $state(false);
+    let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions({ ammunitionArrays: [predefinedUserAmmunition, predefinedManufacturerAmmunition] }));
+
+    // advanced data
+    let advanced: [key: string] = ['bullet']
+    let advancedOpen: boolean = $state(isFactoryAmmunition());
+
+    function isFactoryAmmunition(): boolean
+    {
+        return data.isFactory ? false : true;
+    }
 
     async function handleFormSubmit(e: Event): Promise<void>
     {
@@ -105,23 +116,6 @@
         // handleReset(e, originalData);
     }
 
-    function setCaliberMm(): void
-    {
-        const caliberInput = document.getElementsByName('caliber');
-        if (!caliberInput[0]) return;
-        
-        const input: HTMLInputElement = caliberInput[0] as unknown as HTMLInputElement;
-        let value = input.value;
-        
-        if (value.match(/^\d+,\d+$/)) {
-            caliberMm = convertCommaString(value);
-        } else if (value.match(/^\.\d+$/)) {
-            caliberMm = convertInchToMm(parseFloat(value) * 10);
-        } else {
-            caliberMm = parseFloat(value);
-        }
-    }
-
     async function fetchPredefinedAmmunition(): Promise<AmmunitionData[]> {
         loadingAmmunition = true;
         try {
@@ -133,7 +127,7 @@
             }
             const data = await response.json();
             // console.debug('Ammunition data loaded:', data);
-            return data;
+            return data.map((item: AmmunitionData) => ({ ...item, isFactory: true }));
         } catch (error) {
             console.error('Error loading predefined ammunition:', error);
             return [];
@@ -157,9 +151,9 @@
                 throw new Error('Failed to load user predefined ammunition data');
             }
             const result = await response.json();
-            console.debug('Ammunition data fetched:', result);
+            console.debug('User ammunition data fetched:', result);
             if (result.ammunition.length) {
-                return result.ammunition;
+                return result.ammunition.map((item: AmmunitionData) => ({ ...item, isFactory: false, group: 'Your loads' }));;
             } else {
                 return [];
             }
@@ -190,45 +184,45 @@
         }
     }
 
-    function handleUserPredefinedAmmunitionSelect(selectedId: HTMLOptionElement): void 
-    {
-        // console.debug(`handlePredefinedAmmunitionSelect`, selectedId)
-        if (!selectedId) return;
-        
-        const selected = predefinedUserAmmunition.find(ammo => ammo.id === selectedId.value);
-        if (selected) {
-            data = { ...createEmptyAmmunition(), ...selected };
-            
-            selectedType = data.type || '';
-            selectedPrimerType = data.primerType || undefined;
-            caliberMm = data.caliberMm || 0;
-            
-            selectedUserPredefinedAmmunition = null;
-            
-            data = { ...data };
-        }
-    }
+    // function createAmmunitionOptions(predefinedUserAmmunition: AmmunitionData[], predefinedManufacturerAmmunition: AmmunitionData[]): MenuOption[] 
+    // {
+    //     const ammunition = [...predefinedUserAmmunition, ...predefinedManufacturerAmmunition];
 
-    function createAmmunitionOptions(ammunition: AmmunitionData[]): MenuOption[] 
-    {
-        $inspect(ammunition);
-        if (!ammunition || ammunition.length === 0) {
-            console.debug('No ammunition data available');
-            return [];
-        }
+    //     if (!ammunition || ammunition.length === 0) {
+    //         console.debug('No ammunition data available');
+    //         return [];
+    //     }
         
-        return ammunition.map(ammo => ({
-            value: ammo.id,
-            label: `${ammo.manufacturerBullet || ''} ${ammo.name} - ${ammo.caliber || ''}`.trim()
-        }));
-    }
+    //     const options: MenuOption[] = ammunition.map(ammo => ({
+    //         value: ammo.id,
+    //         group: `${ammo.group ? ammo.group : ammo.manufacturerBullet}`.trim(),
+    //         label: `${ammo.name} - ${ammo.caliber || ''}`.trim()
+    //     }));
+
+    //     // Add blank + create entry on top
+    //     const createOption: MenuOption = {
+    //         group: 'Create new... ',
+    //         label: 'Add new ammunition entry',
+    //         value: 'createnew'
+    //     };
+        
+    //     const blankOption: MenuOption = {
+    //         label: '',
+    //         value: undefined,
+    //         disabled: true
+    //     };
+
+    //     options.unshift(blankOption, createOption);
+
+    //     return options;
+    // }
 
     $effect(() => {
         fetchCsrfToken().then(token => csrfToken = token);
         fetchPredefinedAmmunition()
             .then(ammunitionData => {
-                // console.debug('Setting predefined ammunition:', ammunitionData);
-                predefinedAmmunition = ammunitionData;
+                console.debug('Setting predefined manufacturer ammunition:', ammunitionData);
+                predefinedManufacturerAmmunition = ammunitionData;
             })
             .catch(err => {
                 console.error('Failed to load ammunition data:', err);
@@ -236,7 +230,7 @@
             });
         fetchUserPredefinedAmmunition()
             .then(ammunitionData => {
-                // console.debug('Setting predefined ammunition:', ammunitionData);
+                console.debug('Setting predefined user ammunition:', ammunitionData);
                 predefinedUserAmmunition = ammunitionData;
             })
             .catch(err => {
@@ -246,7 +240,7 @@
         
         // console.debug('Current ammunition data:', data);
         // console.debug('Data changed:', data);
-    })
+    });
 </script>
 
 <form onsubmit={handleFormSubmit} onreset={handleFormReset} class="min-w-96 max-w-[36rem]">
@@ -262,14 +256,14 @@
         </div>
     {/if}
 
-    <div class="grid grid-flow-row gap-2">
+    <div class="grid grid-flow-row gap-2 gap-x-2 card">
         <div class="mb-4">
             <SelectField
-                label="Select Manufacturer Ammunition"
+                label="Select Ammunition"
                 options={ammunitionOptions}
                 bind:value={selectedPredefinedAmmunition}
                 on:change={(e) => handlePredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
-                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for manufacturer ammunition..."}
+                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for ammunition..."}
                 searchable
                 disabled={loadingAmmunition}
                 loading={loadingAmmunition}
@@ -289,37 +283,16 @@
                     {option.label}
                 </MenuItem>
             </SelectField>
-          </div>
+        </div>
 
-          <div class="mb-4">
-            <SelectField
-                label="Your Ammunition"
-                options={userAmmunitionOptions}
-                bind:value={selectedUserPredefinedAmmunition}
-                on:change={(e) => handleUserPredefinedAmmunitionSelect(e.detail as unknown as HTMLOptionElement)}
-                placeholder={loadingAmmunition ? "Loading ammunition data..." : "Search for ammunition..."}
-                searchable
-                disabled={loadingAmmunition}
-            >
-                <MenuItem
-                    slot="option"
-                    let:option
-                    let:index
-                    let:selected
-                    let:highlightIndex
-                    class={cls(
-                        index === highlightIndex && "bg-surface-content/5",
-                        option === selected && "font-semibold"
-                    )}
-                    scrollIntoView={index === highlightIndex}
-                >
-                    {option.label}
-                </MenuItem>
-            </SelectField>
-          </div>
-          
-          
-		<input 
+        <input 
+			type="hidden"
+			id="isFactory"
+			name="isFactory"
+			value={data.isFactory}
+		/>
+
+    	<input 
 			type="hidden"
 			id="id"
 			name="id"
@@ -346,191 +319,118 @@
 			/>
 		</Field>
 
-        <SelectField
-			label="Type"
-			name="type"
-			options={ammunitionTypeOptions}
-			bind:value={selectedType}
-			placeholder="Select ammunition type"
-			required
-		>
-			<MenuItem
-                slot="option"
-                let:option
-                let:index
-                let:selected
-                let:highlightIndex
-                class={cls(
-                    index === highlightIndex && "bg-surface-content/5",
-                    option === selected && "font-semibold"
-                )}
-                scrollIntoView={index === highlightIndex}
-			>
-			    {option.label}
-			</MenuItem>
-		</SelectField>
-
-        <p class="mt-2">Bullet</p>
-
-        <div class="grid grid-cols-2 gap-x-2 items-stretch children-h-full">
-            <Field label="Manufacturer" let:id>
-                <Input 
-                    {id}
-                    name="manufacturerBullet"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.manufacturerBullet || ''}
-                />
-            </Field>
-
-            <Field label="Name" let:id>
-                <Input 
-                    {id}
-                    name="bulletName"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.bulletName || ''}
-                />
-            </Field>
-        </div>
+        <div class="mt-2 border-b-2 border-b-white"><h2 class="mb-2">BaseData</h2></div>
         
-        <div class="grid grid-cols-2 gap-x-2 items-stretch children-h-full">
-            <Field label="Bullet weight" let:id>
-                <Input 
-                    {id}
-                    name="bulletWeight"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.bulletWeight?.toString() || ''}
-                    class="min-w-[8ch]"
-                />
-                <div class="grid gap-2 z-10">
-                    <label class="flex gap-2 items-center text-sm">
-                        <span class={data.bulletWeightUnit == 'g' ? 'font-bold' : ''}>g</span>
-                        <Switch
-                            name="barrelunit" 
-                            checked={data.bulletWeightUnit == 'gr' ? true : false}
+        <Card
+            title="Bullet"
+        >
+            <div slot="contents" class="mb-4">
+                <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full mb-4">
+                    <Field label="Manufacturer" let:id>
+                        <Input 
+                            {id}
+                            name="manufacturerBullet"
+                            min={3}
+                            max={256}
+                            on:keyup={validate}
+                            value={data.manufacturerBullet || ''}
                         />
-                        <span class={data.bulletWeightUnit == 'gr' || undefined ? 'font-bold' : ''}>gr</span>
-                    </label>
-                </div>
-            </Field>
-                
-            <input type="hidden"
-                name="caliberMm"
-                value={caliberMm}
-            />
-            <Field 
-                label="Caliber" 
-                let:id
-                class={cls('StretchHeight')}
-            >
-                <Input 
-                    {id}
-                    name="caliber"
-                    min={3}
-                    max={256}
-                    on:keyup={() => { validate; setCaliberMm() }}
-                    value={data.caliber || ''}
-                    class="w-16ch"
-                />
-                <div class="grid gap-2 z-10">
-                    <label class="flex gap-2 items-center text-sm">
-                        <span class={data.caliberUnit == 'imperial' ? 'font-bold' : ''}>in</span>
-                        <Switch
-                            name="caliberUnit" 
-                            checked={data.caliberUnit == 'metric' || undefined ? true : false}
+                    </Field>
+
+                    <Field label="Name" let:id>
+                        <Input 
+                            {id}
+                            name="bulletName"
+                            min={3}
+                            max={256}
+                            on:keyup={validate}
+                            value={data.bulletName || ''}
+                            placeholder="Varminator FMJHP"
                         />
-                        <span class={data.caliberUnit == 'metric' || undefined ? 'font-bold' : ''}>mm</span>
-                    </label>
+                    </Field>
+                    <SelectField
+                        label="Type"
+                        name="type"
+                        options={ammunitionTypeOptions}
+                        bind:value={selectedType}
+                        placeholder="Select ammunition type"
+                        required
+                    >
+                        <MenuItem
+                            slot="option"
+                            let:option
+                            let:index
+                            let:selected
+                            let:highlightIndex
+                            class={cls(
+                                index === highlightIndex && "bg-surface-content/5",
+                                option === selected && "font-semibold"
+                            )}
+                            scrollIntoView={index === highlightIndex}
+                        >
+                            {option.label}
+                        </MenuItem>
+                    </SelectField>
                 </div>
-            </Field>
-        </div>
-        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
-            <Field label="BC (G1)" let:id>
-                <Input 
-                    {id}
-                    name="bulletBcG1"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    class="min-w-[8ch]"
-                    value={data.bulletBcG1?.toString() || ''}
-                />
-            </Field>
-            <Field label="BC (G7)" let:id>
-                <Input 
-                    {id}
-                    name="bulletBcG7"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    class="min-w-[8ch]"
-                    value={data.bulletBcG7?.toString() || ''}
-                />
-            </Field>
-            <Field label="Sectional Density" let:id>
-                <Input 
-                    {id}
-                    name="bulletSD"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    class="min-w-[8ch]"
-                    value={data.bulletSD?.toString() || ''}
-                />
-            </Field>
-        </div>
 
-        <p class="mt-2">Propellant</p>
+                <AdvancedDataBullet 
+                    data
+                    isFactory
+                    advancedOpen
+                />
+            </div>
+        </Card>
 
-        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
-            <Field label="Manufacturer" let:id class={cls('StretchHeight')}>
-                <Input 
-                    {id}
-                    name="manufacturerPropellant"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.manufacturerPropellant || ''}
-                />
-            </Field>
-            
-            <Field label="Name" let:id class={cls('StretchHeight')}>
-                <Input 
-                    {id}
-                    name="propellantName"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.propellantName || ''}
-                />
-            </Field>
-
-            <Field label="Charge weight" let:id>
-                <Input 
-                    {id}
-                    name="propellantCharge"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.propellantCharge?.toString() || ''}
-                />
-                <div class="grid gap-2 z-10 p-0 m-0">
-                    <label class="flex gap-2 items-center text-sm">
-                        <span class={data.propellantWeightUnit == 'g' ? 'font-bold' : ''}>g</span>
-                        <Switch
-                            name="barrelunit" 
-                            checked={data.propellantWeightUnit == 'gr' ? true : false}
+        <Card
+            title="Propellant"
+        >
+            <div slot="contents" class="mb-4">
+                <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
+                    <Field label="Manufacturer" let:id class={cls('StretchHeight')}>
+                        <Input 
+                            {id}
+                            name="manufacturerPropellant"
+                            min={3}
+                            max={256}
+                            on:keyup={validate}
+                            value={data.manufacturerPropellant || ''}
                         />
-                        <span class={data.propellantWeightUnit == 'gr' || undefined ? 'font-bold' : ''}>gr</span>
-                    </label>
+                    </Field>
+                    
+                    <Field label="Name" let:id class={cls('StretchHeight')}>
+                        <Input 
+                            {id}
+                            name="propellantName"
+                            min={3}
+                            max={256}
+                            on:keyup={validate}
+                            value={data.propellantName || ''}
+                        />
+                    </Field>
+
+                    <Field label="Charge weight" let:id>
+                        <Input 
+                            {id}
+                            name="propellantCharge"
+                            min={3}
+                            max={256}
+                            on:keyup={validate}
+                            value={data.propellantCharge?.toString() || ''}
+                        />
+                        <div class="grid gap-2 z-10 p-0 m-0">
+                            <label class="flex gap-2 items-center text-sm">
+                                <span class={data.propellantWeightUnit == 'g' ? 'font-bold' : ''}>g</span>
+                                <Switch
+                                    name="barrelunit" 
+                                    checked={data.propellantWeightUnit == 'gr' ? true : false}
+                                />
+                                <span class={data.propellantWeightUnit == 'gr' || undefined ? 'font-bold' : ''}>gr</span>
+                            </label>
+                        </div>
+                    </Field>
                 </div>
-            </Field>
-        </div>
+            </div>
+        </Card>
 
         <p class="mt-2">Primer</p>
 

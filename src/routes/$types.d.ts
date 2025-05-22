@@ -66,6 +66,12 @@ declare global {
         gunTypes: GunType;
     }
 
+    interface AmmunuitionAddEditPageServerData {
+        user: User;
+        gundata: GunData;
+        gunTypes: GunType;
+    }
+
     interface InfoPanelData {
         data: User;
         gunsEvents: any;

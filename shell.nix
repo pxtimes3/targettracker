@@ -1,5 +1,4 @@
 { pkgs ? import <nixpkgs> {} }:
-
 let
     projectDir = toString ./.;
 
@@ -37,15 +36,82 @@ let
   gitRemoteUrl = getGitRemoteUrl;
 in
 pkgs.mkShell {
-    buildInputs = [
-        nodejs
-        pkgs.nodePackages.pnpm
-        pkgs.fish
-        pkgs.git
-    ];
+  buildInputs = [
+    # Core development tools
+    pkgs.git
+    # pkgs.nodejs_20  # Latest LTS Node.js
+    nodejs
+    pkgs.nodePackages.npm
+    pkgs.nodePackages.pnpm
+    pkgs.nodePackages.yarn
+    
+    # Python development
+    pkgs.python311
+    pkgs.python311Packages.pip
+    pkgs.python311Packages.virtualenv
+    pkgs.python311Packages.setuptools
+    
+    # Build tools
+    pkgs.gcc
+    pkgs.gnumake
+    pkgs.cmake
+    pkgs.autoconf
+    pkgs.automake
+    pkgs.libtool
+    
+    # Database tools
+    pkgs.sqlite
+    pkgs.postgresql_15
+    
+    # Container tools
+    pkgs.docker
+    pkgs.docker-compose
+    
+    # Version control tools
+    pkgs.git-lfs
+    
+    # Shell and utilities
+    pkgs.fish
+    pkgs.jq  # JSON processor
+    pkgs.ripgrep  # Better grep
+    pkgs.fd  # Better find
+    pkgs.bat  # Better cat
+    # pkgs.eza or pkgs.lsd as alternatives to exa (better ls)
+    
+    # Network tools
+    pkgs.curl
+    pkgs.wget
+    
+    # Text editors/IDEs (uncomment if needed)
+    # pkgs.vim
+    # pkgs.neovim
+  ];
 
-    shellHook = ''
-        echo "Using Node.js version: ${nodejs.version}"
+  shellHook = ''
+    echo "Development environment loaded!"
+    echo "Available tools:"
+    echo " - Node.js: $(node --version)"
+    echo " - npm: $(npm --version)"
+    echo " - pnpm: $(pnpm --version 2>/dev/null || echo 'not available')"
+    echo " - Python: $(python3 --version)"
+    echo " - Git: $(git --version)"
+    echo " - Docker: $(docker --version 2>/dev/null || echo 'not running')"
+    echo " - PostgreSQL: $(psql --version 2>/dev/null || echo 'not configured')"
+    echo " - SQLite: $(sqlite3 --version)"
+    echo ""
+    echo "To use this environment, run: nix-shell dev-environment.nix"
+    
+    # Set up PATH
+    export PATH="$PWD/node_modules/.bin:$PATH"
+    
+    # Python virtual environment setup
+    if [ ! -d .venv ]; then
+      echo "Creating Python virtual environment in .venv..."
+      python3 -m venv .venv
+    fi
+    echo "To activate Python virtual environment: source .venv/bin/activate"
+
+    echo "Using Node.js version: ${nodejs.version}"
         cd ${projectDir}
 
         if [ ! -d node_modules ]; then
@@ -76,8 +142,7 @@ pkgs.mkShell {
 
         # Do your thing...
         pnpm run dev
-    '';
-
+  '';
   SHELL = "${pkgs.fish}/bin/fish";
   NIX_ENFORCE_PURITY = 0;
   HOME = builtins.getEnv "HOME";

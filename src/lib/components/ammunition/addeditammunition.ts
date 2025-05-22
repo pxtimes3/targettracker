@@ -1,5 +1,6 @@
 // src/lib/components/ammunition/addeditammunition.ts
-import { hyphensToSpaces, createOriginalDataCopy, resetForm } from "@/utils/forms";
+import { validate, hyphensToSpaces, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
+import { type MenuOption } from "svelte-ux";
 
 export const createEmptyAmmunition = (): AmmunitionData => ({
     id: '',
@@ -31,6 +32,7 @@ export const createEmptyAmmunition = (): AmmunitionData => ({
     cartridgeOverallLength: null,
     cartridgeOverallLengthUnit: null,
     date: new Date(),
+    isFactory: false,
     error: { message: '' }
 });
 
@@ -46,4 +48,55 @@ export function createTypeOptions(types: string[]): { value: string; label: stri
         value: type,
         label: hyphensToSpaces(type)
     }));
+}
+
+export function setCaliberMm(val: string): number
+{
+    console.debug('setCaliberMm')
+    const caliberInput = document.getElementsByName('caliber');
+    
+    const input: HTMLInputElement = caliberInput[0] as unknown as HTMLInputElement;
+    let value = input.value;
+    
+    if (value.match(/^\d+,\d+$/)) {
+        return convertCommaString(value);
+    } else if (value.match(/^\.\d+$/)) {
+        return convertInchToMm(parseFloat(value) * 10);
+    } else {
+        return parseFloat(value);
+    }
+}
+
+
+export function createAmmunitionOptions(...ammunitionArrays: AmmunitionData[][]): MenuOption[] 
+{
+    if (ammunitionArrays.length === 0) {
+        console.debug('No ammunition arrays provided');
+        return [];
+    }
+
+    const ammunition: AmmunitionData[] = ammunitionArrays.flat();
+    
+    if (!ammunition || ammunition.length === 0) {
+        console.debug('No ammunition data available');
+        return [];
+    }
+    
+    // create entry on top
+    const options: MenuOption[] = [
+        {
+            group: 'Create new... ',
+            label: 'Add new ammunition entry',
+            value: 'createnew'
+        },
+    ];
+    
+    // avengers, assemble!
+    options.push(...ammunition.map(ammo => ({
+        value: ammo.id,
+        group: `${ammo.group || ammo.manufacturerBullet}`.trim(),
+        label: `${ammo.name} - ${ammo.caliber || ''}`.trim()
+    })));
+
+    return options;
 }

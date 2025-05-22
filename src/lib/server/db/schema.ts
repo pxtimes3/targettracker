@@ -1,5 +1,5 @@
 // src/lib/server/db/schema.ts
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { boolean, integer, pgEnum, pgPolicy, pgRole, pgTable, text, timestamp, uuid, doublePrecision, bigint, json } from "drizzle-orm/pg-core";
 
 export const admin = pgRole('admin', { createRole: true, createDb: true, inherit: true }).existing();
@@ -194,6 +194,65 @@ export const ammunition = pgTable('ammunition', {
     cartridgeOverallLengthUnit: measurementsEnum('cartridge_oal_unit'),
 });
 
+export const loadRecipe = pgTable('load_recipe', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    name: text('name').notNull(),
+    isFactory: boolean('is_factory').notNull().default(false),
+    
+    // Caliber info
+    caliber: text('caliber'),
+    caliberMm: doublePrecision('caliber_mm'),
+    caliberUnit: measurementsEnum('caliber_unit'),
+    
+    // Case details
+    manufacturerCase: text('manufacturer_case'),
+    
+    // Bullet details
+    manufacturerBullet: text('manufacturer_bullet'),
+    bulletName: text('bullet_name'),
+    bulletWeight: doublePrecision('bullet_weight'),
+    bulletWeightUnit: weightEnum('bullet_weight_unit'),
+    bulletBcG1: doublePrecision('bullet_bc_g1'),
+    bulletBcG7: doublePrecision('bullet_bc_g7'),
+    bulletSd: doublePrecision('bullet_sd'),
+    
+    // Primer details
+    manufacturerPrimer: text('manufacturer_primer'),
+    primerType: primerTypeEnum('primer_type'),
+    primerName: text('primer_name'),
+    
+    // Propellant base details
+    manufacturerPropellant: text('manufacturer_propellant'),
+    propellantName: text('propellant_name'),
+    
+    // General info
+    note: text('note'),
+    date: timestamp('date', { withTimezone: true }).defaultNow(),
+});
+  
+export const loadVariation = pgTable('load_variation', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    recipeId: uuid('recipe_id').notNull().references(() => loadRecipe.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    name: text('name'),
+    
+    // Specific load details
+    propellantCharge: doublePrecision('propellant_charge'),
+    propellantWeightUnit: weightEnum('propellant_weight_unit'),
+    cartridgeOal: doublePrecision('cartridge_oal'),
+    cartridgeOalUnit: measurementsEnum('cartridge_oal_unit'),
+    
+    // Batch information
+    lotNumber: text('lot_number'),
+    date: timestamp('date', { withTimezone: true }).defaultNow(),
+    
+    // Additional info
+    note: text('note'),
+    type: ammunitionTypeEnum('type').notNull(),
+});
+
 export const events = pgTable('events', {
     id: uuid('id').default(sql`gen_random_uuid()`).primaryKey(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -285,6 +344,22 @@ export const userflags = pgTable('userflags', {
     angleunit: angleUnitEnum('angleunit').default('mil'),
     targetShowall: boolean('target_showall').default(true),
 });
+
+
+export const loadRecipeRelations = relations(loadRecipe, ({ one, many }) => ({
+    user: one(user, {
+    fields: [loadRecipe.userId],
+    references: [user.id],
+    }),
+    variations: many(loadVariation),
+}));
+
+export const loadVariationRelations = relations(loadVariation, ({ one, many }) => ({
+    recipe: one(loadRecipe, {
+    fields: [loadVariation.recipeId],
+    references: [loadRecipe.id],
+    }),
+}));
 
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
