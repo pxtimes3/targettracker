@@ -98,5 +98,63 @@ export function createAmmunitionOptions(...ammunitionArrays: AmmunitionData[][])
         label: `${ammo.name} - ${ammo.caliber || ''}`.trim()
     })));
 
+    // console.debug(options)
+
+    return options;
+}
+
+/* BULLETS */
+export async function fetchPredefinedBullets(): Promise<BulletData[]>
+{
+    let predefinedBullets: BulletData[] = [];
+
+    try {
+        const response = await fetch('/public/bullets.json');
+
+        if (!response.ok) {
+            console.error('Failed to fetch /public/bullets.json');
+            throw new Error('Failed to fetch /public/bullets.json');
+        }
+
+        const result = await response.json();
+        predefinedBullets = result.map((item: BulletData) => ({ ...item }));
+    } catch (error) {
+        console.error('Error fetching bullet data', error);
+        return predefinedBullets;
+    } finally {
+        return predefinedBullets;
+    }
+}
+
+export function createBulletOptions(...array: BulletData[][]): MenuOption[] 
+{
+    if (array.length == 0) {
+        console.debug('No bullet array(s) provided');
+        return [];
+    }
+
+    const bullets: BulletData[] = array.flat();
+
+    if (!bullets || bullets.length === 0) {
+        console.debug('No bullet data available');
+        return [];
+    }
+
+    const options: MenuOption[] = [
+        {
+            group: 'Create new... ',
+            label: 'Add new bullet entry',
+            value: 'createnew'
+        },
+    ];
+
+    options.push(...bullets.map(bullet => ({
+        value: bullet.id,
+        group: `${bullet.manufacturer}`.trim(),
+        label: `${bullet.name} - ${bullet.caliber || ''}`.trim()
+    })));
+
+    // console.debug(options)
+
     return options;
 }

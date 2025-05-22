@@ -3,25 +3,15 @@
     import { validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
     import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption, Collapse, Card } from "svelte-ux";
     import { cls } from "@layerstack/tailwind";
-    import { createEmptyAmmunition, createTypeOptions, createAmmunitionOptions } from "./addeditammunition";
+    import { createEmptyAmmunition, createTypeOptions, createAmmunitionOptions } from "@/utils/addeditammunition";
 	import type { UUIDTypes } from "uuid";
 	import { AmmunitionStore } from "@/stores/AmmunitionStore";
     import { invalidate } from '$app/navigation';
 	import { fetchCsrfToken } from "@/utils/security";
-	import AdvancedDataBullet from "./AdvancedDataBullet.svelte";
+	import BaseRecipe from "./BaseRecipe.svelte";
 
-    const ammunitionTypes: AmmunitionType[] = ['centerfire', 'rimfire', 'shotgun', 'airgun'];
-    const primerTypes: PrimerType[] = [
-        'small rifle', 
-        'small rifle magnum', 
-        'large rifle', 
-        'large rifle magnum', 
-        'small pistol', 
-        'small pistol magnum', 
-        'large pistol', 
-        'large pistol magnum', 
-        'shotgun'
-    ];
+    
+    
     
     let { 
         data: initialData = createEmptyAmmunition(),
@@ -38,24 +28,24 @@
     let data: AmmunitionData = $state(initialData);
     let userData: AmmunitionData = $state(initialUserData);
 
-    let selectedType: AmmunitionType|string = $derived(data.type || '');
-    let selectedPrimerType: PrimerType|undefined = $derived(data.primerType || undefined);
+    // let selectedType: AmmunitionType|string = $derived(data.type || '');
+    
     let caliberMm: number|null = $derived(data.caliberMm || 0);
     let csrfToken: string = $state('');
-    let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
-    let primerTypeOptions: MenuOption[] = $derived(createTypeOptions(primerTypes));
+    // let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
+    
     let submitting: boolean = $state(false);
     let errorMessage: string = $state('');
     let successMessage: string = $state('');
     let predefinedManufacturerAmmunition: AmmunitionData[] = $state<AmmunitionData[]>([]);
     let predefinedUserAmmunition: AmmunitionData[] = $state<AmmunitionData[]>([]);
-    let predefinedAmmunition: AmmunitionData[] = $state<AmmunitionData[]>([]);
+    let predefinedAmmunition: AmmunitionData[] = $derived<AmmunitionData[]>([...predefinedUserAmmunition, ...predefinedManufacturerAmmunition]);
     let selectedPredefinedAmmunition: string|null = $state<string | null>(null);
     let selectedUserPredefinedAmmunition: string|null = $state<string | null>(null);
     let isFactory: boolean = $derived(data.isFactory || false);
     let loadingAmmunition: boolean = $state(false);
     let loadingUserAmmunition: boolean = $state(false);
-    let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions({ ammunitionArrays: [predefinedUserAmmunition, predefinedManufacturerAmmunition] }));
+    let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedUserAmmunition, predefinedManufacturerAmmunition));
 
     // advanced data
     let advanced: [key: string] = ['bullet']
@@ -151,7 +141,7 @@
                 throw new Error('Failed to load user predefined ammunition data');
             }
             const result = await response.json();
-            console.debug('User ammunition data fetched:', result);
+            // console.debug('User ammunition data fetched:', result);
             if (result.ammunition.length) {
                 return result.ammunition.map((item: AmmunitionData) => ({ ...item, isFactory: false, group: 'Your loads' }));;
             } else {
@@ -161,61 +151,37 @@
             console.error('Error loading users predefined ammunition:', error);
             return [];
         } finally {
-            loadingUserAmmunition = false;
+            loadingAmmunition = false;
         }
     }
 
     function handlePredefinedAmmunitionSelect(selectedId: HTMLOptionElement): void 
     {
-        // console.debug(`handlePredefinedAmmunitionSelect`, selectedId)
+        console.debug(`handlePredefinedAmmunitionSelect`, $state.snapshot(selectedId));
         if (!selectedId) return;
         
-        const selected = predefinedAmmunition.find(ammo => ammo.id === selectedId.value);
-        if (selected) {
-            data = { ...createEmptyAmmunition(), ...selected };
-            
-            selectedType = data.type || '';
-            selectedPrimerType = data.primerType || undefined;
-            caliberMm = data.caliberMm || 0;
-            
-            selectedPredefinedAmmunition = null;
-            
-            data = { ...data };
+        if (selectedId.value != 'createnew') {
+            const selected = predefinedAmmunition.find(ammo => ammo.id === selectedId.value);
+            if (selected) {
+                data = { ...createEmptyAmmunition(), ...selected };
+                
+                selectedType = data.type || '';
+                selectedPrimerType = data.primerType || undefined;
+                caliberMm = data.caliberMm || 0;
+                
+                selectedPredefinedAmmunition = null;
+                
+                data = { ...data };
+
+                console.debug('data:', $state.snapshot(data));
+            } else {
+                console.debug(`found nothing! selectedId.value = ${selectedId.value}`);
+                console.debug(`predefiunedAmmunition:`, $state.snapshot(predefinedAmmunition));
+            }
+        } else {
+            data = { ...createEmptyAmmunition() }
         }
     }
-
-    // function createAmmunitionOptions(predefinedUserAmmunition: AmmunitionData[], predefinedManufacturerAmmunition: AmmunitionData[]): MenuOption[] 
-    // {
-    //     const ammunition = [...predefinedUserAmmunition, ...predefinedManufacturerAmmunition];
-
-    //     if (!ammunition || ammunition.length === 0) {
-    //         console.debug('No ammunition data available');
-    //         return [];
-    //     }
-        
-    //     const options: MenuOption[] = ammunition.map(ammo => ({
-    //         value: ammo.id,
-    //         group: `${ammo.group ? ammo.group : ammo.manufacturerBullet}`.trim(),
-    //         label: `${ammo.name} - ${ammo.caliber || ''}`.trim()
-    //     }));
-
-    //     // Add blank + create entry on top
-    //     const createOption: MenuOption = {
-    //         group: 'Create new... ',
-    //         label: 'Add new ammunition entry',
-    //         value: 'createnew'
-    //     };
-        
-    //     const blankOption: MenuOption = {
-    //         label: '',
-    //         value: undefined,
-    //         disabled: true
-    //     };
-
-    //     options.unshift(blankOption, createOption);
-
-    //     return options;
-    // }
 
     $effect(() => {
         fetchCsrfToken().then(token => csrfToken = token);
@@ -319,168 +285,15 @@
 			/>
 		</Field>
 
-        <div class="mt-2 border-b-2 border-b-white"><h2 class="mb-2">BaseData</h2></div>
-        
-        <Card
-            title="Bullet"
-        >
-            <div slot="contents" class="mb-4">
-                <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full mb-4">
-                    <Field label="Manufacturer" let:id>
-                        <Input 
-                            {id}
-                            name="manufacturerBullet"
-                            min={3}
-                            max={256}
-                            on:keyup={validate}
-                            value={data.manufacturerBullet || ''}
-                        />
-                    </Field>
+        <div class="mt-2 border-b-2 border-b-white"><h2 class="mb-2">Base</h2></div>
 
-                    <Field label="Name" let:id>
-                        <Input 
-                            {id}
-                            name="bulletName"
-                            min={3}
-                            max={256}
-                            on:keyup={validate}
-                            value={data.bulletName || ''}
-                            placeholder="Varminator FMJHP"
-                        />
-                    </Field>
-                    <SelectField
-                        label="Type"
-                        name="type"
-                        options={ammunitionTypeOptions}
-                        bind:value={selectedType}
-                        placeholder="Select ammunition type"
-                        required
-                    >
-                        <MenuItem
-                            slot="option"
-                            let:option
-                            let:index
-                            let:selected
-                            let:highlightIndex
-                            class={cls(
-                                index === highlightIndex && "bg-surface-content/5",
-                                option === selected && "font-semibold"
-                            )}
-                            scrollIntoView={index === highlightIndex}
-                        >
-                            {option.label}
-                        </MenuItem>
-                    </SelectField>
-                </div>
-
-                <AdvancedDataBullet 
-                    data
-                    isFactory
-                    advancedOpen
-                />
-            </div>
-        </Card>
-
-        <Card
-            title="Propellant"
-        >
-            <div slot="contents" class="mb-4">
-                <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
-                    <Field label="Manufacturer" let:id class={cls('StretchHeight')}>
-                        <Input 
-                            {id}
-                            name="manufacturerPropellant"
-                            min={3}
-                            max={256}
-                            on:keyup={validate}
-                            value={data.manufacturerPropellant || ''}
-                        />
-                    </Field>
-                    
-                    <Field label="Name" let:id class={cls('StretchHeight')}>
-                        <Input 
-                            {id}
-                            name="propellantName"
-                            min={3}
-                            max={256}
-                            on:keyup={validate}
-                            value={data.propellantName || ''}
-                        />
-                    </Field>
-
-                    <Field label="Charge weight" let:id>
-                        <Input 
-                            {id}
-                            name="propellantCharge"
-                            min={3}
-                            max={256}
-                            on:keyup={validate}
-                            value={data.propellantCharge?.toString() || ''}
-                        />
-                        <div class="grid gap-2 z-10 p-0 m-0">
-                            <label class="flex gap-2 items-center text-sm">
-                                <span class={data.propellantWeightUnit == 'g' ? 'font-bold' : ''}>g</span>
-                                <Switch
-                                    name="barrelunit" 
-                                    checked={data.propellantWeightUnit == 'gr' ? true : false}
-                                />
-                                <span class={data.propellantWeightUnit == 'gr' || undefined ? 'font-bold' : ''}>gr</span>
-                            </label>
-                        </div>
-                    </Field>
-                </div>
-            </div>
-        </Card>
+        {#if !data.isFactory}
+            <BaseRecipe data={ data } />
+        {/if}
 
         <p class="mt-2">Primer</p>
 
-        <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full">
-            <SelectField
-                label="Type"
-                name="primerType"
-                options={primerTypeOptions}
-                bind:value={selectedPrimerType}
-                placeholder="Select primer type"
-                required
-            >
-                <MenuItem
-                    slot="option"
-                    let:option
-                    let:index
-                    let:selected
-                    let:highlightIndex
-                    class={cls(
-                        index === highlightIndex && "bg-surface-content/5",
-                        option === selected && "font-semibold"
-                    )}
-                    scrollIntoView={index === highlightIndex}
-                >
-                    {option.label}
-                </MenuItem>
-            </SelectField>
-
-            <Field label="Manufacturer" let:id>
-                <Input 
-                    {id}
-                    name="manufacturerPrimer"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.manufacturerPrimer || ''}
-                />
-            </Field>
-
-            <Field label="Name" let:id>
-                <Input 
-                    {id}
-                    name="propellantName"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.propellantName || ''}
-                />
-            </Field>
-        </div>
+        
 
         <p class="mt-2">Case & Cartridge</p>
 
