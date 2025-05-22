@@ -137,8 +137,8 @@ pkgs.mkShell {
         git pull
 
         # Switch to a usable shell
-        echo "Switching you to a shell that's actually usable... "
-        exec fish
+        # echo "Switching you to a shell that's actually usable... "
+        # exec fish
 
         # Do your thing...
         pnpm run dev
