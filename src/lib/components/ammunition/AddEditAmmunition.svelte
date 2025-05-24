@@ -1,7 +1,7 @@
 <!-- src/lib/components/ammunition/AddEditAmmunition.svelte -->
 <script lang="ts">
     import { validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
-    import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption, Collapse, Card } from "svelte-ux";
+    import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption, Collapse, Card, Checkbox } from "svelte-ux";
     import { cls } from "@layerstack/tailwind";
     import { createEmptyAmmunition, createTypeOptions, createAmmunitionOptions } from "@/utils/addeditammunition";
 	import type { UUIDTypes } from "uuid";
@@ -9,10 +9,8 @@
     import { invalidate } from '$app/navigation';
 	import { fetchCsrfToken } from "@/utils/security";
 	import BaseRecipe from "./BaseRecipe.svelte";
+	import Variation from "./Variation.svelte";
 
-    
-    
-    
     let { 
         data: initialData = createEmptyAmmunition(),
         userData: initialUserData = createEmptyAmmunition(),
@@ -42,6 +40,8 @@
     let predefinedAmmunition: AmmunitionData[] = $derived<AmmunitionData[]>([...predefinedUserAmmunition, ...predefinedManufacturerAmmunition]);
     let selectedPredefinedAmmunition: string|null = $state<string | null>(null);
     let selectedUserPredefinedAmmunition: string|null = $state<string | null>(null);
+    let selectedType: AmmunitionType|string = $derived(data.type || '');
+    let selectedPrimerType: AmmunitionType|string = $derived(data.primerType || '');
     let isFactory: boolean = $derived(data.isFactory || false);
     let loadingAmmunition: boolean = $state(false);
     let loadingUserAmmunition: boolean = $state(false);
@@ -272,82 +272,31 @@
 			value={userId}
 		/>
   
-		<Field label="Name" let:id>
-			<Input 
-                name="name"
-                {id}
-                min={3}
-                max={256}
-                placeholder="Norma Core-Lokt .308"
-                on:keyup={validate}
-                value={data.name}
-                required
-			/>
-		</Field>
+		<BaseRecipe 
+            data={ data } 
+            disabled={ data.isFactory ? true : false } 
+            embedded={ false }
+        />
 
-        <div class="mt-2 border-b-2 border-b-white"><h2 class="mb-2">Base</h2></div>
-
-        {#if !data.isFactory}
-            <BaseRecipe data={ data } />
+        {#if !isFactory}
+            <Variation
+                data={ data } 
+                disabled={ data.isFactory ? true : false } 
+                embedded={ false }
+            />
         {/if}
 
-        <p class="mt-2">Primer</p>
-
-        
-
-        <p class="mt-2">Case & Cartridge</p>
-
-        <div class="grid grid-cols-2 gap-x-2 items-stretch children-h-full">
-            <Field label="Manufacturer" let:id>
-                <Input 
-                    {id}
-                    name="manufacturerCase"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.manufacturerCase || ''}
-                />
-            </Field>
-
-            <Field label="Cartridge Overall Length" let:id>
-                <Input 
-                    {id}
-                    name="cartridgeOverallLength"
-                    min={3}
-                    max={256}
-                    on:keyup={validate}
-                    value={data.cartridgeOverallLength?.toString() || ''}
-                />
-                <div class="grid gap-2 z-10 p-0 m-0">
-                    <label class="flex gap-2 items-center text-sm">
-                        <span class={data.cartridgeOverallLengthUnit == 'imperial' ? 'font-bold' : ''}>cm</span>
-                        <Switch
-                            name="cartridgeOverallLengthUnit" 
-                            checked={data.cartridgeOverallLengthUnit == 'metric' ? true : false}
-                        />
-                        <span class={data.cartridgeOverallLengthUnit == 'metric' || undefined ? 'font-bold' : ''}>in</span>
-                    </label>
-                </div>
-            </Field>
-        </div>
-
-        <div class="grid children-h-full mt-4">
-            <TextField
-                name="note"
-                value={data.note || ''}
-                multiline
-                placeholder="Notes... " 
-                classes={{ input: "h-[5rem]" }}
-            />
-        </div>
-
-        <div class="grid">
+        <div class="grid grid-flow-col grid-cols-[auto_auto] justify-end my-4">
+            <Checkbox 
+                name="createmore"
+                class="align-middle mr-4"
+            >Add another variation</Checkbox>
             <Button
                 variant='fill'
                 color='success'
                 type='submit'
                 class={cls(
-                    'mt-4 w-fit px-8 place-self-end'
+                    'w-fit px-8 place-self-end'
                 )}
             >Save</Button>
         </div>

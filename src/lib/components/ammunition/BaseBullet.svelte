@@ -82,7 +82,7 @@
     </div>
 
     <div class="grid grid-cols-2 gap-x-2 mb-2 items-stretch children-h-full">
-        <Field label="Bullet weight" let:id disabled={!data.isFactory}>
+        <Field label="Bullet weight" let:id disabled={data.isFactory}>
             <Input 
                 {id}
                 name="bulletWeight"
@@ -110,7 +110,7 @@
             label="Bullet Caliber" 
             let:id
             class={cls('StretchHeight')}
-            disabled={!data.isFactory}
+            disabled={data.isFactory}
         >
             <Input 
                 {id}
