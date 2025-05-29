@@ -1,7 +1,19 @@
 import { z } from 'zod';
 import type { Ammunition, Gun, User, ammunitionTypeEnum, PrimerType } from '@/server/db/schema';
+import { loadVariation, measurementsEnum, angleUnitEnum, weightEnum } from '../lib/server/db/schema';
+import type { UUIDTypes } from 'uuid';
+import type { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
 declare global {
+    // imports av enums från schema.ts
+    type AmmunitionType = import('@/server/db/schema').AmmunitionType;
+    type PrimerType = import('@/server/db/schema').PrimerType;
+    type GunType = import('@/server/db/schema').GunType;
+    type MeasurementsType = import('@/server/db/schema').MeasurementsType; 
+    type AngleUnitType = import('@/server/db/schema').AngleUnitType;
+    type WeightType = import('@/server/db/schema').WeightType;
+
     interface Caliber {
         id: string;
         name: string;
@@ -45,20 +57,59 @@ declare global {
         type: GunData<type>|undefined;
         error: { message: string };
     };
-    type GunType = import('@/server/db/schema').GunType;
+    
 
     interface EventData {};
     interface TargetData {};
-    interface AmmunitionData extends Ammunition {
-        id?: string;
-        type?: AmmunitionType | undefined;
-        primerType?: PrimerType | undefined;
-        error?: { message: string };
-        [key: string]: any;
-    };
-    type AmmunitionType = import('@/server/db/schema').ammunitionType;
+    
+    interface BaseRecipe {
+        id: string|undefined;
+        userId: string,
+        createdAt: string,
+        name: string,
+        isFactory: boolean,
+        caliber: string,
+        caliberMm: number,
+        caliberUnit: MeasurementsType,
+        manufacturerCase: string,
+        caseName: string,
+        manufacturerBullet: string,
+        bulletId?: string,
+        bulletName: string,
+        bulletWeight: number,
+        bulletWeightUnit: WeightType,
+        bulletBcG1: number,
+        bulletBcG7: number,
+        bulletSd: number,
+        manufacturerPropellant: string,
+        propellantName: string,
+        note: string;
+        date: string;
+        type: AmmunitionType|undefined;
+    }
 
-    type PrimerType = import('@/server/db/schema').PrimerType;
+    interface LoadVariation {
+        id: string;
+        recipeId: string;
+        createdAt: string;
+        name: string;
+        propellantCharge: number|null;
+        propellantWeightUnit: WeightType;
+        manufacturerPrimer: string,
+        primerType: PrimerType,
+        primerName: string,
+        cartridgeOal: number;
+        cartridgeOalUnit: MeasurementsType;
+        lotNumber: string;
+        date: string;
+        note: string;
+        type: string|undefined;
+    }
+
+    interface AmmunitionData {
+        baseRecipe: BaseRecipe;
+        loadVariation: LoadVariation;
+    }
 
     interface GunEditPageServerData {
         user: User;
@@ -68,8 +119,8 @@ declare global {
 
     interface AmmunuitionAddEditPageServerData {
         user: User;
-        gundata: GunData;
-        gunTypes: GunType;
+        data: AmmunitionData;
+        ammunitionTypes: AmmunitionType;
     }
 
     interface BulletData {
@@ -122,4 +173,3 @@ const AnalysisRequestSchema = z.object({
     imagename: z.string().uuid(),
 });
 
-export {};
