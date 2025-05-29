@@ -11,4 +11,5 @@
 
 ## TODO
 
+- [ ] Working concatenate.ts for new structure.
 - [ ] Working validation of files.
