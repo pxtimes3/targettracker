@@ -7,7 +7,7 @@ export const service = pgRole('service', { createRole: true, createDb: true, inh
 
 export const rolesEnum = pgEnum("roles", ["user", "vip", "admin", "service"]);
 export const gunTypeEnum = pgEnum('gunType', ['rifle', 'pistol', 'air-rifle', 'air-pistol']);
-export const ammunitionTypeEnum = pgEnum('ammunitionType', ['centerfire', 'rimfire', 'shotgun', 'airgun'])
+export const ammunitionTypeEnum = pgEnum('ammunitionType', ['centerfire', 'rimfire', 'shotgun', 'airgun']);
 export const measurementsEnum = pgEnum('measurements', ['metric', 'imperial']);
 export const angleUnitEnum = pgEnum('angleunit', ['mil', 'moa']);
 export const sightsEnum = pgEnum('sights', ['iron', 'scope', 'red-dot', 'holographic']);
@@ -162,6 +162,7 @@ export const gun = pgTable('gun', {
     barrelTwistUnit: measurementsEnum('barrel_twist_unit'),
 });
 
+/** Deprecated */
 export const ammunition = pgTable('ammunition', {
     id: uuid('id').default(sql`gen_random_uuid()`).primaryKey(),
     userId: uuid('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
@@ -211,17 +212,13 @@ export const loadRecipe = pgTable('load_recipe', {
     
     // Bullet details
     manufacturerBullet: text('manufacturer_bullet'),
+    bulletId: text('bullet_id'),
     bulletName: text('bullet_name'),
     bulletWeight: doublePrecision('bullet_weight'),
     bulletWeightUnit: weightEnum('bullet_weight_unit'),
     bulletBcG1: doublePrecision('bullet_bc_g1'),
     bulletBcG7: doublePrecision('bullet_bc_g7'),
     bulletSd: doublePrecision('bullet_sd'),
-    
-    // Primer details
-    manufacturerPrimer: text('manufacturer_primer'),
-    primerType: primerTypeEnum('primer_type'),
-    primerName: text('primer_name'),
     
     // Propellant base details
     manufacturerPropellant: text('manufacturer_propellant'),
@@ -230,6 +227,7 @@ export const loadRecipe = pgTable('load_recipe', {
     // General info
     note: text('note'),
     date: timestamp('date', { withTimezone: true }).defaultNow(),
+    type: ammunitionTypeEnum('type').notNull(),
 });
   
 export const loadVariation = pgTable('load_variation', {
@@ -237,20 +235,21 @@ export const loadVariation = pgTable('load_variation', {
     recipeId: uuid('recipe_id').notNull().references(() => loadRecipe.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     name: text('name'),
-    
-    // Specific load details
+    // Propellant load details
     propellantCharge: doublePrecision('propellant_charge'),
     propellantWeightUnit: weightEnum('propellant_weight_unit'),
+    // Cartridge details
     cartridgeOal: doublePrecision('cartridge_oal'),
     cartridgeOalUnit: measurementsEnum('cartridge_oal_unit'),
-    
+    // Primer details
+    manufacturerPrimer: text('manufacturer_primer'),
+    primerType: primerTypeEnum('primer_type'),
+    primerName: text('primer_name'),
     // Batch information
     lotNumber: text('lot_number'),
-    date: timestamp('date', { withTimezone: true }).defaultNow(),
-    
+    date: timestamp('priduction_date', { withTimezone: true }).defaultNow(),
     // Additional info
     note: text('note'),
-    type: ammunitionTypeEnum('type').notNull(),
 });
 
 export const events = pgTable('events', {
@@ -368,6 +367,9 @@ export type Faq = typeof faq.$inferSelect;
 export type Analysis = typeof analysis.$inferSelect;
 export type Gun = typeof gun.$inferSelect;
 export type GunType = (typeof gunTypeEnum.enumValues)[number];
+export type MeasurementsType = (typeof measurementsEnum.enumValues)[number];
+export type AngleUnitType = (typeof angleUnitEnum.enumValues)[number];
+export type WeightType = (typeof weightEnum.enumValues)[number];
 export type Ammunition = typeof ammunition.$inferSelect;
 export type AmmunitionType = (typeof ammunitionTypeEnum.enumValues)[number];
 export type PrimerType = (typeof primerTypeEnum.enumValues)[number];
