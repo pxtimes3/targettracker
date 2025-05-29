@@ -3,7 +3,7 @@
 	"type": "array",
 	"items": {
 	"type": "object",
-	"required": ["id", "name", "type", "caliber", "caliberMm"],
+	"required": ["id", "name", "type", "manufacturer", "caliber", "caliberMm"],
 	"properties": {
 		"id": {
 			"type": "string",
@@ -18,29 +18,13 @@
 			"type": "string",
 			"enum": ["centerfire", "rimfire", "shotgun", "airgun"]
 		},
-		"manufacturerBullet": {
+		"bulletId": {
 			"type": "string",
 			"minLength": 2
 		},
-		"bulletName": {
-			"type": "string"
-		},
-		"bulletWeight": {
-			"type": "number",
-			"minimum": 0
-		},
-		"bulletWeightUnit": {
+		"manufacturer": {
 			"type": "string",
-			"enum": ["g", "gr"]
-		},
-		"bulletBc": {
-			"type": "number",
-			"minimum": 0,
-			"maximum": 1
-		},
-		"bulletBcModel": {
-			"type": "string",
-			"enum": ["g1", "g7"]
+			"minLength": 2
 		},
 		"caliberId": {
 			"type": "string"

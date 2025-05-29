@@ -78,6 +78,8 @@ async function merge(paths: string[]): Promise<void>
 
 async function main(): Promise<void>
 {
+    console.error('Deprecated due to new data structure... -.-');
+    return;
     const targetDir = process.argv[2] || 'src/';
     const fullTargetDir = join(process.cwd(), targetDir);
     console.log(`Scanning directory: ${chalk.blue(fullTargetDir)}`);

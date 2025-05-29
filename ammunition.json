@@ -1,5 +1,15 @@
 [
   {
+    "id": "hornady-223rem-55gr-fmj",
+    "name": "Hornady .223 Rem 55gr FMJ",
+    "type": "centerfire",
+    "bulletId": "hornady-varminator-express-55",
+    "caliber": ".223 Rem",
+    "caliberId": "223rem",
+    "caliberMm": 5.56,
+    "manufacturerCase": "Lapua"
+  },
+  {
     "id": "lapua-223rem-55gr-fmj",
     "name": "Lapua .223 Rem 55gr FMJ",
     "type": "centerfire",
