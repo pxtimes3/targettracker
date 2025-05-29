@@ -11,7 +11,7 @@
       "bc1": 0.11,
       "bc7": 0.22,
       "type": "FMJ",
-      "caliberId": "5.7x28"
+      "caliberId": "223rem"
     },
     {
       "id": "hornady-varminator-express-55",
@@ -25,7 +25,7 @@
       "bc1": 0.12,
       "bc7": 0.23,
       "type": "FMJ",
-      "caliberId": "5.7x28"
+      "caliberId": "223rem"
     },
     {
       "id": "hornady-varminator-express-223-40",
@@ -39,6 +39,6 @@
       "bc1": 0.13,
       "bc7": 0.24,
       "type": "FMJ",
-      "caliberId": "5.7x28"
+      "caliberId": "223rem"
     }
 ]
