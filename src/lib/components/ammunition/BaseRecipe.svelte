@@ -37,15 +37,14 @@
                 max={256}
                 placeholder="Norma Core-Lokt .308"
                 on:keyup={validate}
-                value={data.name}
+                value={data.baseRecipe.name}
                 required
             />
         </Field>
         <BaseBullet { data } />
         <BasePropellant { data } />
-        <BasePrimer { data } />
         <BaseCase { data } />
-        {#if data.isFactory}
+        {#if data.baseRecipe.isFactory}
             <Note {data} disabled={disabled} />
         {/if}
     </div>

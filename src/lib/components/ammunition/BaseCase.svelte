@@ -2,7 +2,7 @@
 	import { Field, Input, Switch } from "svelte-ux";
     import { validate } from "@/utils/forms";
 	
-    let { data } = $props();
+    let { data }: { data: AmmunitionData } = $props();
 </script>
 
 <h3 class="text-sm uppercase text-primary-content dark:text-white/75 tracking-wide mb-2">Case</h3>
@@ -14,7 +14,7 @@
             min={3}
             max={256}
             on:keyup={validate}
-            value={data.manufacturerCase || ''}
+            value={data.baseRecipe.manufacturerCase || ''}
         />
     </Field>
 
@@ -25,7 +25,7 @@
             min={3}
             max={256}
             on:keyup={validate}
-            value={data.caseName?.toString() || ''}
+            value={data.baseRecipe.caseName?.toString() || ''}
         />
     </Field>
 </div>

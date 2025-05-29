@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Card, TextField } from "svelte-ux";
+	import { Card } from "svelte-ux";
 	import VariationPropellant from "./VariationPropellant.svelte";
     import VariationPrimer from "./VariationPrimer.svelte";
 	import Note from "./Note.svelte";

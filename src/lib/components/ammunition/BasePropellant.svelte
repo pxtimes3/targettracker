@@ -3,7 +3,7 @@
     import { validate } from "@/utils/forms";
 	import { cls } from "@layerstack/tailwind";
 
-    let { data } = $props();
+    let { data }: { data: AmmunitionData } = $props();
 </script>
 
 <h3 class="text-sm uppercase text-primary-content dark:text-white/75 tracking-wide mb-2">Propellant</h3>
@@ -16,7 +16,7 @@
             max={256}
             on:keyup={validate}
             placeholder="ACME Explosives"
-            value={data.manufacturerPropellant || ''}
+            value={data.baseRecipe.manufacturerPropellant || ''}
         />
     </Field>
     
@@ -28,7 +28,7 @@
             max={256}
             on:keyup={validate}
             placeholder="N420"
-            value={data.propellantName || ''}
+            value={data.baseRecipe.propellantName || ''}
         />
     </Field>
 

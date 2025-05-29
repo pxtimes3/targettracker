@@ -3,7 +3,7 @@
     import { validate, createOriginalDataCopy, convertComma, convertCommaString, convertInchToMm } from "@/utils/forms";
     import { Field, Input, Switch, TextField, SelectField, MenuItem, Button, type MenuOption, Collapse, Card, Checkbox } from "svelte-ux";
     import { cls } from "@layerstack/tailwind";
-    import { createEmptyAmmunition, createTypeOptions, createAmmunitionOptions } from "@/utils/addeditammunition";
+    import { createEmptyLoadRecipe, createTypeOptions, createAmmunitionOptions, fetchPredefinedAmmunition } from "@/utils/addeditammunition";
 	import type { UUIDTypes } from "uuid";
 	import { AmmunitionStore } from "@/stores/AmmunitionStore";
     import { invalidate } from '$app/navigation';
@@ -12,23 +12,20 @@
 	import Variation from "./Variation.svelte";
 
     let { 
-        data: initialData = createEmptyAmmunition(),
-        userData: initialUserData = createEmptyAmmunition(),
+        data: initialData = createEmptyLoadRecipe(),
         userId,
         onSuccess,
     }: { 
-        data?: AmmunitionData, 
-        userData?: AmmunitionData, 
+        data?: AmmunitionData,
         userId: UUIDTypes,
         onSuccess?: (ammunitionId: string, updatedAmmunition?: AmmunitionData) => void,
     } = $props();
 
     let data: AmmunitionData = $state(initialData);
-    let userData: AmmunitionData = $state(initialUserData);
 
     // let selectedType: AmmunitionType|string = $derived(data.type || '');
     
-    let caliberMm: number|null = $derived(data.caliberMm || 0);
+    let caliberMm: number|null = $derived(data.baseRecipe.caliberMm || 0);
     let csrfToken: string = $state('');
     // let ammunitionTypeOptions: MenuOption[] = $derived(createTypeOptions(ammunitionTypes));
     
@@ -40,9 +37,9 @@
     let predefinedAmmunition: AmmunitionData[] = $derived<AmmunitionData[]>([...predefinedUserAmmunition, ...predefinedManufacturerAmmunition]);
     let selectedPredefinedAmmunition: string|null = $state<string | null>(null);
     let selectedUserPredefinedAmmunition: string|null = $state<string | null>(null);
-    let selectedType: AmmunitionType|string = $derived(data.type || '');
-    let selectedPrimerType: AmmunitionType|string = $derived(data.primerType || '');
-    let isFactory: boolean = $derived(data.isFactory || false);
+    let selectedType: AmmunitionType|string = $derived(data.baseRecipe.type || '');
+    let selectedPrimerType: AmmunitionType|string = $derived(data.loadVariation.primerType || '');
+    let isFactory: boolean = $derived(data.baseRecipe.isFactory || false);
     let loadingAmmunition: boolean = $state(false);
     let loadingUserAmmunition: boolean = $state(false);
     let ammunitionOptions: MenuOption[] = $derived(createAmmunitionOptions(predefinedUserAmmunition, predefinedManufacturerAmmunition));
@@ -53,7 +50,7 @@
 
     function isFactoryAmmunition(): boolean
     {
-        return data.isFactory ? false : true;
+        return data.baseRecipe.isFactory ? false : true;
     }
 
     async function handleFormSubmit(e: Event): Promise<void>
@@ -106,25 +103,7 @@
         // handleReset(e, originalData);
     }
 
-    async function fetchPredefinedAmmunition(): Promise<AmmunitionData[]> {
-        loadingAmmunition = true;
-        try {
-            // console.debug('Fetching ammunition data...');
-            const response = await fetch('/public/ammunition.json');
-            if (!response.ok) {
-                console.error(`Failed to load ammunition data: ${response.status} ${response.statusText}`);
-                throw new Error('Failed to load predefined ammunition data');
-            }
-            const data = await response.json();
-            // console.debug('Ammunition data loaded:', data);
-            return data.map((item: AmmunitionData) => ({ ...item, isFactory: true }));
-        } catch (error) {
-            console.error('Error loading predefined ammunition:', error);
-            return [];
-        } finally {
-            loadingAmmunition = false;
-        }
-    }
+    
 
     async function fetchUserPredefinedAmmunition(): Promise<AmmunitionData[]> 
     {
@@ -161,13 +140,13 @@
         if (!selectedId) return;
         
         if (selectedId.value != 'createnew') {
-            const selected = predefinedAmmunition.find(ammo => ammo.id === selectedId.value);
+            const selected = predefinedAmmunition.find((ammo) => ammo.baseRecipe.id === selectedId.value);
             if (selected) {
-                data = { ...createEmptyAmmunition(), ...selected };
+                data = { ...createEmptyLoadRecipe(), ...selected };
                 
-                selectedType = data.type || '';
-                selectedPrimerType = data.primerType || undefined;
-                caliberMm = data.caliberMm || 0;
+                selectedType = data.baseRecipe.type || '';
+                selectedPrimerType = data.loadVariation.primerType || undefined;
+                caliberMm = data.baseRecipe.caliberMm || 0;
                 
                 selectedPredefinedAmmunition = null;
                 
@@ -179,7 +158,7 @@
                 console.debug(`predefiunedAmmunition:`, $state.snapshot(predefinedAmmunition));
             }
         } else {
-            data = { ...createEmptyAmmunition() }
+            data = { ...createEmptyLoadRecipe() }
         }
     }
 
@@ -194,15 +173,15 @@
                 console.error('Failed to load ammunition data:', err);
                 errorMessage = 'Failed to load predefined ammunition data';
             });
-        fetchUserPredefinedAmmunition()
-            .then(ammunitionData => {
-                console.debug('Setting predefined user ammunition:', ammunitionData);
-                predefinedUserAmmunition = ammunitionData;
-            })
-            .catch(err => {
-                console.error('Failed to load user ammunition data:', err);
-                errorMessage = 'Failed to load user predefined ammunition data';
-            });
+        // fetchUserPredefinedAmmunition()
+        //     .then(ammunitionData => {
+        //         console.debug('Setting predefined user ammunition:', ammunitionData);
+        //         predefinedUserAmmunition = ammunitionData;
+        //     })
+        //     .catch(err => {
+        //         console.error('Failed to load user ammunition data:', err);
+        //         errorMessage = 'Failed to load user predefined ammunition data';
+        //     });
         
         // console.debug('Current ammunition data:', data);
         // console.debug('Data changed:', data);
@@ -255,14 +234,14 @@
 			type="hidden"
 			id="isFactory"
 			name="isFactory"
-			value={data.isFactory}
+			value={data.baseRecipe.isFactory}
 		/>
 
     	<input 
 			type="hidden"
 			id="id"
 			name="id"
-			value={data.id}
+			value={data.baseRecipe.id}
 		/>
 
         <input 
@@ -274,17 +253,17 @@
   
 		<BaseRecipe 
             data={ data } 
-            disabled={ data.isFactory ? true : false } 
+            disabled={ data.baseRecipe.isFactory ? true : false } 
             embedded={ false }
         />
 
-        {#if !isFactory}
+        <!-- {#if !isFactory} -->
             <Variation
                 data={ data } 
-                disabled={ data.isFactory ? true : false } 
+                disabled={ data.baseRecipe.isFactory ? true : false } 
                 embedded={ false }
             />
-        {/if}
+        <!-- {/if} -->
 
         <div class="grid grid-flow-col grid-cols-[auto_auto] justify-end my-4">
             <Checkbox 

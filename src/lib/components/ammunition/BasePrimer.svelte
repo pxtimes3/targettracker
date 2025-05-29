@@ -4,7 +4,7 @@
 	import { cls } from "@layerstack/tailwind";
     import { validate } from "@/utils/forms";
     
-	let { data } = $props();
+	let { data }: { data: AmmunitionData } = $props();
 
     const primerTypes: PrimerType[] = [
         'small rifle', 
@@ -18,7 +18,7 @@
         'shotgun'
     ];
 
-    let selectedPrimerType: PrimerType|undefined = $derived(data.primerType || undefined);
+    let selectedPrimerType: PrimerType|undefined = $derived(data.loadVariation.primerType || undefined);
     let primerTypeOptions: MenuOption[] = $derived(createTypeOptions(primerTypes));
 </script>
 
@@ -55,7 +55,7 @@
             min={3}
             max={256}
             on:keyup={validate}
-            value={data.manufacturerPrimer || ''}
+            value={data.loadVariation.manufacturerPrimer || ''}
         />
     </Field>
 
@@ -66,7 +66,7 @@
             min={3}
             max={256}
             on:keyup={validate}
-            value={data.propellantName || ''}
+            value={data.baseRecipe.propellantName || ''}
         />
     </Field>
 </div>
