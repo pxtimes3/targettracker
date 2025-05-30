@@ -1,22 +1,34 @@
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-pids
-*.pid
-*.seed
-*.pid.lock
-lib-cov
-coverage
-*.lcov
-.nyc_output
-.grunt
-bower_components
-.lock-wscript
-build/Release
-node_modules/
-.venv/
+node_modules
+
+# Output
+.output
+.vercel
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+temp/*
+postgres-data/
+coverage/
+!coverage/.gitkeep
+/.vscode
+
+# Sentry Config File
+.env.sentry-build-plugin
+.qodo
+
+# Python
+**/.venv/**

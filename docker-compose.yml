@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres
+    restart: no
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: local
+    volumes:
+      - ./postgres-data:/var/lib/postgresql
+
+  adminer:
+    image: adminer
+    restart: no
+    ports:
+      - 8989:8080
