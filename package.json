@@ -7,6 +7,7 @@
 		"test": "jest",
 		"build": "npx ts-node scripts/concatenate.ts src && npm run validate-all",
 		"validate-calibers": "ajv validate --verbose -s schemas/caliber.json -d calibers.json",
+		"validate-bullets": "node scripts/validateBullets.js",
 		"validate-ammunition": "ajv validate --verbose -s schemas/ammunition.json -d ammunition.json",
 		"validate-all": "npm run validate-calibers && npm run validate-ammunition && npm test"
 	},
@@ -20,6 +21,7 @@
 	"dependencies": {
 		"acorn": "^8.14.1",
 		"acorn-typescript": "^1.4.13",
+		"ajv-keywords": "^5.1.0",
 		"chalk": "^5.4.1",
 		"ts-node": "^10.9.2"
 	}

@@ -1,6 +1,7 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"type": "array",
+	"uniqueItemProperties": ["id"],
 	"items": {
 		"type": "object",
 		"required": ["id", "name", "type", "manufacturer", "caliber", "caliberMm"],
@@ -22,8 +23,11 @@
 				"type": "string",
 				"enum": ["centerfire", "rimfire", "shotgun", "airgun"]
 			},
-			"caliberId": {
-				"type": "string"
+			"caliber": {
+				"type": "number"
+			},
+			"caliberMm": {
+				"type": "number"
 			},
             "weight": {
                 "type": "number",
@@ -31,21 +35,22 @@
                 "maxLength": 24
             },
             "weightMetric": {
-                "type": "string",
-                "enum": ["gr", "g"]
+                "type": "number",
+                "minLength": 3,
+                "maxLength": 24
             },
             "sd": {
-                "type": "number",
+                "type": ["number", "null"],
                 "minLength": 3,
                 "maxLength": 24
             },
             "bc1": {
-                "type": "number",
+                "type": ["number", "null"],
                 "minLength": 3,
                 "maxLength": 24
             },
             "bc7": {
-                "type": "number",
+                "type": ["number", "null"],
                 "minLength": 3,
                 "maxLength": 24
             }

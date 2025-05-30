@@ -1,6 +1,6 @@
 [
   {
-    "id": "lapua-fmj-55",
+    "id": "lapua-fmj-219-55",
     "manufacturer": "Lapua",
     "name": "FMJ",
     "caliber": 0.2189,
@@ -10,11 +10,10 @@
     "sd": null,
     "bc1": 0.267,
     "bc7": null,
-    "type": "FMJ",
-    "caliberId": "223rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-69",
+    "id": "lapua-scenarhpbt-219-69",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2189,
@@ -24,11 +23,10 @@
     "sd": null,
     "bc1": 0.315,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "223rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-77",
+    "id": "lapua-scenarhpbt-219-77",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2189,
@@ -38,11 +36,10 @@
     "sd": null,
     "bc1": 0.372,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "223rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-fmj-150",
+    "id": "lapua-fmj-300-150",
     "manufacturer": "Lapua",
     "name": "FMJ",
     "caliber": 0.3,
@@ -52,11 +49,10 @@
     "sd": null,
     "bc1": 0.387,
     "bc7": null,
-    "type": "FMJ",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-167",
+    "id": "lapua-scenarhpbt-300-167",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3,
@@ -66,11 +62,10 @@
     "sd": null,
     "bc1": 0.47,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-175",
+    "id": "lapua-scenarhpbt-300-175",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3,
@@ -80,11 +75,10 @@
     "sd": null,
     "bc1": 0.505,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-185",
+    "id": "lapua-scenarhpbt-300-185",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3,
@@ -94,11 +88,10 @@
     "sd": null,
     "bc1": 0.521,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-l-hpbt-155",
+    "id": "lapua-scenarlhpbt-300-155",
     "manufacturer": "Lapua",
     "name": "Scenar-L HPBT",
     "caliber": 0.3,
@@ -108,11 +101,10 @@
     "sd": null,
     "bc1": 0.508,
     "bc7": null,
-    "type": "Scenar-L",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-l-hpbt-185",
+    "id": "lapua-scenarlhpbt-300-185",
     "manufacturer": "Lapua",
     "name": "Scenar-L HPBT",
     "caliber": 0.3,
@@ -122,11 +114,10 @@
     "sd": null,
     "bc1": 0.535,
     "bc7": null,
-    "type": "Scenar-L",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-200",
+    "id": "lapua-scenarhpbt-300-200",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3,
@@ -136,11 +127,10 @@
     "sd": null,
     "bc1": 0.565,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-170",
+    "id": "lapua-megasp-300-170",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.3,
@@ -150,11 +140,10 @@
     "sd": null,
     "bc1": 0.41,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-185",
+    "id": "lapua-megasp-300-185",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.3,
@@ -164,11 +153,10 @@
     "sd": null,
     "bc1": 0.44,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-136",
+    "id": "lapua-scenarhpbt-256-136",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2559,
@@ -178,11 +166,10 @@
     "sd": null,
     "bc1": 0.547,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "260rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-140",
+    "id": "lapua-scenarhpbt-256-140",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2559,
@@ -192,11 +179,10 @@
     "sd": null,
     "bc1": 0.585,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "260rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-123",
+    "id": "lapua-scenarhpbt-256-123",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2559,
@@ -206,11 +192,10 @@
     "sd": null,
     "bc1": 0.527,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "260rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-120",
+    "id": "lapua-megasp-256-120",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.2559,
@@ -220,11 +205,10 @@
     "sd": null,
     "bc1": 0.47,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "260rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-155",
+    "id": "lapua-scenarhpbt-300-155",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3,
@@ -234,11 +218,10 @@
     "sd": null,
     "bc1": 0.508,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "762x54r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-150",
+    "id": "lapua-megasp-277-150",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.2772,
@@ -248,11 +231,10 @@
     "sd": null,
     "bc1": 0.47,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "270win"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-center-x-40",
+    "id": "lapua-centerx-221-40",
     "manufacturer": "Lapua",
     "name": "Center-X",
     "caliber": 0.2205,
@@ -262,11 +244,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Center-X",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-midas+-m-40",
+    "id": "lapua-midasm-221-40",
     "manufacturer": "Lapua",
     "name": "Midas+ M",
     "caliber": 0.2205,
@@ -276,11 +257,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Midas+",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-midas+-l-40",
+    "id": "lapua-midasl-221-40",
     "manufacturer": "Lapua",
     "name": "Midas+ L",
     "caliber": 0.2205,
@@ -290,11 +270,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Midas+",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-x-act-40",
+    "id": "lapua-xact-221-40",
     "manufacturer": "Lapua",
     "name": "X-Act",
     "caliber": 0.2205,
@@ -304,11 +283,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "X-Act",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-polar-biathlon-40",
+    "id": "lapua-polarbiathlon-221-40",
     "manufacturer": "Lapua",
     "name": "Polar Biathlon",
     "caliber": 0.2205,
@@ -318,11 +296,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Polar",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-standard-plus-40",
+    "id": "lapua-standardplus-221-40",
     "manufacturer": "Lapua",
     "name": "Standard Plus",
     "caliber": 0.2205,
@@ -332,11 +309,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Standard",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-super-club-40",
+    "id": "lapua-superclub-221-40",
     "manufacturer": "Lapua",
     "name": "Super Club",
     "caliber": 0.2205,
@@ -346,11 +322,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Super",
-    "caliberId": "22wmr"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-155",
+    "id": "lapua-scenarhpbt-276-155",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2756,
@@ -360,11 +335,10 @@
     "sd": null,
     "bc1": 0.547,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "280ai"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-180",
+    "id": "lapua-megasp-276-180",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.2756,
@@ -374,11 +348,10 @@
     "sd": null,
     "bc1": 0.52,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "280ai"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-139",
+    "id": "lapua-scenarhpbt-256-139",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2559,
@@ -388,11 +361,10 @@
     "sd": null,
     "bc1": 0.615,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "260rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-155",
+    "id": "lapua-megasp-256-155",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.2559,
@@ -402,11 +374,10 @@
     "sd": null,
     "bc1": 0.51,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "260rem"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-90",
+    "id": "lapua-scenarhpbt-243-90",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2429,
@@ -416,11 +387,10 @@
     "sd": null,
     "bc1": 0.447,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": null
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-100",
+    "id": "lapua-megasp-243-100",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.2429,
@@ -430,11 +400,10 @@
     "sd": null,
     "bc1": 0.38,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": null
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-200",
+    "id": "lapua-megasp-323-200",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.3228,
@@ -444,11 +413,10 @@
     "sd": null,
     "bc1": 0.44,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "8x57"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-285",
+    "id": "lapua-megasp-366-285",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.3661,
@@ -458,11 +426,10 @@
     "sd": null,
     "bc1": 0.4,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "9.3x74r"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-55",
+    "id": "lapua-scenarhpbt-224-55",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2244,
@@ -472,11 +439,10 @@
     "sd": null,
     "bc1": 0.267,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "5.7x28"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-250",
+    "id": "lapua-scenarhpbt-339-250",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3386,
@@ -486,11 +452,10 @@
     "sd": null,
     "bc1": 0.675,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "338lapua"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-300",
+    "id": "lapua-scenarhpbt-339-300",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.3386,
@@ -500,11 +465,10 @@
     "sd": null,
     "bc1": 0.736,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "338lapua"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-mega-sp-250",
+    "id": "lapua-megasp-339-250",
     "manufacturer": "Lapua",
     "name": "Mega SP",
     "caliber": 0.3386,
@@ -514,11 +478,10 @@
     "sd": null,
     "bc1": 0.55,
     "bc7": null,
-    "type": "Mega",
-    "caliberId": "338lapua"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-l-hpbt-270",
+    "id": "lapua-scenarlhpbt-339-270",
     "manufacturer": "Lapua",
     "name": "Scenar-L HPBT",
     "caliber": 0.3386,
@@ -528,11 +491,10 @@
     "sd": null,
     "bc1": 0.757,
     "bc7": null,
-    "type": "Scenar-L",
-    "caliberId": "338lapua"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-90",
+    "id": "lapua-scenarhpbt-236-90",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2362,
@@ -542,11 +504,10 @@
     "sd": null,
     "bc1": 0.447,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "6mmcreedmoor"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-scenar-hpbt-105",
+    "id": "lapua-scenarhpbt-236-105",
     "manufacturer": "Lapua",
     "name": "Scenar HPBT",
     "caliber": 0.2362,
@@ -556,11 +517,10 @@
     "sd": null,
     "bc1": 0.53,
     "bc7": null,
-    "type": "Scenar",
-    "caliberId": "6mmcreedmoor"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-fmj-55",
+    "id": "lapua-fmj-224-55",
     "manufacturer": "Lapua",
     "name": "FMJ",
     "caliber": 0.2244,
@@ -570,11 +530,10 @@
     "sd": null,
     "bc1": 0.267,
     "bc7": null,
-    "type": "FMJ",
-    "caliberId": "5.7x28"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-fmj-123",
+    "id": "lapua-fmj-354-123",
     "manufacturer": "Lapua",
     "name": "FMJ",
     "caliber": 0.3543,
@@ -584,11 +543,10 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "FMJ",
-    "caliberId": "357sig"
+    "type": "centerfire"
   },
   {
-    "id": "lapua-wadcutter-98",
+    "id": "lapua-wadcutter-313-98",
     "manufacturer": "Lapua",
     "name": "Wadcutter",
     "caliber": 0.3126,
@@ -598,7 +556,6 @@
     "sd": null,
     "bc1": null,
     "bc7": null,
-    "type": "Wadcutter",
-    "caliberId": null
+    "type": "centerfire"
   }
 ]
