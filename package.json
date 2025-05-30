@@ -89,7 +89,7 @@
 		"postgres": "^3.4.5",
 		"svelte-captcha-enhance": "^1.2.1",
 		"svelte-sonner": "^0.3.28",
-		"svelte-ux": "^1.0.4",
+		"svelte-ux": "^1.0.6",
 		"ts-luxon": "^6"
 	},
 	"pnpm": {
