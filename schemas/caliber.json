@@ -1,6 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "array",
+    "uniqueItemProperties": ["id"],
     "items": {
         "type": "object",
         "required": ["id", "name", "category", "mm", "in"],
