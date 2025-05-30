@@ -19,6 +19,5 @@
         multiline
         placeholder="Notes... " 
         classes={{ input: "h-[2.5rem]" }}
-        disabled={disabled}
     />
 </div>

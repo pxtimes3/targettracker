@@ -106,6 +106,7 @@ export function createAmmunitionOptions(...ammunitionArrays: AmmunitionData[][])
         console.debug('No ammunition arrays provided');
         return [];
     }
+    console.debug(`ammunition arrays:`, ammunitionArrays)
 
     const ammunition: AmmunitionData[] = ammunitionArrays.flat();
     
@@ -132,7 +133,7 @@ export function createAmmunitionOptions(...ammunitionArrays: AmmunitionData[][])
         label: `${ammo.baseRecipe.name} - ${ammo.baseRecipe.caliber || ''}`.trim()
     })));
 
-    // console.debug(options)
+    console.debug("options:", options);
 
     return options;
 }
@@ -185,7 +186,7 @@ export function createBulletOptions(...array: BulletData[][]): MenuOption[]
     options.push(...bullets.map(bullet => ({
         value: bullet.id,
         group: `${bullet.manufacturer}`.trim(),
-        label: `${bullet.name} - ${bullet.caliber || ''}`.trim()
+        label: `${bullet.name} - ${bullet.caliber.toString().substring(1,3).padEnd(3, '0') || ''}`.trim()
     })));
 
     // console.debug(options)
@@ -210,7 +211,7 @@ const mappingRules: Partial<Record<keyof AmmunitionData, (src: any) => any>> = {
         caliberUnit: 'metric',
         manufacturerCase: src.manufacturerCase || '',
         caseName: '',
-        manufacturerBullet: src.manufacturerBullet || '',
+        manufacturerBullet: src.manufacturerBullet || src.manufacturer || '',
         bulletName: src.bulletName || '',
         bulletWeight: src.bulletWeight || 0,
         bulletWeightUnit: src.bulletWeightUnit || 'gr',

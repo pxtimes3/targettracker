@@ -7,7 +7,6 @@
 	import BaseCase from "./BaseCase.svelte";
 	import Note from "./Note.svelte";
 
-
     let { 
         data, 
         disabled = false, 
@@ -17,6 +16,12 @@
         disabled: boolean, 
         embedded: boolean|undefined
     } = $props();
+
+    $effect(() => {
+        if (data.baseRecipe.isFactory) {
+            disabled = true;
+        }
+    });
 </script>
 
 <Card
@@ -41,9 +46,9 @@
                 required
             />
         </Field>
-        <BaseBullet { data } />
-        <BasePropellant { data } />
-        <BaseCase { data } />
+        <BaseBullet {data} disabled={disabled} />
+        <BasePropellant {data} disabled={disabled} />
+        <BaseCase {data} disabled={disabled} />
         {#if data.baseRecipe.isFactory}
             <Note {data} disabled={disabled} />
         {/if}

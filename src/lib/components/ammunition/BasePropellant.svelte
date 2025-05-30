@@ -3,12 +3,12 @@
     import { validate } from "@/utils/forms";
 	import { cls } from "@layerstack/tailwind";
 
-    let { data }: { data: AmmunitionData } = $props();
+    let { data, disabled = false }: { data: AmmunitionData, disabled: boolean } = $props();
 </script>
 
 <h3 class="text-sm uppercase text-primary-content dark:text-white/75 tracking-wide mb-2">Propellant</h3>
 <div class="grid grid-cols-2 gap-x-2 mb-4 items-stretch children-h-full">
-    <Field label="Manufacturer" let:id class={cls('StretchHeight')}>
+    <Field label="Manufacturer" let:id class={cls('StretchHeight')} disabled={disabled}>
         <Input 
             {id}
             name="manufacturerPropellant"
@@ -20,7 +20,7 @@
         />
     </Field>
     
-    <Field label="Name" let:id class={cls('StretchHeight')}>
+    <Field label="Name" let:id class={cls('StretchHeight')} disabled={disabled}>
         <Input 
             {id}
             name="propellantName"

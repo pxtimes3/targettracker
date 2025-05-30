@@ -4,7 +4,7 @@
 	import { cls } from "@layerstack/tailwind";
     import { validate } from "@/utils/forms";
     
-	let { data }: { data: AmmunitionData } = $props();
+	let { data, disabled }: { data: AmmunitionData, disabled: boolean } = $props();
 
     const ammunitionTypes: AmmunitionType[] = ['centerfire', 'rimfire', 'shotgun', 'airgun'];
 
@@ -30,10 +30,11 @@
     options={bulletOptions}
     bind:value={selectedBullet}
     class="mb-2"
+    disabled={disabled}
 />
 
 <div class="grid grid-cols-3 gap-x-2 items-stretch children-h-full mb-2">
-    <Field label="Manufacturer" let:id>
+    <Field label="Manufacturer" let:id disabled={disabled}>
         <Input 
             {id}
             name="manufacturerBullet"
@@ -44,7 +45,7 @@
         />
     </Field>
 
-    <Field label="Name" let:id>
+    <Field label="Name" let:id disabled={disabled}>
         <Input 
             {id}
             name="bulletName"
@@ -62,6 +63,7 @@
         bind:value={selectedType}
         placeholder="Select ammunition type"
         required
+        disabled={disabled}
     >
         <MenuItem
             slot="option"
@@ -81,7 +83,7 @@
 </div>
 
 <div class="grid grid-cols-2 gap-x-2 mb-2 items-stretch children-h-full">
-    <Field label="Bullet weight" let:id disabled={data.baseRecipe.isFactory}>
+    <Field label="Bullet weight" let:id disabled={disabled}>
         <Input 
             {id}
             name="bulletWeight"
@@ -109,7 +111,7 @@
         label="Bullet Caliber" 
         let:id
         class={cls('StretchHeight')}
-        disabled={data.baseRecipe.isFactory}
+        disabled={disabled}
     >
         <Input 
             {id}
@@ -133,7 +135,7 @@
     </Field>
 </div>
 <div class="grid grid-cols-3 gap-x-2 mb-4 items-stretch children-h-full">
-    <Field label="BC (G1)" let:id>
+    <Field label="BC (G1)" let:id disabled={disabled}>
         <Input 
             {id}
             name="bulletBcG1"
@@ -144,7 +146,7 @@
             value={data.baseRecipe.bulletBcG1?.toString() || ''}
         />
     </Field>
-    <Field label="BC (G7)" let:id>
+    <Field label="BC (G7)" let:id disabled={disabled}>
         <Input 
             {id}
             name="bulletBcG7"
@@ -155,7 +157,7 @@
             value={data.baseRecipe.bulletBcG7?.toString() || ''}
         />
     </Field>
-    <Field label="Sectional Density" let:id>
+    <Field label="Sectional Density" let:id disabled={disabled}>
         <Input 
             {id}
             name="bulletSD"

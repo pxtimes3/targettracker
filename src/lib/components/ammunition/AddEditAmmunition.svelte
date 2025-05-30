@@ -103,37 +103,6 @@
         // handleReset(e, originalData);
     }
 
-    
-
-    async function fetchUserPredefinedAmmunition(): Promise<AmmunitionData[]> 
-    {
-        loadingUserAmmunition = true;
-        try {
-            // console.debug('Fetching ammunition data...');
-            const response = await fetch(`/api/ammunition/`, {
-                headers: {
-                    "Accept": "application/json"
-                }
-            });
-            if (!response.ok) {
-                console.error(`Failed to load user ammunition data: ${response.status} ${response.statusText}`);
-                throw new Error('Failed to load user predefined ammunition data');
-            }
-            const result = await response.json();
-            // console.debug('User ammunition data fetched:', result);
-            if (result.ammunition.length) {
-                return result.ammunition.map((item: AmmunitionData) => ({ ...item, isFactory: false, group: 'Your loads' }));;
-            } else {
-                return [];
-            }
-        } catch (error) {
-            console.error('Error loading users predefined ammunition:', error);
-            return [];
-        } finally {
-            loadingAmmunition = false;
-        }
-    }
-
     function handlePredefinedAmmunitionSelect(selectedId: HTMLOptionElement): void 
     {
         console.debug(`handlePredefinedAmmunitionSelect`, $state.snapshot(selectedId));

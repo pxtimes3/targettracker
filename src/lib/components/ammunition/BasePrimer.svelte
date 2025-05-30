@@ -4,7 +4,7 @@
 	import { cls } from "@layerstack/tailwind";
     import { validate } from "@/utils/forms";
     
-	let { data }: { data: AmmunitionData } = $props();
+	let { data, disabled = false }: { data: AmmunitionData, disabled: boolean } = $props();
 
     const primerTypes: PrimerType[] = [
         'small rifle', 
@@ -31,6 +31,7 @@
         bind:value={selectedPrimerType}
         placeholder="Select primer type"
         required
+        disabled={disabled}
     >
         <MenuItem
             slot="option"
@@ -48,7 +49,7 @@
         </MenuItem>
     </SelectField>
 
-    <Field label="Manufacturer" let:id>
+    <Field label="Manufacturer" let:id disabled={disabled}>
         <Input 
             {id}
             name="manufacturerPrimer"
@@ -59,7 +60,7 @@
         />
     </Field>
 
-    <Field label="Name" let:id>
+    <Field label="Name" let:id disabled={disabled}>
         <Input 
             {id}
             name="propellantName"
