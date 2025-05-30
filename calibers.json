@@ -405,7 +405,15 @@
       "category": "Rifle",
       "mm": "6.2",
       "in": ".243",
-      "aliases": ["6 Creedmoor", "6mm CM"]
+      "aliases": ["6mm BR"]
+    },
+    {
+      "id": "6xc",
+      "name": "6 XC",
+      "category": "Rifle",
+      "mm": "6",
+      "in": ".243",
+      "aliases": ["6mm XC", "6 XC"]
     },
     {
       "id": "6mmcreedmoor",
@@ -413,7 +421,7 @@
       "category": "Rifle",
       "mm": "6",
       "in": ".243",
-      "aliases": ["6mm BR"]
+      "aliases": ["6 Creedmoor", "6mm CM"]
     },
     {
       "id": "224valkyrie",
